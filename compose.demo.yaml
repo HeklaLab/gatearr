@@ -1,0 +1,60 @@
+name: gatearr-demo
+# Standalone isolated demo. No .env needed. Never expose it to the Internet.
+services:
+  gatearr:
+    build: .
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      APP_NAME: Gatearr
+      SECRET_KEY: demo-only-secret-change-before-production-123456789
+      PUBLIC_URL: http://localhost:8000
+      COOKIE_SECURE: "false"
+      SYNC_INTERVAL_MINUTES: "1"
+      DATABASE_URL: sqlite:////data/gatearr.db
+      TRUSTED_PROXY_IPS: "127.0.0.1"
+    volumes: ["demo_portal:/data"]
+    depends_on:
+      mock-emby:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+      mock-services:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  mock-emby:
+    build: .
+    command: ["uvicorn", "app.mock_emby:app", "--host", "0.0.0.0", "--port", "8096", "--no-access-log"]
+    environment:
+      MOCK_API_KEY: demo-emby-key
+      MOCK_DB: /data/mock.db
+    volumes: ["demo_emby:/data"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8096/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  mock-services:
+    build: .
+    command: ["uvicorn", "app.mock_services:app", "--host", "0.0.0.0", "--port", "8097", "--no-access-log"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8097/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  mailpit:
+    image: axllent/mailpit:v1.24.1
+    ports: ["127.0.0.1:8025:8025"]
+volumes:
+  demo_portal:
+  demo_emby:

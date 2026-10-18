@@ -1,0 +1,31 @@
+name: gatearr
+services:
+  gatearr:
+    image: ${GATEARR_IMAGE:-ghcr.io/heklalab/gatearr:latest}
+    restart: unless-stopped
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8000}:8000"
+    environment:
+      APP_NAME: ${APP_NAME:-Gatearr}
+      SECRET_KEY: ${SECRET_KEY:-}
+      MEDIA_SERVER: ${MEDIA_SERVER:-emby}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:${PORT:-8000}}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SYNC_INTERVAL_MINUTES: ${SYNC_INTERVAL_MINUTES:-30}
+      DATABASE_URL: sqlite:////data/gatearr.db
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-127.0.0.1}
+    volumes:
+      - gatearr_data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  gatearr_data:
+    name: ${GATEARR_DATA_VOLUME:-gatearr_data}

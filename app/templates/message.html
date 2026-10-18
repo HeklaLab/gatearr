@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<section class="card narrow"><span class="eyebrow">{{ _("YOUR SPACE") }}</span><h1>{{ _("All done.") }}</h1><p>{{ message }}</p><a class="button" href="{{ '/admin' if user and user.admin else '/home' if user else '/login' }}">{{ _("Continue →") }}</a></section>{% endblock %}

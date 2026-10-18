@@ -1,0 +1,19 @@
+{% extends 'base.html' %}{% block content %}
+<span class="eyebrow">{{ _('COMMUNICATION') }}</span><h1>{{ _("Your emails, your style.") }}</h1>
+<nav class="tabs">{% for key,title in purposes.items() %}<a href="/admin/mail-editor?purpose={{ key }}&mail_locale={{ edit_locale }}" {% if key==purpose %}aria-current="page"{% endif %}>{{ _(title) }}</a>{% endfor %}</nav>
+<p>{{ _('English source') if edit_locale=='en' else _('Translation') }} · {{ edit_language_name }} · <a href="/admin/translations?scope=email&edit_locale={{ edit_locale }}">{{ _('Translation center') }} →</a></p>
+{% if request.query_params.get('saved') %}<p class="success-message" role="status">{{ _("Template saved.") }}</p>{% endif %}{% if notice %}<p role="status">{{ _(notice) }}</p>{% endif %}
+<div class="mail-workspace"><section class="card"><h2>{{ _(purposes[purpose]) }}</h2><p class="hint">{{ _("Variables: ${app_name}, ${username}, ${link}, ${minutes}. The link is required.") }}</p>
+<form method="post" id="mail-editor-form" data-invalid-url="{{ _("Use a valid HTTP(S) URL.") }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="source_hash" value="{{ source_stamp }}"><input type="hidden" name="purpose" value="{{ purpose }}"><input type="hidden" name="mail_locale" value="{{ edit_locale }}">
+<label>{{ _("Subject") }}<input name="subject" value="{{ subject }}" required maxlength="300"></label>
+<div class="editor-toolbar" role="toolbar" aria-label="{{ _("Formatting") }}" hidden>
+{% for command,label in [('bold',"Bold"),('italic',"Italic"),('underline',"Underline"),('h2',"Heading"),('p',"Paragraph"),('ul',"Bullet list"),('ol',"Numbered list"),('left',"Align left"),('center',"Center"),('right',"Align right")] %}<button type="button" class="secondary" data-command="{{ command }}">{{ _(label) }}</button>{% endfor %}
+<label>{{ _("Text color") }}<input type="color" id="editor-color" value="#333333"></label>
+</div>
+<div id="rich-editor" class="rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="{{ _("Rich text message") }}" hidden></div>
+<label id="html-fallback">{{ _("HTML message (without visual editor)") }}<textarea name="html" rows="12" maxlength="50000">{{ html }}</textarea></label>
+<div class="editor-insert" hidden><label>{{ _("Image URL") }}<input type="url" id="image-url" placeholder="https://example.com/banner.png"></label><label>{{ _("Image description") }}<input id="image-alt" maxlength="300"></label><button type="button" class="secondary" data-insert="image">{{ _("Insert image") }}</button><label>{{ _("Link URL") }}<input id="link-url" placeholder="${link}"></label><label>{{ _("Link text") }}<input id="link-text" value="{{ _("Confirm my email") }}"></label><button type="button" class="secondary" data-insert="link">{{ _("Insert link") }}</button></div>
+<p class="hint">{{ _("Images use a public HTTP(S) URL. Some email clients may block them.") }}</p>
+<div class="builder-actions"><button name="action" value="save">{{ _("Save template") }}</button><button class="secondary" name="action" value="preview">{{ _("Refresh preview") }}</button><button class="secondary" name="action" value="test">{{ _("Send a test to my email") }}</button></div>
+</form></section><section class="card"><h2>{{ _("Message preview") }}</h2><p class="hint">{{ _("Example using Alex and a dummy link. Refresh the preview to see your changes.") }}</p><iframe title="{{ _("Message preview") }}" class="mail-preview" sandbox="" referrerpolicy="no-referrer" srcdoc="{{ mail_preview }}"></iframe></section></div>
+{% endblock %}{% block scripts %}<script src="/static/mail-editor.js?v={{ asset_version }}" defer></script>{% endblock %}

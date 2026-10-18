@@ -1,0 +1,7 @@
+# Developers only: build and run from the local source tree.
+# docker compose -f compose.yaml -f compose.build.yaml up -d --build --wait
+services:
+  gatearr:
+    image: gatearr:local
+    build: .
+    pull_policy: never
