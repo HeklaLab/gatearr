@@ -156,6 +156,9 @@ def libraries_save(request: Request, data=Depends(form)):
     from .permissions import state,encoded,recompute,observe
     prior=emby.user(user.emby_id).get('Policy',{})
     row=state(request.state.db,user,prior)
+    names={library['Id']:library['Name'] for library in emby.libraries()}
+    describe=lambda full,ids:'All libraries' if full else ', '.join(names.get(identifier,identifier) for identifier in ids) or 'No libraries'
+    request.state.audit_detail='Libraries: '+describe(prior.get('EnableAllFolders'),prior.get('EnabledFolders',[]) or [])+' → '+describe(all_folders,selected)
     emby.assign_libraries(user.emby_id,selected,all_folders)
     overrides=__import__('json').loads(row.overrides);overrides.update(EnableAllFolders=all_folders,EnabledFolders=sorted(set(selected)))
     row.overrides=encoded(overrides);recompute(request.state.db,user,row);row.pending=False
@@ -258,6 +261,8 @@ def user_role(request:Request,local_id:int,data=Depends(form)):
         raise HTTPException(403,'Administrator access required')
     target=db.get(User,local_id)
     if not target or not target.emby_id:raise HTTPException(404,'Media account required')
+    request.state.audit_subject=local_id
+    request.state.audit_detail='Gatearr administrator: '+str(target.admin)+' → '+str(data.get('admin')=='on')+'\nTools: '+target.tool_access+' → '+str(data.getlist('tools'))
     grant=data.get('admin')=='on'
     if grant and (not target.active or target.emby_missing):raise HTTPException(400,'An active media account is required')
     import json

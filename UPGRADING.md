@@ -1,3 +1,11 @@
+# Upgrading to 0.2.1
+
+Back up all of `/data` and retain its existing key. Accounts and permissions are unchanged. The dark theme is now the only appearance; its palette remains editable. The bundled dark preset becomes darker, while custom dark colors are retained.
+
+Tools move from separate public hosts to the Gatearr hostname. Set URL Base in each native service to `/tools/radarr/app`, `/tools/sonarr/app` or `/tools/bazarr/app` and restart that service. In Gatearr, save its private server root URL and API key. The public hostname field is removed. Your existing main Gatearr proxy handles these paths; old tool subdomain sites can be retired after verifying access. Native authentication/private-network prerequisites still apply. Apps share Gatearr's browser origin and must be trusted.
+
+Legacy footer content remains published until you save/publish the new column layout. It is prefilled into the rich editor. Hidden columns remain in the draft when reducing the visible count, and can be restored by increasing it.
+
 # Preserve an existing Docker installation
 
 This release uses **gatearr** consistently for the Compose service, project, database and session cookie. A service/project rename does not automatically attach an older deployment's data volume. Preserve it explicitly.

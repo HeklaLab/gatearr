@@ -1,17 +1,17 @@
-"""Origin-isolated, authenticated reverse proxy for explicitly configured admin tools.
+"""Session-protected, path-based reverse proxy for explicitly configured admin tools.
 Only configured upstreams are reachable; no request supplies a target URL or API key.
 """
-import json,secrets,time
-from urllib.parse import urlsplit,parse_qs
+import json,time
+from urllib.parse import urlsplit,urljoin
 import httpx
 from fastapi import APIRouter,Request,Depends,HTTPException
 from fastapi.responses import Response,RedirectResponse,StreamingResponse
-from sqlalchemy import select,delete,text
-from .models import Config,Session,User,ToolGrant,SupportSession
+from sqlalchemy import delete
+from .models import Session,User,ToolGrant,SupportSession
 from .db import SessionLocal
 from .mailer import config
 from .security import url_ok,origin,encrypt,decrypt,digest
-from .main import form,require_admin,require_user,redirect,render,limit,set_config
+from .main import form,require_admin,require_user,redirect,render,set_config
 router=APIRouter();TOOLS=('radarr','sonarr','bazarr')
 HOP={'connection','keep-alive','proxy-authenticate','proxy-authorization','te','trailer','transfer-encoding','upgrade','host','content-length','cookie','authorization','x-api-key','x-emby-token','forwarded','x-forwarded-for','x-forwarded-host','x-forwarded-proto'}
 
@@ -24,24 +24,19 @@ def configure_tools(request,data):
     for tool in TOOLS:
         active=data.get(tool+'_enabled')=='on'
         base=url_ok(str(data.get(tool+'_url','')),optional=not active)
-        public=url_ok(str(data.get(tool+'_public_url','')),optional=not active)
         key=str(data.get(tool+'_api_key','')).strip() or decrypt(config(db,tool+'_api_key'))
         if active:
             if not key:raise ValueError('API key required')
-            if urlsplit(base).path not in ('','/') or urlsplit(base).query or urlsplit(base).fragment:raise ValueError('Tool private URLs must use the domain root; clear the upstream URL Base setting')
-            target=urlsplit(public)
-            if target.path or target.query or target.fragment or origin(public)==origin(config(db,'public_url')):raise ValueError('Each tool needs a separate public hostname')
-            if target.scheme!='https' and target.hostname not in ('localhost','127.0.0.1'):raise ValueError('Public tool URLs require HTTPS')
-            if any(data.get(other+'_enabled')=='on' and origin(public)==origin(str(data.get(other+'_public_url',''))) for other in TOOLS if other!=tool):raise ValueError('Each tool needs a separate public hostname')
+            if urlsplit(base).path not in ('','/') or urlsplit(base).query or urlsplit(base).fragment:raise ValueError('Enter the private server root URL, without the URL Base path')
             path='/api/system/status' if tool=='bazarr' else '/api/v3/system/status'
             try:
-                with httpx.Client(timeout=8,trust_env=False,follow_redirects=False) as client:r=client.get(base+path,headers={'X-Api-Key':key});r.raise_for_status();result=r.json()
+                with httpx.Client(timeout=8,trust_env=False,follow_redirects=False) as client:r=client.get(base.rstrip('/')+prefix(tool)+path,headers={'X-Api-Key':key});r.raise_for_status();result=r.json()
                 if not isinstance(result,dict) or not result:raise ValueError('Invalid connection response')
-            except (httpx.HTTPError,ValueError):raise ValueError('Tool connection failed. Check its private URL and API key.')
+            except (httpx.HTTPError,ValueError):raise ValueError('Tool connection failed. Check the private URL, API key and native URL Base: '+prefix(tool))
             if data.get('proxy_acknowledge')!='on':raise ValueError('Confirm the private upstream and proxy authentication setup')
-        prepared[tool]={'base':base,'public':public,'key':key,'active':active}
+        prepared[tool]={'base':base,'key':key,'active':active}
     for tool,v in prepared.items():
-        for suffix,value in {'url':v['base'],'public_url':v['public'],'api_key':encrypt(v['key']) if v['key'] else '','enabled':'true' if v['active'] else 'false'}.items():set_config(db,tool+'_'+suffix,value)
+        for suffix,value in {'url':v['base'],'api_key':encrypt(v['key']) if v['key'] else '','enabled':'true' if v['active'] else 'false'}.items():set_config(db,tool+'_'+suffix,value)
     db.execute(delete(ToolGrant));db.commit()
 
 @router.post('/admin/tools')
@@ -52,15 +47,14 @@ def save_tools(request:Request,data=Depends(form)):
 def open_tool(request:Request,tool:str):
     user=require_user(request);db=request.state.db
     if tool not in allowed_tools(db,user):raise HTTPException(403,'Tool access denied')
-    limit(request,'tool-launch',maximum=30)
-    raw=secrets.token_urlsafe(32)
-    db.execute(delete(ToolGrant).where(ToolGrant.expires<int(time.time())))
-    db.add(ToolGrant(digest=digest(raw),session_digest=request.state.session.digest,user_id=user.id,tool=tool,expires=int(time.time())+60,redeemed=False));db.commit()
-    return render(request,'tool.html',tool=tool,tool_public=config(db,tool+'_public_url'),handoff_ticket=raw)
+    return render(request,'tool.html',tool=tool)
+
+def prefix(tool):return '/tools/'+tool+'/app'
 
 def target_for_host(db,request):
-    host=request.headers.get('host','').lower()
-    return next((tool for tool in TOOLS if config(db,tool+'_enabled')=='true' and urlsplit(config(db,tool+'_public_url')).netloc.lower()==host),None)
+    # Kept as an internal dispatch name for compatibility; hostnames never select a tool.
+    path=request.url.path
+    return next((tool for tool in TOOLS if path==prefix(tool) or path.startswith(prefix(tool)+'/')),None)
 
 def effective(db,session):
     user=db.get(User,session.user_id) if session else None
@@ -68,17 +62,16 @@ def effective(db,session):
     support=db.get(SupportSession,session.digest)
     if support:
         target=db.get(User,support.target_id)
-        if not user.admin or support.expires<=int(time.time()) or not target or not target.active or target.version!=support.target_version:return None
+        if not user.admin or support.expires<=int(time.time()) or not target or not target.active or target.emby_missing or target.version!=support.target_version:return None
         return target
     return user
 
 def authorize(db,request,tool):
-    raw=request.cookies.get('gatearr_tool_session','')
-    grant=db.get(ToolGrant,digest(raw)) if raw else None
-    if not grant or not grant.redeemed or grant.tool!=tool or grant.expires<=int(time.time()):return None
-    session=db.get(Session,grant.session_digest);user=effective(db,session)
-    if not user or user.id!=grant.user_id or tool not in allowed_tools(db,user):return None
-    return grant
+    raw=request.cookies.get('gatearr_session','')
+    session=db.get(Session,digest(raw)) if raw else None
+    user=effective(db,session)
+    if not user or tool not in allowed_tools(db,user):return None
+    return type('ProxyAccess',(),{'session_digest':session.digest,'user_id':user.id})()
 
 async def bounded_body(request,maximum):
     body=bytearray()
@@ -89,25 +82,10 @@ async def bounded_body(request,maximum):
 
 async def handle(request,tool):
     with SessionLocal() as db:
-        public=config(db,tool+'_public_url');portal=config(db,'public_url')
-        if request.url.path=='/gatearr-tool-login':
-            if request.method!='POST' or origin(request.headers.get('origin',''))!=origin(portal):return Response('Origin rejected',status_code=403)
-            body=await bounded_body(request,2048)
-            ticket=parse_qs(body.decode(errors='replace')).get('ticket',[''])[0]
-            if len(ticket)!=43:return Response('Invalid ticket',status_code=403)
-            db.execute(text('BEGIN IMMEDIATE'));grant=db.get(ToolGrant,digest(ticket))
-            if not grant or grant.tool!=tool or grant.redeemed or grant.expires<=int(time.time()):return Response('Ticket expired',status_code=403)
-            user=effective(db,db.get(Session,grant.session_digest))
-            if not user or user.id!=grant.user_id or tool not in allowed_tools(db,user):return Response('Access revoked',status_code=403)
-            # Exchange the one-use ticket for a different host-only cookie.
-            db.delete(grant)
-            raw=secrets.token_urlsafe(32);db.add(ToolGrant(digest=digest(raw),tool=tool,user_id=user.id,session_digest=grant.session_digest,redeemed=True,expires=min(int(time.time())+43200,db.get(Session,grant.session_digest).expires)));db.commit()
-            response=RedirectResponse(public+'/',303)
-            response.set_cookie('gatearr_tool_session',raw,httponly=True,secure=urlsplit(public).scheme=='https',samesite='lax',path='/')
-            response.headers['Cache-Control']='no-store';return response
+        portal=config(db,'public_url');public=portal.rstrip('/')+prefix(tool)
         grant=authorize(db,request,tool)
         if not grant:return Response('Open this tool from Gatearr to sign in.',status_code=401,headers={'Cache-Control':'no-store'})
-        if request.method not in ('GET','HEAD','OPTIONS') and origin(request.headers.get('origin',''))!=origin(public):return Response('Origin rejected',status_code=403)
+        if request.method not in ('GET','HEAD','OPTIONS') and origin(request.headers.get('origin',''))!=origin(portal):return Response('Origin rejected',status_code=403)
         base=config(db,tool+'_url');key=decrypt(config(db,tool+'_api_key'));actor=db.get(Session,grant.session_digest).user_id;subject=grant.user_id
     body=await bounded_body(request,32*1024*1024)
     # Preserve the raw escaped path/query. The fixed upstream cannot be replaced by //host or redirects.
@@ -125,11 +103,12 @@ async def handle(request,tool):
     output={k:v for k,v in upstream.headers.items() if k.lower() not in HOP|{'set-cookie','content-security-policy','x-frame-options','content-encoding'}}
     location=output.get('location')
     if location:
-        parsed=urlsplit(location)
-        if parsed.netloc and origin(location)!=origin(base):
-            await upstream.aclose();await client.aclose();return Response('External redirect refused',502)
-        if parsed.netloc:output['location']=public+parsed.path+('?' + parsed.query if parsed.query else '')
-    output.update({'Cache-Control':'no-store','Referrer-Policy':'same-origin','X-Content-Type-Options':'nosniff','Content-Security-Policy':"frame-ancestors "+urlsplit(portal).scheme+"://"+urlsplit(portal).netloc})
+        parsed=urlsplit(urljoin(str(upstream.request.url),location))
+        root=parsed.scheme+'://'+parsed.netloc
+        if origin(root)!=origin(base) or not (parsed.path==prefix(tool) or parsed.path.startswith(prefix(tool)+'/')):
+            await upstream.aclose();await client.aclose();return Response('External redirect refused or upstream URL Base is incorrect',502)
+        output['location']=portal.rstrip('/')+parsed.path+('?' + parsed.query if parsed.query else '')
+    output.update({'Cache-Control':'no-store','Referrer-Policy':'same-origin','X-Content-Type-Options':'nosniff','Content-Security-Policy':"frame-ancestors "+"'self'"})
     from .audit import record
     record(actor,subject,'tool.'+tool+'.'+request.method,upstream.status_code)
     async def stream():
@@ -143,9 +122,9 @@ async def websocket_proxy(socket):
     from websockets.asyncio.client import connect
     with SessionLocal() as db:
         tool=target_for_host(db,socket)
-        if not tool or origin(socket.headers.get('origin',''))!=origin(config(db,tool+'_public_url')) or not authorize(db,socket,tool):
+        if not tool or origin(socket.headers.get('origin',''))!=origin(config(db,'public_url')) or not authorize(db,socket,tool):
             await socket.close(code=1008);return
-        base=config(db,tool+'_url');key=decrypt(config(db,tool+'_api_key'));public=config(db,tool+'_public_url')
+        base=config(db,tool+'_url');key=decrypt(config(db,tool+'_api_key'));public=config(db,'public_url')
     parsed=urlsplit(base);url=('wss' if parsed.scheme=='https' else 'ws')+'://'+parsed.netloc+parsed.path.rstrip('/')+socket.scope['raw_path'].decode('ascii')
     if socket.url.query:url+='?'+socket.url.query
     if socket.url.path.startswith('//') or '\\' in socket.url.path:await socket.close(code=1008);return

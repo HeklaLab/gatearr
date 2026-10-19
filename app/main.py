@@ -9,7 +9,7 @@ from string import Template
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 from fastapi import FastAPI, Request, Depends, HTTPException
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, delete, update, text, case
@@ -229,10 +229,8 @@ async def context(request: Request, call_next):
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
         response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self'; img-src 'self' https: http:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         if request.url.path=="/services/emby/open":response.headers["Referrer-Policy"]="no-referrer"
-        if request.url.path.startswith("/tools/"):
-            key=request.url.path.rsplit("/",1)[-1]
-            tool_public=config(db,key+"_public_url") if key in ("radarr","sonarr","bazarr") else ""
-            if tool_public:response.headers["Content-Security-Policy"]="default-src 'self'; style-src 'self'; img-src 'self'; script-src 'self'; frame-src "+tool_public+"; frame-ancestors 'none'; base-uri 'none'; form-action "+tool_public
+        if request.url.path.startswith('/tools/'):
+            response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self'; img-src 'self'; script-src 'none'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         if request.url.path=="/services/seerr/open":
             from .seerr_login import public_url
             target=public_url(db)
@@ -245,7 +243,7 @@ async def context(request: Request, call_next):
             actor=getattr(request.state,'audit_actor',None) or getattr(request.state,'actor',None) or user
             effective=request.state.user
             if request.url.path!='/theme.css' and not request.url.path.startswith('/media/icons/'):
-                await run_in_threadpool(record,actor.id if actor else None,getattr(request.state,'audit_subject',effective.id if effective else None),getattr(request.state,'audit_action',request.method+' '+request.url.path),response.status_code)
+                await run_in_threadpool(record,actor.id if actor else None,getattr(request.state,'audit_subject',effective.id if effective else None),getattr(request.state,'audit_action',request.method+' '+request.url.path),response.status_code,getattr(request.state,'audit_detail',''))
         return response
 
 async def form(request: Request):
@@ -285,7 +283,7 @@ async def form(request: Request):
         "/admin/portal/block": ("version", "kind", "region", "order", "span"),
         "/admin/portal/delete": ("version", "block_id"),
         "/admin/portal/move": ("version", "block_id", "direction"),
-        "/admin/portal/theme": ("version", "nav_position", "accent", "bg", "surface", "text", "muted"),
+        "/admin/portal/theme": ("version", "nav_position"),
         "/admin/portal/publish": ("version",),
         "/admin/portal/reset": ("version",),
     }.get(request.url.path, ())
@@ -305,6 +303,8 @@ async def form(request: Request):
         raise HTTPException(403, 'Origin rejected')
     safe_names={'app_name','public_url','media_server','url','browser_url','smtp_host','smtp_port','smtp_mode','smtp_username','smtp_from','notification_mode','user_id','radarr_url','radarr_public_url','sonarr_url','sonarr_public_url','bazarr_url','bazarr_public_url','radarr_enabled','sonarr_enabled','bazarr_enabled','proxy_acknowledge'}
     request.state.form_values={key:value for key,value in data.items() if key in safe_names and isinstance(value,str)}
+    from .audit import describe_form
+    describe_form(request,data)
     return data
 
 def limit(request, action, identity="", maximum=5, window=900):
@@ -923,6 +923,7 @@ def upload_asset(request:Request,data=Depends(form)):
     require_admin(request)
     from .icons import icon_value
     value=icon_value(request.state.db,data);request.state.db.commit()
+    if request.headers.get('accept')=='application/json':return JSONResponse({'url':value})
     return redirect('/admin/footer?'+urlencode({'asset':value}))
 
 @app.websocket('/{path:path}')

@@ -143,6 +143,8 @@ def save_permission(request:Request,uid:int,data=Depends(form)):
     overrides=json.loads(row.overrides)
     if data.get('action')=='inherit':overrides.pop(key,None)
     else:overrides[key]=value
+    request.state.audit_subject=uid
+    request.state.audit_detail=label(key)+': '+encoded(remote[key])+' → '+('Inherited from groups' if data.get('action')=='inherit' else encoded(value))
     row.overrides=encoded(overrides);recompute(db,user,row);guard(db,user,json.loads(row.desired));db.commit();apply(db,user,row,write_keys={key})
     return redirect('/admin/users/'+str(uid)+'#permissions')
 
@@ -203,6 +205,7 @@ def save_group(request:Request,gid:int,data=Depends(form)):
         if not set(selected)<=available:raise ValueError('Unknown library. Reload the page.')
         policy.update(EnableAllFolders=mode=='all',EnabledFolders=selected)
         if remotes and all('ExcludedSubFolders' in p for p in remotes.values()):policy['ExcludedSubFolders']=[]
+    request.state.audit_detail='Group: '+group.name+'\nMembers: '+', '.join(indexed[uid].name for uid in sorted(members))+'\nPermissions: '+encoded(policy)
     affected=members|old_members
     states={}
     for uid in sorted(affected):states[uid]=state(db,indexed[uid],remotes[uid])

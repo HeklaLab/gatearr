@@ -51,7 +51,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.2.0` for a controlled version. Public container pulls require no GitHub credentials. Repository/release downloads require your GitHub login while the source repository remains private; GitHub release checks inside Gatearr also require a public repository and report an access failure while it is private.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.2.1` for a controlled version. Public container pulls require no GitHub credentials. Repository/release downloads require your GitHub login while the source repository remains private; GitHub release checks inside Gatearr also require a public repository and report an access failure while it is private.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 
@@ -110,7 +110,7 @@ Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTE
 - **Emails**: SMTP and visual invitation/recovery/verification/account-change templates, localized through Translations.
 - **API connections**: media server, Seerr and optional admin tools. Health indicators describe authenticated checks, separately from per-user synchronization.
 - **Translations**: create a language and translate interface, content and email strings on one page. One user language applies to the interface, emails and supported Seerr settings.
-- **Activity log**: time, actor, affected user, action and result. It records portal page visits and mutations, assistance and proxied tool actions. No request bodies, passwords, API keys, session cookies or query strings are recorded. Retention is 90 days, capped at 100,000 events; logs also go to the container's output.
+- **Activity log**: time, actor, affected user, action and result. It shows readable actions, account names and selected change details (including before/after library, permission and email changes). Changes are shown by default; Show all activity also includes page visits. Passwords, API keys, session cookies and query strings are excluded. Only explicitly selected fields are recorded, never complete request bodies. Retention is 90 days, capped at 100,000 events; logs also go to the container's output.
 
 ### Account management and assistance
 
@@ -130,9 +130,9 @@ Emby libraries use virtual-folder GUIDs, not numeric navigation IDs. Jellyfin us
 
 ### Themes, footer and icons
 
-Edit the light and dark palettes, gradients and navigation in Branding. Choose forced light/dark, automatic device appearance, or user choice. Automatic follows the browser/OS appearance preference. Drafts do not change the published portal. The old custom palette is retained when upgrading.
+Only the dark theme is available in 0.2.1. Edit its palette and subtle gradient in Branding → Themes. Save a draft and publish it. Existing custom dark colors are retained; the shipped blue preset is made darker.
 
-The footer is centered and supports one, two or three rich-text columns, links and uploaded images. Save a draft, preview it, then publish. Existing footer items are retained until you publish a column layout. Content in unused columns must be moved/cleared explicitly before reducing the column count.
+The footer is centered and supports one, two or three rich-text columns, links and uploaded images. Save a draft, preview it, then publish. Only the selected number of column editors is shown. Each has rich text and direct PNG/SVG image upload. Legacy content is prefilled into one editable column. Hidden columns are kept in the draft and restored when you increase the count.
 
 Icons accept validated PNG/SVG uploads or a bundled Font Awesome selection. PNG limit: 2 MB and 1024×1024; SVG limit: 2 MB with a strict element/attribute allowlist. Scripts, embedded documents and external references are refused. Assets persist in SQLite and are served as inert images. Font Awesome is bundled locally under its included license; no external font service is required.
 
@@ -165,20 +165,13 @@ Each tool has its own optional connection and its own user checkbox under **Admi
 
 For each tool:
 
-1. Enter its private URL and API key in the common setup step or API connections. The private URL must use the domain root; clear the native application's URL Base setting for this subdomain deployment.
-2. Choose a separate public hostname, for example `radarr.example.com`. Prefer sibling hostnames under the portal's domain for browser cookie compatibility.
-3. Point that hostname's DNS at your existing proxy and proxy **all** its requests to **Gatearr**, preserving Host:
+1. In the native application's general settings, set **URL Base** to `/tools/radarr/app`, `/tools/sonarr/app` or `/tools/bazarr/app`, respectively. Restart the native app after changing it. Its private API and web UI will now use that prefix too.
+2. In Gatearr, enter the private server root URL (for example `http://radarr:7878`) and API key. Gatearr verifies the API under the required prefix. No public tool URL is requested.
+3. Your existing main Gatearr proxy already handles the tools. No extra public hostname or Caddy site is needed. `/tools/radarr`, `/tools/sonarr` and `/tools/bazarr` show the native application inside the Gatearr interface.
+4. For automatic UI login, use the native [Radarr/Sonarr external authentication setting](https://wiki.servarr.com/radarr/settings) and Bazarr proxy-only access. Keep native ports restricted to the private Docker/LAN network. Gatearr does not weaken or alter native authentication automatically. Forms authentication can otherwise show an additional login screen.
+5. Grant each tool independently on the user's Gatearr page. The wrapper and every proxied HTTP/WebSocket request check the live Gatearr session and grant. Revoking the grant or signing out removes access.
 
-```caddyfile
-radarr.example.com, sonarr.example.com, bazarr.example.com {
-    reverse_proxy gatearr:8000
-}
-```
-
-4. Gatearr then proxies authenticated requests to the configured private upstream. For automatic UI login, configure [Radarr/Sonarr external authentication](https://wiki.servarr.com/radarr/faq#forced-authentication) and Bazarr proxy-only access (native authentication off). **Keep native ports restricted to the private Docker/LAN network and trusted proxy.** Never expose an unauthenticated upstream to the public internet. Gatearr does not change these upstream settings for you. If retaining native Forms login, an additional login screen can remain.
-5. Grant access on the user's Gatearr page. The service opens inside the portal on its separate origin. If browser third-party-cookie rules block embedded login, use **Open in a new tab**, which creates a fresh handoff.
-
-The proxy supports HTTP streaming and WebSockets. Browser Authorization/API-key/cookie/forwarded headers are stripped; configured upstream credentials are added server-side. Arbitrary target URLs, external redirects and unauthorized requests are refused. Web origins are isolated so native application scripts do not run on Gatearr's account/administration origin. Requests are capped at 32 MB and WebSocket messages at 4 MB. Native application settings pages may expose that application's own configuration to users granted its full interface, just as when accessing it directly.
+The iframe shares Gatearr's browser origin. Only connect trusted native applications: this path-based arrangement is not an origin-isolation boundary, and native scripts have the same origin as the portal. Grants provide the full native interface, including administrative capabilities and configuration normally visible there. Browser cookies/Authorization/API-key headers are stripped before upstream forwarding; configured API credentials are added server-side. Arbitrary targets and redirects outside the tool prefix are refused. HTTP bodies are capped at 32 MB, WebSocket messages at 4 MB.
 
 ## Updates, backup and recovery
 

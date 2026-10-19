@@ -1,5 +1,5 @@
 """Global, translated footer content with independent draft/publish control."""
-import json, re, secrets
+import json, re, secrets, html
 from copy import deepcopy
 from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlalchemy import update
@@ -26,6 +26,9 @@ def clean_html(value):
 
 def validate(value):
     if value.get('alignment') not in ('left','center','right') or type(value.get('enabled')) is not bool: raise ValueError('Invalid footer')
+    if 'column_archive' in value:
+        if not isinstance(value['column_archive'],list) or len(value['column_archive'])>3:raise ValueError('Invalid footer')
+        value['column_archive']=[clean_html(column) for column in value['column_archive']]
     if 'columns' in value:
         if not isinstance(value['columns'],list) or not 1<=len(value['columns'])<=3:raise ValueError('Choose one, two or three footer columns')
         value['columns']=[clean_html(column) for column in value['columns']]
@@ -67,14 +70,14 @@ def display(db,value,locale,app_name):
         if item['id']=='signature' and source==DEFAULT['items'][0]['text'] and text==source:
             text=i18n.translate(source,locale,overrides=i18n.overrides(db,locale),base_overrides=i18n.overrides(db,'en'),app_name=app_name)
         item['text']=text.replace('{app_name}',app_name)
-    if 'columns' in value:value['columns']=[clean_html(i18n.content(db,'footer:column:'+str(index),column,locale)) for index,column in enumerate(value['columns'])]
+    if 'columns' in value:value['columns']=[clean_html(i18n.content(db,'footer:column:'+str(index),column,locale).replace('{app_name}',html.escape(app_name))) for index,column in enumerate(value['columns'])]
     value['items'].sort(key=lambda item:(item['position'],item['id']))
     return value
 
 @router.get('/admin/footer')
 def editor(request: Request):
     require_admin(request)
-    return render(request,'footer_editor.html',footer_draft=load(request.state.db,True),footer_version=version(request.state.db))
+    return render(request,'footer_editor.html',footer_draft=editor_value(request.state.db),footer_version=version(request.state.db))
 
 @router.get('/admin/footer/preview')
 def preview(request: Request):
@@ -90,10 +93,9 @@ def edit(request: Request,data=Depends(form)):
     elif action=='columns':
         count=int(data.get('count','1'))
         if count not in (1,2,3):raise ValueError('Choose one, two or three footer columns')
-        columns=[clean_html(str(data.get('column_'+str(index),''))) for index in range(3)]
-        # Switching to fewer columns never discards content silently.
-        if any(column.strip() for column in columns[count:]):raise ValueError('Move content out of hidden columns before reducing their number')
-        value.update(columns=columns[:count],alignment='center');save(db,value,expected)
+        previous=value.get('column_archive',value.get('columns',['','','']))
+        columns=[clean_html(str(data.get('column_'+str(index),previous[index] if index<len(previous) else ''))) for index in range(3)]
+        value.update(columns=columns[:count],column_archive=columns,alignment='center');save(db,value,expected)
     elif action=='upload':
         icon_value(db,data)
         db.commit()
@@ -108,3 +110,16 @@ def edit(request: Request,data=Depends(form)):
         value['items']=[old for old in value['items'] if old['id']!=ident]+[item];save(db,value,expected)
     else:raise ValueError('Invalid action')
     return redirect('/admin/footer')
+
+def editor_value(db):
+    value=load(db,True)
+    if 'columns' not in value:
+        parts=[]
+        for item in value['items']:
+            text=html.escape(item['text'])
+            if item['kind']=='logo':text='<img src="'+html.escape(item['icon_url'],quote=True)+'" alt="'+text+'">'
+            if item['url']:text='<a href="'+html.escape(item['url'],quote=True)+'">'+text+'</a>'
+            parts.append('<p>'+text+'</p>')
+        value['columns']=[''.join(parts)]
+    value['column_archive']=value.get('column_archive',value['columns'])
+    return value

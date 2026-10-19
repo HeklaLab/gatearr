@@ -1,3 +1,12 @@
+# 0.2.1 — 2026-10-19
+
+- Dark-only appearance with a darker, subtle background gradient and editable colors.
+- Clear active parent/child administration navigation and consistent button spacing.
+- Radarr, Sonarr and Bazarr embedded under /tools on the portal hostname, with per-request permissions.
+- Footer editor shows only the selected columns, with rich text and inline PNG/SVG uploads; hidden drafts are retained.
+- Hide the language selector when only one language is enabled.
+- Readable audit actions, username snapshots and redacted change details.
+
 # Changes
 
 ## 0.2.0 — 2026-10-19

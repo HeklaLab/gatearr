@@ -1,5 +1,7 @@
 """Full browser-form smoke against a fresh isolated demo + Mailpit. Requires httpx."""
 import argparse
+import json
+from pathlib import Path
 import re
 import time
 import httpx
@@ -66,7 +68,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         def layout_version():
             return re.search(r'name="version" value="(\d+)"',client.get('/admin/portal').text)[1]
         submit(client, '/admin/portal/block', {'version':layout_version(),'kind':'text','region':'main','order':'11','span':'12','title':'Welcome to Gatearr','body':'Your movie night starts here. Find your films, shows and requests in one place.'}, '/admin/portal')
-        submit(client, '/admin/portal/theme', {'version':layout_version(),'nav_position':'left','accent':'#c9a7ff','bg':'#10151b','surface':'#1a222c','text':'#edf3f9','muted':'#aab8c9'}, '/admin/portal')
+        submit(client, '/admin/portal/theme', {'version':layout_version(),'nav_position':'left','accent':'#159eff','bg':'#05070d','surface':'#0b101b','text':'#e7f2ff','muted':'#a7bbd9'}, '/admin/portal')
         assert 'Welcome to Gatearr' not in client.get('/home').text
         assert 'Welcome to Gatearr' in client.get('/admin/portal/preview').text
         submit(client, '/admin/portal/publish', {'version':layout_version()}, '/admin/portal')
@@ -74,7 +76,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         submit(client, '/admin/guides/service', {'key':'emby','name':'Emby','browser_url':'https://emby.example.com','server_url':'https://media.example.com:8920'}, '/admin/guides')
         assert 'Emby on Windows' in client.get('/admin/guides').text
         assert 'Emby on Android' in client.get('/admin/guides').text
-        assert 'Gatearr 0.2.0' in client.get('/admin/updates').text
+        assert 'Gatearr '+json.loads((Path(__file__).resolve().parents[1]/'app/releases.json').read_text())[0]['version'] in client.get('/admin/updates').text
         submit(client,'/admin/footer',{'version':0,'kind':'link','text':'Community','url':'https://community.example.com','position':20},'/admin/footer')
         assert 'community.example.com' not in client.get('/forgot').text
         assert 'community.example.com' in client.get('/admin/footer/preview').text

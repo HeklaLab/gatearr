@@ -1,3 +1,11 @@
+# Validation — Gatearr 0.2.1 — 19 October 2026
+
+- **145 automated tests passed** locally with Python 3.12; one existing Starlette/httpx deprecation warning remains.
+- New regressions verify dark-only defaults and old preset normalization, active Services/How to navigation, hidden single-language controls, footer column visibility and preservation, sanitized inline PNG/SVG upload, readable user-name audit history and secret redaction.
+- Path-based tool tests cover the Gatearr wrapper, prefixed HTML/assets, absolute and relative redirects, credential stripping, live-session revocation, origin checks and WebSockets. Native tools must be configured with the documented URL Base. They share the portal origin; this is explicitly documented and limited to trusted applications.
+- Full isolated HTTP/SMTP smoke and browser checks cover the updated flow. Docker build/startup/health/smoke and AMD64/ARM64 publication are gated by GitHub Actions; the local workspace has no Docker engine.
+- Actual native Emby/Jellyfin/Seerr/Radarr/Sonarr/Bazarr deployments and the user's proxy were not used in these checks. Validate native URL Base and proxy-authentication settings on the test server before production rollout.
+
 # Validation — Gatearr 0.2.0 — 19 October 2026
 
 - **140 automated tests passed** with Python 3.12. One existing Starlette/httpx test-client deprecation warning remains.

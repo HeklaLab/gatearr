@@ -13,7 +13,7 @@ The workflow authenticates using GitHub's short-lived `GITHUB_TOKEN`; no Docker 
 
 ## Subsequent releases
 
-Commit changes, push them, review the verification results, then create a new `vMAJOR.MINOR.PATCH` tag. Update `app/release.py`, the changelog and release notes together. The stable-tag workflow creates the source release if needed and attaches the source ZIP, Docker configuration ZIP and SHA256 checksums. Repository visibility remains unchanged. Changing `main` updates only `edge`; stable installations update when a stable tag passes all checks.
+Commit changes, push them, review the verification results, then create a new `vMAJOR.MINOR.PATCH` tag. Update `app/release.py`, the changelog and release notes together. The stable-tag workflow creates the source release if needed and attaches the source ZIP, Docker configuration ZIP and SHA256 checksums. Repository visibility remains unchanged. A new stable application version on `main` is released automatically after verification and multiarchitecture publication. The exact verified image digest is tagged with its version and latest; the workflow then creates the GitHub tag, release and packages. If that version tag already exists, main updates edge only and the existing release stays unchanged. Explicit stable tags continue to work.
 
 After backing up `/data`, users update with:
 

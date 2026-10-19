@@ -35,6 +35,8 @@ jobs:
       - if: always()
         run: docker compose -p gatearr-ci -f compose.demo.yaml down -v
   publish:
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     needs: verify
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
@@ -86,6 +88,7 @@ jobs:
             org.opencontainers.image.description=Your media services, one account portal
             org.opencontainers.image.licenses=MIT
       - name: Build and publish AMD64 and ARM64 images
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -165,3 +168,67 @@ jobs:
             gh release create "$GITHUB_REF_NAME" --verify-tag --title "Gatearr $version" --notes-file RELEASE_NOTES.md --repo "$GITHUB_REPOSITORY"
           fi
           gh release upload "$GITHUB_REF_NAME" gatearr.zip gatearr-docker.zip SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+
+  publish_new_version:
+    needs: [verify, publish]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: gatearr-stable-release
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check whether this version has already been released
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PYCODE'
+          import json,os,re,urllib.request,urllib.error
+          from app.release import VERSION
+          if not re.fullmatch(r'\d+\.\d+\.\d+',VERSION):raise SystemExit('Stable version required')
+          url='https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/git/ref/tags/v'+VERSION
+          request=urllib.request.Request(url,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+          try:
+              with urllib.request.urlopen(request,timeout=20):fresh=False
+          except urllib.error.HTTPError as error:
+              if error.code!=404:raise
+              fresh=True
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              out.write('fresh='+str(fresh).lower()+'\nversion='+VERSION+'\n')
+          PYCODE
+      - uses: docker/setup-buildx-action@v3
+        if: steps.release.outputs.fresh == 'true'
+      - uses: docker/login-action@v3
+        if: steps.release.outputs.fresh == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the verified digest and release packages
+        if: steps.release.outputs.fresh == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          IMAGE_DIGEST: ${{ needs.publish.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          test -n "$IMAGE_DIGEST"
+          docker buildx imagetools create -t "$image:$VERSION" -t "$image:${VERSION%.*}" -t "$image:latest" "$image@$IMAGE_DIGEST"
+          git archive --format=zip --prefix=gatearr/ --output=gatearr.zip HEAD
+          python - <<'PYCODE'
+          from pathlib import Path
+          from zipfile import ZipFile,ZIP_DEFLATED
+          import hashlib
+          with ZipFile('gatearr-docker.zip','w',ZIP_DEFLATED) as archive:
+              for name in ('compose.yaml','.env.example','.env.windows.example','UPGRADING.md','README.md'):
+                  archive.write(name,'gatearr/'+name)
+          Path('SHA256SUMS.txt').write_text(''.join(hashlib.sha256(Path(name).read_bytes()).hexdigest()+'  '+name+'\n' for name in ('gatearr.zip','gatearr-docker.zip')))
+          PYCODE
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "Gatearr $VERSION" --notes-file RELEASE_NOTES.md gatearr.zip gatearr-docker.zip SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"
