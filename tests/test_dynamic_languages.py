@@ -73,7 +73,7 @@ def test_content_translations_preserve_placeholders_and_draft_boundaries(client)
 
 def test_guides_journeys_menus_and_branding_use_the_created_language(client):
     setup(client,empty_journeys=True);language(client)
-    assert post(client,'/admin/menu',{'label':'Requests','url':'https://requests.test','icon':'★','position':'1'},'/admin').status_code==303
+    assert post(client,'/admin/menu',{'label':'Requests','url':'https://requests.test','icon':'link','position':'1'},'/admin').status_code==303
     with SessionLocal() as db:mid=db.scalar(select(MenuItem.id))
     assert translate(client,'menu:'+str(mid)+':label','Solicitudes').status_code==303
     assert translate(client,'branding:login_text','Tus servicios en un solo lugar').status_code==303

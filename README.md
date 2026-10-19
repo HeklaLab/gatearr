@@ -1,111 +1,84 @@
 # Gatearr
 
-![Gatearr](app/static/gatearr-logo.png)
+A customizable, self-hosted account portal for Emby and Jellyfin. Sign in with your media account, manage your account and open the services published by your administrator.
 
-A self-hosted account portal for Emby and Jellyfin. Users sign in with their existing media-server account, manage their profile and open the services you publish. Administrators customize the portal with blocks, menus, PNG icons and device guides.
+Python 3.12, FastAPI, SQLAlchemy/Alembic and SQLite/WAL. One application container and one persistent data volume. English is the source language; add languages and customize all interface, content and email text in Translations. No reverse proxy is bundled.
 
-Python 3.12, FastAPI, Jinja, SQLAlchemy, Alembic and SQLite/WAL. One application container and one persistent volume; no bundled reverse proxy. SQLite is intended for one host and one worker on a local disk.
+## Installation prerequisites
+
+Before starting Gatearr, check:
+
+1. **Docker Engine/Desktop and Compose v2** are installed and running: `docker version` and `docker compose version`. On Windows, select Linux containers. On Linux follow the [official Docker installation instructions](https://docs.docker.com/engine/install/), including permission to use the Docker daemon. Package-manager commands require administrator privileges; upgrading/rebooting the operating system is separate from installing Gatearr.
+2. **Persistent writable storage** is available on a local disk. Keep `/data`, including `bootstrap.json`, for the lifetime of the installation. SQLite uses WAL and requires directory access for the database, WAL and shared-memory files; network filesystems are not supported.
+3. **Emby/Jellyfin** is reachable from inside Docker and an administrator API key is available. `localhost` inside the container refers to that container. Use a shared Docker service name, the server's LAN address, or `host.docker.internal` for a server on Windows/Mac Docker Desktop. Linux host access needs a LAN address or an explicit host-gateway mapping. Check the server firewall.
+4. **Public HTTPS** is provided by your existing reverse proxy. Point both A and any AAAA DNS records at the proxy's actual public endpoint; forward the required ports to that proxy. ACME certificate validation must reach it on port 80 and/or 443, depending on the challenge. A stale AAAA record or a record pointing at another web host can fail certificate issuance even if local access works. Keep the initial setup private until completed.
+5. **SMTP** is needed for invitations, recovery and account-change notifications. It can be skipped during setup, but direct admin email/password changes require SMTP and a recipient address. Confirm host, port, TLS mode, sender and credentials.
+
+### Linux bind-mounted data: prepare ownership first
+
+The image runs as UID **10001**, GID **10001**, without root privileges. If you mount a host directory, prepare that specific directory before starting:
+
+```sh
+sudo install -d -m 0750 -o 10001 -g 10001 /opt/emby/gatearr
+```
+
+Example service volume:
+
+```yaml
+volumes:
+  - /opt/emby/gatearr:/data
+```
+
+For an existing directory, stop Gatearr and back it up before correcting ownership of its files. Do not change permissions on the entire media-server directory, do not delete `bootstrap.json`, and do not use `chmod 777`. A Docker named volume is used by the supplied Compose and avoids manual host-directory preparation on a fresh installation.
+
+Check access **before** starting the application:
+
+```sh
+docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
+```
+
+This checks the running UID/GID's access without replacing secrets or modifying the database. Startup also checks access and prints a concise diagnostic if it cannot write to storage. Existing older error lines can remain in Docker logs after a successful restart; use `docker compose logs --since=2m gatearr` and check health/current state.
 
 ## Start with Docker
 
-Download `compose.yaml` and `.env.example` from [HeklaLab/gatearr](https://github.com/HeklaLab/gatearr). You do not need the source code or a local build. In that directory:
+Download the release's `gatearr-docker.zip`, extract it and copy `.env.example` to `.env`:
 
 ```sh
 cp .env.example .env
-# The example uses ghcr.io/heklalab/gatearr:latest.
 docker compose config --quiet
 docker compose pull
+docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Open **http://localhost:8000/setup**. `PORT` changes the published HTTP port. For LAN access set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. HTTP is appropriate for a private test network; use your existing HTTPS reverse proxy for public access.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.2.0` for a controlled version. Public container pulls require no GitHub credentials. Repository/release downloads require your GitHub login while the source repository remains private; GitHub release checks inside Gatearr also require a public repository and report an access failure while it is private.
 
-Only the session/encryption secret can optionally be supplied through the environment. When blank, it is generated once in `/data/bootstrap.json`. **Media API keys are entered in the wizard or API connections, not in `.env`. There is no installation token.**
+Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 
-The first installation must be reached on a private/local access path: it is open until a server and its first administrator have been configured. CSRF and rate limiting protect form submissions; they do not establish who owns an as-yet unconfigured portal.
+The session/encryption secret is generated once in `/data/bootstrap.json` when `SECRET_KEY` is empty. Retain it. API keys are entered in the wizard/API connections and stored encrypted, never supplied through `.env`. No installation token is required.
 
-## Installation wizard
-
-1. Choose the portal name and public URL. Select Emby or Jellyfin, enter the private API URL and its API key. The key is required explicitly on this first step. Gatearr verifies the server and imports its users.
-2. Select an existing, active media account and confirm its existing password. This account becomes the first Gatearr administrator. No separate local account or password is created.
-3. Connect Seerr, or skip.
-4. Connect Tracearr, or skip.
-5. Configure SMTP, or skip.
-6. Finish. The wizard is then hidden and its routes return to API connections.
-
-The steps are shown as a numbered breadcrumb. The first-admin selection is bound to the browser that established the server connection, expires after 30 minutes and cannot be claimed a second time. All subsequent users sign in with their usual media credentials. Gatearr administration is an explicit local role; media administrator status is not inherited.
-
-## Windows / Docker Desktop
-
-Use Linux containers. With the project in `C:\docker-test\gatearr`:
+### Windows / Docker Desktop
 
 ```powershell
 cd C:\docker-test\gatearr
-Copy-Item .env.example .env
-notepad .env
-```
-
-For a same-PC test, set:
-
-```dotenv
-PORT=8088
-BIND_ADDRESS=127.0.0.1
-PUBLIC_URL=http://localhost:8088
-COOKIE_SECURE=false
-```
-
-Set `GATEARR_IMAGE` to the published image address listed on the GitHub release. Then:
-
-```powershell
+Copy-Item .env.windows.example .env
 docker compose pull
 docker compose up -d --wait
-docker compose logs --tail=100 gatearr
 ```
 
-Open http://localhost:8088/setup. For Emby running on Windows with its default HTTP port, use **http://host.docker.internal:8096/emby** as the API URL. Enter the key in the wizard. The browser URL is **http://localhost:8096** for same-PC access. Other computers need the Windows machine's LAN address instead of `localhost`. Emby must accept connections from Docker through the Windows firewall.
+The Windows example uses port 8088. Open `http://localhost:8088/setup`. For Emby on the same PC use `http://host.docker.internal:8096/emby` as the API URL. Browser/app URLs must be reachable by the actual users; another device cannot use your PC's `localhost`.
 
-## Administration
+### First-run wizard
 
-Each section has its own page and a visible back button:
+Six steps: media server/name/public URL → existing media administrator selection → optional Seerr → optional Radarr/Sonarr/Bazarr on one screen → optional SMTP → finish.
 
-- **Branding**: portal name, logo URL, sign-in text, public URL and media web link.
-- **Emails**: SMTP, test delivery and WYSIWYG invitation/verification/recovery templates, including images, links and text formatting.
-- **Services**: configurable links and menus, order, new-tab behavior, emoji or uploaded/remote PNG icons.
-- **Users**: imported accounts, verified email invitations, Gatearr roles, one language and media-library permissions. The last active administrator cannot be removed; role changes revoke portal sessions and email tokens.
-- **API connections**: connection configuration and read-only authenticated health probes. Green means the API responded with the expected authenticated response; red means unreachable/rejected/unexpected response. Hover or focus for details and check time. Results are cached for 60 seconds; use Refresh to check again. Unconfigured connections are gray.
-- **Portal builder**: blocks, multiple menus, navigation position, theme and button-hover color. Drafts stay separate from the published portal.
-- **Application journeys**: direct links or nested choices such as Browser / Computer / Mobile / TV, with editable guides and store links.
-- **Translations**: English source text, additional languages and every interface/content/email string on one page for the selected language, with search and optional section filters. English is the only bundled language. Empty or stale translations fall back to English.
+The first Gatearr administrator is an existing active media account whose password is verified. Other imported accounts can later receive the Gatearr admin role. Media administrator status does not automatically grant Gatearr administration. The first-admin selection is browser-bound, expires after 30 minutes and cannot be claimed twice.
 
-### One language per account
-
-The account language controls Gatearr's interface and emails. It is also queued to Seerr with the verified email and managed notification preferences. Changing the language from the header, account page or member editor uses the same field. Remote updates are retried and verified; matching uses the immutable media user ID, never a guessed username or email.
-
-**Tracearr limitation:** its current application stores interface language in the client browser/device. Its API has no per-user locale field or update endpoint. Gatearr therefore synchronizes Tracearr contact email and newsletter subscription, but cannot change Tracearr's language remotely. It does not report a language synchronization that did not happen. Seerr and Tracearr also retain their own supported translation catalogs.
-
-User-list synchronization indicators include Seerr/Tracearr only when their connector is enabled with a URL and key. These indicators describe the latest observed per-user synchronization, separately from the API connection health check.
-
-### Emby library access
-
-Emby permissions use each virtual folder's **Guid**, not its numeric `ItemId`. Gatearr maps the available folders to those permission GUIDs, writes `EnableAllFolders` / `EnabledFolders`, clears obsolete subfolder exclusions and verifies the saved policy. Other policy restrictions are preserved. Jellyfin keeps its own adapter and identifiers. Test a restricted media account on your server before enabling the portal publicly.
-
-Cloning uses the supported native APIs to copy policy, configuration and home-screen preferences from a non-administrator template. A newly created account is protected during provisioning; failures attempt to remove only that new account. Creation/copy operations across services are not a distributed transaction.
-
-### Icons and email templates
-
-PNG uploads support 2 MB and 1024 × 1024 pixels maximum. Image structure, CRCs, decoded-size bounds and dimensions are checked; metadata is stripped. Images are stored in SQLite, deduplicated and served with a fixed PNG content type and `nosniff`. Icons are public assets; historical icon URLs are retained after replacement.
-
-Email templates use `${app_name}`, `${username}`, `${link}` and `${minutes}`. The invitation has its own template. HTML is allowlisted and sanitized, variables escaped, and a plain-text alternative included. Recovery/verification links expire after 30 minutes and are single use. SMTP is required for email verification and recovery. Administrators use the same account and email verification flow as other users; verify an address before using test delivery.
-
-## Connected services
-
-Seerr needs its URL and API key. It must already contain the matching media account. Its global email delivery must be enabled for email notifications. Gatearr preserves unrelated settings and notification agents. Notification policy can be unmanaged, user-selectable or enforced by the administrator.
-
-Tracearr needs its URL, public API key, media-server UUID and an owner login with explicit internal-API permission. Public API v2 identifies the exact media account; the owner-only internal endpoint updates `contactEmail`, not the owner's authentication email. Newsletter opt-out uses suppression state and respects a remote unsubscribe until the user explicitly opts in again. Internal endpoints may change; validate against your version. A missing or ambiguous mapping is an error, not permission to update a different account.
+When a connection check fails, non-secret fields remain filled in, with an error on the same page. Passwords/API keys are not echoed into the response. After setup, connection settings remain in API connections and the wizard is hidden.
 
 ## Existing reverse proxy
 
-Connect your existing proxy container to Gatearr's Docker network or attach Gatearr to the proxy's external network. An example override:
+Connect Gatearr to the same Docker network as your existing proxy, or use an external shared network in a Compose override:
 
 ```yaml
 services:
@@ -119,7 +92,7 @@ networks:
     name: YOUR_EXISTING_PROXY_NETWORK
 ```
 
-Run with `docker compose -f compose.yaml -f compose.proxy.yaml up -d --wait`. In your existing Caddy configuration:
+Example existing Caddy site:
 
 ```caddyfile
 accounts.example.com {
@@ -127,67 +100,47 @@ accounts.example.com {
 }
 ```
 
-Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true` and `TRUSTED_PROXY_IPS` to the proxy's exact IP/CIDR as seen by the container. Update the stored public URL in Branding too if the portal was already installed. No Caddy container, certificate volume or port 443 listener is bundled. Never trust arbitrary forwarded headers on a publicly reachable application port.
+Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTED_PROXY_IPS` to the proxy's exact address/CIDR as seen by Gatearr. If already installed, update the stored public URL in Branding too. Validate the Caddy configuration before reloading it. A formatting warning is different from a failed certificate challenge; use the actual error/status to diagnose it. `GET /healthz` and `HEAD /healthz` check application/database readiness.
 
-## Updates and backups
+## Administration
 
-Back up the complete `/data` volume, including `bootstrap.json`, before upgrading. Keep the original `SECRET_KEY` if you supplied one. Changing this key makes stored connections and queued emails unreadable. For an existing deployment that used a different service/project name, follow [UPGRADING.md](UPGRADING.md) to attach its existing volume instead of accidentally starting an empty portal.
+- **Branding**: identity and sign-in text, Portal builder, Themes and Footer tabs.
+- **Users**: account details, email verification/invitations, direct email/password changes, reset links, groups, libraries, all media policy fields and assistance.
+- **Services**: choose **Direct link** or **How to** when creating a service. The service identifier is generated automatically. How to lets you add a submenu, browser/link or tutorial; create a tutorial directly from a choice, edit its steps and publish it. Draft guides and choices remain separate from published content.
+- **Emails**: SMTP and visual invitation/recovery/verification/account-change templates, localized through Translations.
+- **API connections**: media server, Seerr and optional admin tools. Health indicators describe authenticated checks, separately from per-user synchronization.
+- **Translations**: create a language and translate interface, content and email strings on one page. One user language applies to the interface, emails and supported Seerr settings.
+- **Activity log**: time, actor, affected user, action and result. It records portal page visits and mutations, assistance and proxied tool actions. No request bodies, passwords, API keys, session cookies or query strings are recorded. Retention is 90 days, capped at 100,000 events; logs also go to the container's output.
 
-Migrations run automatically at container startup. Revision `0010` removes the bundled French language and its translations, resets affected users to English, unifies account language and adds connection-check history. Other custom languages, users, media mappings, roles, email addresses and encrypted connections are retained. Older local-only administrator identities are retired by the historical migration; no media user is promoted implicitly.
+### Account management and assistance
 
-```sh
-docker compose pull
-docker compose up -d --wait
-docker compose logs --tail=100 gatearr
-```
+Administrators can send verification/reset links or directly change an email/password. Direct changes queue a localized notification; email changes notify the old and new addresses. Passwords are never emailed. Existing Gatearr sessions and recovery tokens are invalidated after direct credential changes. SMTP failures are retried by the encrypted mail outbox and recorded in container logs.
 
-`pull` downloads the new image; `up -d` recreates the container while preserving `/data`. Never use `down -v` when upgrading. Pin `GATEARR_IMAGE` to a version tag for controlled upgrades. The stable `latest` tag follows version releases; `edge` follows the main development branch.
+**Open portal as this user** starts an audited, 30-minute assistance session with a visible banner and return button. Gatearr account/settings writes are blocked during assistance. The user's own tools/permissions control what is displayed. Automatic Emby/Seerr links need a still-valid session created when that member previously signed in to Gatearr. If unavailable, the interface asks the member to sign in again. No user password is retained. Service links open genuine remote user sessions: actions performed there have that user's normal effects. Returning to the administrator's portal does not close already-open external browser tabs.
 
-### Build from source
+Emby browser login verifies the captured user token before handoff. Jellyfin web clients do not universally support this URI login scheme, so Gatearr reports the limitation instead of substituting an administrator API key.
 
-Developers can use the source checkout without a published image:
+### Media permissions and groups
 
-```sh
-docker compose -f compose.yaml -f compose.build.yaml up -d --build --wait
-```
+Review/edit the fields actually returned by the media server: streams, downloads, subtitles, remote access and other policy settings. Authentication providers and server-maintained counters remain read-only. Sensitive administrator/disabled changes require explicit confirmation; the last active Gatearr admin is protected.
 
-See [PUBLISHING.md](PUBLISHING.md) for release and container publication.
+Group libraries combine. Restrictive permission flags win, and the smallest positive stream/bitrate limit wins (zero is unlimited). Conflicting structured settings require an individual override. Individual overrides take priority. Removing a membership restores original values for fields formerly managed by the group. Writes are read back; indicators distinguish confirmation, pending/drift and failures. Reading remote drift never automatically overwrites it.
 
-Server-side administrator recovery, using an existing active media account:
+Emby libraries use virtual-folder GUIDs, not numeric navigation IDs. Jellyfin uses its own adapter. Cloning copies the selected policy/configuration/home preferences through native media APIs; validate a restricted account on your actual server before granting access broadly.
 
-```sh
-docker compose exec gatearr python -m app.admin_cli list-users
-docker compose exec gatearr python -m app.admin_cli grant-admin MEDIA_USER_ID
-```
+### Themes, footer and icons
 
-## Tests and isolated demo
+Edit the light and dark palettes, gradients and navigation in Branding. Choose forced light/dark, automatic device appearance, or user choice. Automatic follows the browser/OS appearance preference. Drafts do not change the published portal. The old custom palette is retained when upgrading.
 
-```sh
-python -m pip install -r requirements-dev.txt
-python -m pytest -q
-docker compose -f compose.demo.yaml up -d --build --wait
-python scripts/smoke.py
-```
+The footer is centered and supports one, two or three rich-text columns, links and uploaded images. Save a draft, preview it, then publish. Existing footer items are retained until you publish a column layout. Content in unused columns must be moved/cleared explicitly before reducing the column count.
 
-The demo uses simulated media/Seerr/Tracearr services and Mailpit at http://localhost:8025. At setup enter `http://mock-emby:8096/emby` and the demo key `demo-emby-key`, then choose `portal-admin` / `AdminPassword123!`. The ordinary account is `demo` / `DemoPassword123!`; the smoke test changes it to `ResetPassword123!`. Demo credentials are deliberately test-only. The demo stack is isolated and must stay private.
+Icons accept validated PNG/SVG uploads or a bundled Font Awesome selection. PNG limit: 2 MB and 1024×1024; SVG limit: 2 MB with a strict element/attribute allowlist. Scripts, embedded documents and external references are refused. Assets persist in SQLite and are served as inert images. Font Awesome is bundled locally under its included license; no external font service is required.
 
-See [VALIDATION.md](VALIDATION.md) for executed checks and limits, and [CHANGELOG.md](CHANGELOG.md) for changes. External contracts: [Emby libraries](https://betadev.emby.media/reference/RestAPI/LibraryStructureService/getLibraryVirtualfoldersQuery.html), [Seerr user settings](https://github.com/seerr-team/seerr/blob/develop/server/routes/user/usersettings.ts), [Tracearr identity schema](https://github.com/connorgallopo/Tracearr/blob/main/packages/shared/src/schemas.ts), [Tracearr client language](https://github.com/connorgallopo/Tracearr/blob/main/packages/translations/src/language.ts).
+## Automatic Seerr login
 
-## Version, footer and access administration
+Configure Seerr's API and public HTTPS URL, then enable automatic login in API connections. Seerr must already contain the same media account, matched by immutable media ID. Users sign back in to Gatearr after activation.
 
-**Administration → Updates** shows the installed version/build, bundled changelog and latest GitHub release. Checks run at most every six hours and can be disabled. Administrators see an update indicator; connection failures remain visible rather than reporting a successful check. A refreshed build of the same initial version is detected using the release tag's commit reference.
-
-**Footer** manages a global draft with text, links and uploaded PNG logos, alignment and ordering. Preview before publishing. Existing custom portal colors and journeys are preserved. Default device guides can be added from **Guides** only when no existing guides/journeys would be replaced. Their steps and store links remain editable and translatable.
-
-**Users → user → Media-server permissions** exposes the policy returned by the connected server, including simultaneous streams and subtitle downloading. Authentication provider identifiers and server-maintained counters are read-only. Sensitive administrator/disabled changes need explicit confirmation. The adjacent status shows confirmed, pending/different, or failed readback; merely reading a remote change never overwrites it.
-
-**Groups** applies shared policy and libraries to selected users. Library grants combine across groups. Restrictive permissions win and the smallest positive stream/bitrate limit wins (zero means unlimited). Conflicting structured settings require an explicit individual override. Individual overrides take priority; removing membership restores the original value for fields formerly managed by the group. Changes queue for application and verification. Use the user page to inspect or retry errors.
-
-## Optional automatic Seerr login
-
-Configure the Seerr API and public HTTPS URL in **API connections**, then enable automatic login. Existing Seerr accounts must already be imported and linked to the same media-server identity. Sign out and back in to Gatearr to prepare the Seerr session. Gatearr never retains the password or includes credentials in a link. An encrypted, temporary Seerr session is bound to the Gatearr session; the handoff ticket expires after 60 seconds and can be used once.
-
-On the **Seerr public hostname**, route only `/gatearr-login` to Gatearr using your existing reverse proxy. For an existing Caddy Docker deployment, adapt the upstream names/ports to your shared Docker network:
+On the **Seerr hostname**, add this route to your existing proxy, adapting upstreams to your Docker network:
 
 ```caddyfile
 requests.example.com {
@@ -200,4 +153,61 @@ requests.example.com {
 }
 ```
 
-Preserve the original Host header. Gatearr's public URL and Seerr's public URL must match their actual browser origins. Other reverse proxies need the equivalent route. No proxy is bundled. Without this opt-in configuration, the journey opens the ordinary Seerr login page. Gatearr attempts to end its captured Seerr session on logout; independently created Seerr sessions follow Seerr's own expiry rules. This integration is tested against simulators; validate your installed Seerr version and proxy before enabling it for users.
+Preserve Host. The bridge uses a one-use 60-second POST ticket; no password/key is included in links. Sessions are encrypted and bound to live Gatearr sessions; assistance tickets are also bound to the issuing admin's active assistance session. Gatearr attempts remote logout for its captured session. Independently created service sessions follow their own expiration rules.
+
+Seerr email/language/notification synchronization preserves unrelated settings. Notification policy may be unmanaged, user-selectable or forced. Email delivery must also be configured in Seerr.
+
+## Radarr / Sonarr / Bazarr admin tools
+
+Each tool has its own optional connection and its own user checkbox under **Admin tools**: **Admin Gatearr**, **Access Radarr**, **Access Sonarr**, **Access Bazarr**. Tool access does not require the Gatearr admin role. A tool checkbox appears after that tool is configured and enabled.
+
+**These grants provide the complete native tool interface and its administrative actions.** They are not per-library or read-only native application roles. Gatearr checks the grant on every HTTP request and periodically during WebSocket connections; logout/revocation invalidates access.
+
+For each tool:
+
+1. Enter its private URL and API key in the common setup step or API connections. The private URL must use the domain root; clear the native application's URL Base setting for this subdomain deployment.
+2. Choose a separate public hostname, for example `radarr.example.com`. Prefer sibling hostnames under the portal's domain for browser cookie compatibility.
+3. Point that hostname's DNS at your existing proxy and proxy **all** its requests to **Gatearr**, preserving Host:
+
+```caddyfile
+radarr.example.com, sonarr.example.com, bazarr.example.com {
+    reverse_proxy gatearr:8000
+}
+```
+
+4. Gatearr then proxies authenticated requests to the configured private upstream. For automatic UI login, configure [Radarr/Sonarr external authentication](https://wiki.servarr.com/radarr/faq#forced-authentication) and Bazarr proxy-only access (native authentication off). **Keep native ports restricted to the private Docker/LAN network and trusted proxy.** Never expose an unauthenticated upstream to the public internet. Gatearr does not change these upstream settings for you. If retaining native Forms login, an additional login screen can remain.
+5. Grant access on the user's Gatearr page. The service opens inside the portal on its separate origin. If browser third-party-cookie rules block embedded login, use **Open in a new tab**, which creates a fresh handoff.
+
+The proxy supports HTTP streaming and WebSockets. Browser Authorization/API-key/cookie/forwarded headers are stripped; configured upstream credentials are added server-side. Arbitrary target URLs, external redirects and unauthorized requests are refused. Web origins are isolated so native application scripts do not run on Gatearr's account/administration origin. Requests are capped at 32 MB and WebSocket messages at 4 MB. Native application settings pages may expose that application's own configuration to users granted its full interface, just as when accessing it directly.
+
+## Updates, backup and recovery
+
+Back up **all of `/data`**, including `bootstrap.json`, before updating. Keep the same named volume/bind mount and the exact existing `SECRET_KEY` if supplied explicitly. Never use `docker compose down -v` to update.
+
+```sh
+docker compose pull
+docker compose up -d --wait
+docker compose logs --since=2m gatearr
+```
+
+Startup runs migrations automatically. See [UPGRADING.md](UPGRADING.md) before upgrading from older packages. The v0.2.0 migration removes the retired Tracearr connection secrets, queued jobs/checks and newsletter fields. Other accounts, mappings, roles, emails, Seerr/media connections and custom portal content remain.
+
+Server-side role recovery uses an existing media account:
+
+```sh
+docker compose exec gatearr python -m app.admin_cli list-users
+docker compose exec gatearr python -m app.admin_cli grant-admin MEDIA_USER_ID
+```
+
+## Development and validation
+
+```sh
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+docker compose -f compose.demo.yaml up -d --build --wait
+python scripts/smoke.py
+```
+
+The demo uses simulated media/Seerr services and Mailpit. At setup use `http://mock-emby:8096/emby`, key `demo-emby-key`, and first administrator `portal-admin` / `AdminPassword123!`. The ordinary account is `demo` / `DemoPassword123!`; the smoke test changes it to `ResetPassword123!`. These credentials are for the isolated demo only.
+
+Build from source with `docker compose -f compose.yaml -f compose.build.yaml up -d --build --wait`. See [VALIDATION.md](VALIDATION.md), [CHANGELOG.md](CHANGELOG.md) and [PUBLISHING.md](PUBLISHING.md). Live Emby/Jellyfin/Seerr/tool versions and your actual proxy need validation in your environment; simulator tests do not establish compatibility with every native version.

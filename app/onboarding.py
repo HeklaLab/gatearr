@@ -10,10 +10,10 @@ from .models import AccessService,User
 from .settings import settings
 from .connections import media_kind
 from .emby import client_for,EmbyError,_ADMIN
-from .integrations import request as remote_request,tracearr_login
+from .integrations import request as remote_request
 
 router=APIRouter()
-STEPS=('media','seerr','tracearr','smtp','finish')
+STEPS=('media','seerr','tools','smtp','finish')
 
 def probe_media(kind,base,key):
     client=client_for(kind,base,key)
@@ -74,7 +74,8 @@ def page(request:Request,step:str):
     if step not in STEPS:raise HTTPException(404,'Step not found')
     db=request.state.db
     if config(db,'onboarding_required')!='true':return redirect('/admin/integrations')
-    return render(request,'onboarding.html',step=step,steps=STEPS,step_number=1 if step=='media' else STEPS.index(step)+2,media_url=config(db,'emby_url'),media_key_saved=bool(config(db,'emby_api_key') or ''),selected_media=media_kind(db),media_verified=config(db,'onboarding_media_verified')=='true')
+    request.state.setup_context=dict(step=step,steps=STEPS,step_number=1 if step=='media' else STEPS.index(step)+2,media_url=getattr(request.state,'form_values',{}).get('url',config(db,'emby_url')),media_key_saved=bool(config(db,'emby_api_key') or ''),selected_media=getattr(request.state,'form_values',{}).get('media_server',media_kind(db)),media_verified=config(db,'onboarding_media_verified')=='true')
+    return render(request,'onboarding.html',**request.state.setup_context)
 
 @router.post('/admin/setup/{step}')
 def save(request:Request,step:str,data=Depends(form)):
@@ -87,7 +88,7 @@ def save(request:Request,step:str,data=Depends(form)):
     elif step=='media':
         limit(request,'onboarding_connection',maximum=15)
         connect_media(db,data)
-    elif step in ('seerr','tracearr'):
+    elif step=='seerr':
         limit(request,'onboarding_connection',maximum=15)
         from .admin_features import integrations_save
         from starlette.datastructures import FormData
@@ -99,25 +100,14 @@ def save(request:Request,step:str,data=Depends(form)):
         if not key:raise ValueError('API key required')
         try:
             with httpx.Client(base_url=base+'/',timeout=15,trust_env=False,follow_redirects=False) as client:
-                if step=='seerr':
-                    result=remote_request(client,'GET','api/v1/user',headers={'X-Api-Key':key},params={'take':1,'skip':0})
-                    if not isinstance(result,dict) or not isinstance(result.get('results'),list):raise ValueError('Invalid connection response')
-                else:
-                    UUID(str(data.get('server_id','')))
-                    owner=email_ok(str(data.get('owner_email','')))
-                    password=str(data.get('owner_password','')) or decrypt(config(db,'tracearr_owner_password'))
-                    if not password or data.get('internal_api')!='on':raise ValueError('Tracearr requires an owner account and its internal API.')
-                    result=remote_request(client,'GET','api/v2/public/users',headers={'Authorization':'Bearer '+key},params={'pageSize':1})
-                    if not isinstance(result,dict) or not isinstance(result.get('data'),list):raise ValueError('Invalid connection response')
-                    parsed=urlsplit(base)
-                    client.headers['Origin']=parsed.scheme+'://'+parsed.netloc
-                    remote_request(client,'POST','api/v1/auth/sign-in/email',json={'email':owner,'password':password,'rememberMe':False})
-                    if not client.cookies:raise SyncError('authentication')
-                    try:remote_request(client,'GET','api/v1/email/suppressions')
-                    finally:remote_request(client,'POST','api/v1/auth/sign-out',json={})
+                result=remote_request(client,'GET','api/v1/user',headers={'X-Api-Key':key},params={'take':1,'skip':0})
+                if not isinstance(result,dict) or not isinstance(result.get('results'),list):raise ValueError('Invalid connection response')
         except SyncError:
             raise HTTPException(502,'Connection refused or service unavailable. Check the settings and try again.')
         integrations_save(request,FormData({**dict(data),'service':step,'enabled':'on'}))
+    elif step=='tools':
+        from .tools_proxy import configure_tools
+        configure_tools(request,data)
     elif step=='smtp':
         from .main import admin_smtp
         admin_smtp(request,data)

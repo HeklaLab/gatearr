@@ -1,5 +1,18 @@
 # Changes
 
+## 0.2.0 — 2026-10-19
+
+- Grouped administration, intuitive service creation and How to editing.
+- Retired Tracearr integration and removed its saved credentials/jobs/preferences.
+- Audited, expiring user assistance using live member sessions.
+- Optional Radarr/Sonarr/Bazarr origin-isolated proxies and individual user grants.
+- Direct administrative account changes and encrypted localized notifications.
+- Editable light/dark themes, gradients and appearance policy.
+- Centered rich footer columns, sanitized SVG and bundled Font Awesome.
+- Consistent controls, account service card and preserved setup fields.
+- Storage preflight and explicit installation prerequisites.
+
+
 ## 0.1.0 — 2026-10-19
 
 - First public multiarchitecture Docker release, refreshed once at the owner's request.

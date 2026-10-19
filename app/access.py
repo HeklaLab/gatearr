@@ -123,6 +123,12 @@ def edit(request: Request,key: str,data=Depends(form)):
         ident=str(data.get('id','')) or secrets.token_hex(8)
         if data.get('id') and not any(node['id']==ident for node in nodes):raise HTTPException(404,'Submenu not found')
         node={'id':ident,'kind':str(data.get('kind','group')),'parent':str(data.get('parent','')),'position':int(data.get('position','10')),**{field:str(data[field]) for field in ('title','title_fr','title_en') if field in data},'icon_url':str(data.get('icon_url','')),'url':str(data.get('url','')),'guide_id':int(data.get('guide_id','0') or '0')}
+        if node['kind']=='guide' and not node['guide_id']:
+            if service.access_version!=expected:raise HTTPException(409,'The How to changed. Reload this page.')
+            guide=Guide(service_key=key,draft=json.dumps({'title':node['title'],'summary':'','device':'other','steps':[]}),version=0)
+            db.add(guide);db.flush();node['guide_id']=guide.id
+            save(db,service,[old for old in nodes if old['id']!=ident]+[node],expected)
+            return redirect('/admin/guides/'+str(guide.id))
         save(db,service,[old for old in nodes if old['id']!=ident]+[node],expected)
     else:raise ValueError('Invalid action')
     return redirect('/admin/access/'+key)

@@ -10,7 +10,7 @@ from test_portal import setup, post, csrf, logout, login_user
 from test_icon_uploads import png
 
 
-def remote(monkeypatch, version='0.2.0', revision='b'*40, fail=False):
+def remote(monkeypatch, version='0.3.0', revision='b'*40, fail=False):
     original=httpx.Client;calls=[]
     def handler(req):
         calls.append(req)
@@ -27,7 +27,7 @@ def test_version_page_and_update_notification_are_admin_only_and_escaped(client,
     setup(client);calls=remote(monkeypatch)
     assert post(client,'/admin/updates/check',{},'/admin/updates').status_code==303
     page=client.get('/admin/updates').text
-    assert 'Gatearr 0.1.0' in page and '0.2.0' in page and 'Installed release history' in page
+    assert 'Gatearr 0.2.0' in page and '0.3.0' in page and 'Installed release history' in page
     assert '&lt;script&gt;untrusted&lt;/script&gt;' in page and 'malicious.test' not in page
     assert 'class="update-notice"' in client.get('/account').text
     assert len(calls)==1
@@ -47,7 +47,7 @@ def test_release_cache_backoff_failure_retention_and_opt_out(client,monkeypatch)
     remote(monkeypatch,fail=True)
     with SessionLocal() as db:
         state=versioning.check(db,True)
-        assert state['available'] and state['state']=='error' and state['version']=='0.2.0'
+        assert state['available'] and state['state']=='error' and state['version']=='0.3.0'
         main.set_config(db,'release_check','{}');main.set_config(db,'release_checks_enabled','false');db.commit()
         assert versioning.check(db)['state']=='unchecked'
     assert client.post('/admin/updates/check',data={'csrf':'bad'}).status_code==403
@@ -55,7 +55,7 @@ def test_release_cache_backoff_failure_retention_and_opt_out(client,monkeypatch)
     assert 'GitHub could not be reached' not in client.get('/admin/updates').text
 
 
-@pytest.mark.parametrize('tag,available',[('0.0.9',False),('0.1.0',False),('0.1.1',True),('0.10.0',True)])
+@pytest.mark.parametrize('tag,available',[('0.0.9',False),('0.1.0',False),('0.2.1',True),('0.10.0',True)])
 def test_semantic_version_comparison(client,monkeypatch,tag,available):
     setup(client);remote(monkeypatch,version=tag)
     monkeypatch.setattr(versioning,'BUILD_REVISION','')
@@ -63,12 +63,12 @@ def test_semantic_version_comparison(client,monkeypatch,tag,available):
 
 
 def test_same_version_rebuild_and_invalid_release_are_handled(client,monkeypatch):
-    setup(client);remote(monkeypatch,version='0.1.0');monkeypatch.setattr(versioning,'BUILD_REVISION','a'*40)
+    setup(client);remote(monkeypatch,version='0.2.0');monkeypatch.setattr(versioning,'BUILD_REVISION','a'*40)
     with SessionLocal() as db:assert versioning.check(db,True)['available']
     remote(monkeypatch,version='../../bad')
     with SessionLocal() as db:
         state=versioning.check(db,True)
-        assert state['state']=='error' and state['url']=='https://github.com/HeklaLab/gatearr/releases/tag/v0.1.0'
+        assert state['state']=='error' and state['url']=='https://github.com/HeklaLab/gatearr/releases/tag/v0.2.0'
     assert 'Updates and changelog' in client.get('/admin').text
 
 

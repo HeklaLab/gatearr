@@ -46,7 +46,7 @@ def test_guide_publication_device_choices_localization_and_placeholders(client):
     assert 'href="/access/emby"' in home
     choices=client.get('/access/emby').text
     assert 'Browser' in choices and 'Emby sur mobile' in choices
-    assert 'https://media.example.com/web' in choices
+    assert '/services/emby/open' in choices
     assert client.get('/help',follow_redirects=False).headers['location']=='/home'
     assert post(client,'/language',{'locale':'en','next':'/help'},'/help').status_code==303
     assert 'Emby on mobile' in client.get('/access/emby').text
@@ -85,11 +85,11 @@ def test_guide_validation_conflicts_unpublish_and_direct_fallback(client):
 def test_custom_service_guides_in_menus_and_30_step_editor(client):
     setup(client)
     assert post(client,'/admin/guides/service',{'key':'seerr','name':'Seerr','browser_url':'https://requests.example.com'},'/admin/guides').status_code==303
-    response=post(client,'/admin/menu',{'label':'Demandes','url':'','access_service':'seerr','icon':'★','position':'2'},'/admin')
+    response=post(client,'/admin/menu',{'label':'Demandes','url':'','access_service':'seerr','icon':'link','position':'2'},'/admin')
     assert response.status_code==303,response.text
     assert 'href="/access/seerr"' in client.get('/home').text
     assert 'href="https://requests.example.com"' in client.get('/access/seerr').text
-    assert post(client,'/admin/menu',{'label':'Bad','url':'','access_service':'missing','icon':'★','position':'2'},'/admin').status_code==400
+    assert post(client,'/admin/menu',{'label':'Bad','url':'','access_service':'missing','icon':'link','position':'2'},'/admin').status_code==400
     gid=create(client)
     data=guide_data(step_count='30')
     for index in range(30):

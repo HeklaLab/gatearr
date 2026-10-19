@@ -53,6 +53,7 @@ def localized(block,name,locale,db=None):
 def for_display(layout,locale,user=None,db=None):
     layout=deepcopy(layout);regions={key:[] for key in REGIONS}
     for block in sorted(layout['blocks'],key=lambda block:(block['order'],block['id'])):
+        if block['id']=='account' and block['kind']=='account' and block.get('title')=='My account' and block.get('body')=='Manage your details and password.' and any(b['kind']=='services' for b in layout['blocks']):continue
         for field in ('title','body','alt'):
             block[field]=localized(block,field,locale,db).replace('{username}',user.name if user else '')
         regions[block['region']].append(block)

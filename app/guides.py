@@ -15,6 +15,7 @@ router = APIRouter()
 DEVICES = ('mobile', 'tv', 'tablet', 'desktop', 'other')
 
 def service_url(db, service):
+    if service.key=='emby' and service.browser_url:return '/services/emby/open'
     if service.key=='seerr':
         from .seerr_login import enabled,public_url
         if enabled(db):return '/services/seerr/open'

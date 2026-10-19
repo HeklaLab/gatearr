@@ -1,3 +1,16 @@
+# Validation — Gatearr 0.2.0 — 19 October 2026
+
+- **140 automated tests passed** with Python 3.12. One existing Starlette/httpx test-client deprecation warning remains.
+- An isolated full HTTP/SMTP smoke passed: setup, import, cloning, library assignment, account verification/recovery, password changes, translation, menus/How to, footer, Seerr synchronization and group policy readback.
+- New coverage includes upgrade from migration 0012 to 0013 without losing accounts or encrypted connections, removal of retired Tracearr data, setup error repopulation without API-key disclosure, editable themes and enforced preferences, rich-footer sanitization, SVG validation, member-session assistance, notification delivery, tool permissions, one-time tickets, origin validation, HTTP proxy header isolation, WebSockets and immediate revocation.
+- Browser inspection verified grouped administration, dark theme with transparent logo, equal-width palette fields, rich footer controls and the full user page.
+- No local Docker engine is available. GitHub Actions gates publication on the actual Docker build/startup, health checks and HTTP/SMTP smoke, then builds Linux AMD64 and ARM64 images. See the version's workflow for the container result.
+- Native Emby/Jellyfin/Seerr/Radarr/Sonarr/Bazarr instances and a real external reverse proxy were not used in these local checks. Tool proxy routes use mock upstreams, including a WebSocket exchange. Follow the documented dedicated-host and private-upstream prerequisites and validate against your installed versions.
+
+## Historical validation records
+
+The following records describe older versions, including integrations retired in 0.2.0.
+
 # Validation — 19 October 2026
 
 - **127 automated tests passed** locally, including footer publication/validation, default journeys, release version checks and failed-network handling, policy merge/individual overrides/readback/drift, group removal, sensitive permissions, and Seerr handoff identity/origin/expiry/replay protection.

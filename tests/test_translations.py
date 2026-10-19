@@ -12,7 +12,7 @@ def change(client,key,value='',locale='fr',action='save'):
 def test_translations_customize_public_recovery_and_account_labels(client):
     setup(client)
     assert 'Translations' in client.get('/admin').text
-    for key,value in [('ACCOUNT RECOVERY','RETROUVER MON ACCÈS'),('A fresh start.','Un nouvel accès.'),("Enter the verified email address of your Emby account. You will receive a link valid for 30 minutes.",'Saisissez votre adresse pour recevoir le lien.'),('Receive the newsletter','Ma newsletter'),('Receive notifications about my requests','Suivre mes demandes')]:
+    for key,value in [('ACCOUNT RECOVERY','RETROUVER MON ACCÈS'),('A fresh start.','Un nouvel accès.'),("Enter the verified email address of your Emby account. You will receive a link valid for 30 minutes.",'Saisissez votre adresse pour recevoir le lien.'),('Receive notifications about my requests','Suivre mes demandes')]:
         assert change(client,key,value).status_code==303
     assert change(client,'A fresh start.','Recover your access','en').status_code==303
     assert 'Un nouvel accès.' in client.get('/forgot').text
@@ -26,7 +26,6 @@ def test_translations_customize_public_recovery_and_account_labels(client):
     post(client,'/language',{'locale':'en','next':'/forgot'},'/forgot')
     assert 'Recover your access' in client.get('/forgot').text
     with SessionLocal() as db:
-        assert i18n.overrides(db,'fr')['Receive the newsletter']=='Ma newsletter'
         assert i18n.overrides(db,'fr')['Receive notifications about my requests']=='Suivre mes demandes'
 
 

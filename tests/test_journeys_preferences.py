@@ -23,7 +23,7 @@ def test_nested_journey_direct_mode_icons_and_no_help_navigation(client):
     setup(client);gid=create(client)
     assert edit(client,gid,guide_data('publish')).status_code==303
     assert post(client,'/admin/guides/service',{'key':'emby','name':'Emby','browser_url':'https://media.test','entry_mode':'direct','icon_url':'https://cdn.test/emby.png'},'/admin/guides').status_code==303
-    assert 'href="https://media.test"' in client.get('/home').text
+    assert 'href="/services/emby/open"' in client.get('/home').text
     assert 'href="/help"' not in client.get('/home').text
     assert 'https://cdn.test/emby.png' in client.get('/home').text
     for kind,title,parent in [('browser','Browser',''),('group','Computer',''),('group','Mobile','')]:
@@ -34,7 +34,7 @@ def test_nested_journey_direct_mode_icons_and_no_help_navigation(client):
     assert nodes(client,kind='guide',title_fr='Mac',title_en='Mac',parent=desktop,guide_id=gid,position=2,icon_url='https://cdn.test/mac.png').status_code==303
     assert nodes(client,kind='link',title_fr='iPhone',title_en='iPhone',parent=mobile,url='https://apps.apple.com/example',position=2).status_code==303
     # Draft remains private; direct mode is not inferred from a published guide.
-    assert client.get('/access/emby',follow_redirects=False).headers['location']=='https://media.test'
+    assert client.get('/access/emby',follow_redirects=False).headers['location']=='/services/emby/open'
     assert nodes(client,'publish').status_code==303
     home=client.get('/home').text
     assert 'href="/access/emby"' in home
@@ -46,8 +46,8 @@ def test_nested_journey_direct_mode_icons_and_no_help_navigation(client):
     assert client.get('/access/emby/guide/'+str(gid)).status_code==200
     # The admin can switch back to a direct link without losing the saved journey.
     post(client,'/admin/guides/service',{'key':'emby','name':'Emby','browser_url':'https://media.test','entry_mode':'direct'},'/admin/guides')
-    assert 'href="https://media.test"' in client.get('/home').text
-    assert post(client,'/admin/menu',{'label':'Requests','url':'https://requests.test','icon':'★','icon_url':'https://cdn.test/requests.png','position':2},'/admin').status_code==303
+    assert 'href="/services/emby/open"' in client.get('/home').text
+    assert post(client,'/admin/menu',{'label':'Requests','url':'https://requests.test','icon':'link','icon_url':'https://cdn.test/requests.png','position':2},'/admin').status_code==303
     assert 'https://cdn.test/requests.png' in client.get('/account').text
 
 
@@ -101,16 +101,14 @@ def test_api_connection_ui_encryption_current_url_and_key(client,monkeypatch):
 def test_preference_permissions_queue_and_forced_seerr(client):
     prepare_user(client)
     with SessionLocal() as db:
-        configured(db,'tracearr');configured(db,'seerr')
+        configured(db,'seerr')
         main.set_config(db,'seerr_notification_mode','optional');db.commit()
     page=client.get('/account').text
-    assert 'Receive the newsletter' in page and 'Receive notifications about my requests' in page
-    assert post(client,'/account/preferences',{'service':'tracearr','enabled':'on'},'/account').status_code==303
+    assert 'Receive the newsletter' not in page and 'Receive notifications about my requests' in page
     assert post(client,'/account/preferences',{'service':'seerr','enabled':'on'},'/account').status_code==303
     with SessionLocal() as db:
         user=db.scalar(select(User).where(User.emby_id=='user-1'))
-        assert user.newsletter_opt_in and user.newsletter_pending and user.seerr_notifications
-        assert db.get(IntegrationJob,(user.id,'tracearr')).email_digest==integrations.sync_digest(db,user,'tracearr')
+        assert user.seerr_notifications
         main.set_config(db,'seerr_notification_mode','forced');db.commit()
     assert post(client,'/account/preferences',{'service':'seerr'},'/account').status_code==403
     assert 'Your administrator requires these notifications.' in client.get('/account').text
@@ -120,24 +118,6 @@ def test_preference_permissions_queue_and_forced_seerr(client):
     assert post(client,'/account/preferences',{'service':'tracearr'},'/account').status_code==400
 
 
-def test_newsletter_opt_in_opt_out_and_remote_unsubscribe_are_preserved():
-    suppressed={'member@example.com'};writes=[]
-    def handler(req):
-        if req.method=='GET':return httpx.Response(200,json=[{'address':email,'reason':'unsubscribed'} for email in suppressed])
-        writes.append(req.method)
-        if req.method=='DELETE':suppressed.clear();return httpx.Response(204)
-        suppressed.add(json.loads(req.content)['address']);return httpx.Response(201,json={})
-    user=SimpleNamespace(email='member@example.com',newsletter_opt_in=True,newsletter_pending=True)
-    with httpx.Client(base_url='https://tracearr.test/',transport=httpx.MockTransport(handler)) as api:
-        assert integrations.sync_newsletter(api,user)=={'newsletter_opt_in':True,'newsletter_pending':False}
-        assert writes==['DELETE']
-        user.newsletter_opt_in=False
-        result=integrations.sync_newsletter(api,user)
-        assert result['newsletter_opt_in'] is False and writes==['DELETE','POST']
-        # A user opting out in Tracearr must not be silently re-subscribed on a retry.
-        user.newsletter_opt_in=True;user.newsletter_pending=False;writes.clear()
-        assert integrations.sync_newsletter(api,user)['newsletter_opt_in'] is False
-        assert writes==[]
 
 
 def test_seerr_notification_writes_preserve_other_agents_and_pgp(client):
@@ -165,19 +145,6 @@ def test_seerr_notification_writes_preserve_other_agents_and_pgp(client):
             with pytest.raises(integrations.SyncError,match='notifications_disabled'):integrations.sync_seerr_notifications(db,api,user,'/notifications')
 
 
-def test_newsletter_worker_stores_remote_preference_without_marking_stale(client,monkeypatch):
-    prepare_user(client)
-    with SessionLocal() as db:
-        configured(db,'tracearr')
-        user=db.scalar(select(User).where(User.emby_id=='user-1'));uid=user.id
-        user.newsletter_opt_in=True;user.newsletter_pending=False;db.commit()
-        integrations.queue_user(db,user)
-    monkeypatch.setattr(integrations,'sync_tracearr',lambda db,user:{'newsletter_opt_in':False,'newsletter_pending':False})
-    integrations.run_jobs()
-    with SessionLocal() as db:
-        user=db.get(User,uid);job=db.get(IntegrationJob,(uid,'tracearr'))
-        assert user.newsletter_opt_in is False and user.newsletter_pending is False
-        assert job.state=='success' and job.email_digest==integrations.sync_digest(db,user,'tracearr')
 
 
 def test_upgrade_migrates_existing_published_guides_into_explicit_journey(client):

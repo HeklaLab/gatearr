@@ -25,9 +25,8 @@ def theme_css(request: Request):
     if draft:
         require_admin(request)
     layout = portal.load(request.state.db, draft)
-    colors = {key: layout['theme'].get(key, value) for key, value in portal.DEFAULT['theme'].items()}
-    content = ':root{' + ''.join('--'+key+':'+value+';' for key,value in colors.items()) + '}'
-    return Response(content, media_type='text/css')
+    from .themes import css
+    return Response(css(request.state.db,request.state.user,draft),media_type='text/css')
 
 @router.get('/admin/portal')
 def builder(request: Request):
@@ -200,20 +199,6 @@ def integrations_save(request: Request, data=Depends(form)):
         set_config(db, service+'_api_key', encrypt(data['api_key']))
     if data.get('clear_key') == 'on':
         set_config(db, service+'_api_key', '')
-    if service == 'tracearr':
-        server_id = data.get('server_id','').strip()
-        if active:
-            UUID(server_id)
-        set_config(db, 'tracearr_server_id', server_id)
-        owner_email = data.get('owner_email','').strip()
-        set_config(db, 'tracearr_owner_email', email_ok(owner_email) if owner_email else '')
-        if data.get('owner_password'):
-            set_config(db, 'tracearr_owner_password', encrypt(data['owner_password']))
-        if data.get('clear_owner_password') == 'on':
-            set_config(db, 'tracearr_owner_password', '')
-        set_config(db, 'tracearr_internal_api', 'true' if data.get('internal_api') == 'on' else 'false')
-        if active and (data.get('internal_api') != 'on' or not owner_email or not config(db, 'tracearr_owner_password')):
-            raise ValueError('Tracearr requires an owner account and its internal API.')
     if active and not config(db, service+'_api_key'):
         raise ValueError('API key required')
     if service == 'seerr':
@@ -275,8 +260,13 @@ def user_role(request:Request,local_id:int,data=Depends(form)):
     if not target or not target.emby_id:raise HTTPException(404,'Media account required')
     grant=data.get('admin')=='on'
     if grant and (not target.active or target.emby_missing):raise HTTPException(400,'An active media account is required')
-    if target.admin==grant:return redirect('/admin/users/'+str(local_id))
-    if not grant:
+    import json
+    tools=sorted(set(data.getlist('tools')))
+    if any(t not in ('radarr','sonarr','bazarr') or config(db,t+'_enabled')!='true' for t in tools):raise ValueError('Invalid tool access')
+    changed_tools=json.loads(target.tool_access)!=tools
+    if target.admin==grant and not changed_tools:return redirect('/admin/users/'+str(local_id))
+    target.tool_access=json.dumps(tools)
+    if not grant and target.admin:
         count=db.scalar(select(func.count(User.id)).where(User.admin.is_(True),User.active.is_(True),User.emby_missing.is_(False),User.emby_id.is_not(None)))
         if target.active and not target.emby_missing and count<=1:
             raise HTTPException(409,'The last active administrator cannot be removed')

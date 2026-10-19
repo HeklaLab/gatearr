@@ -9,7 +9,7 @@ from .rich_mail import clean,validate,interpolate,plain,document
 from . import i18n
 
 router=APIRouter()
-PURPOSES={'invite':'Invitation','verify':'Address verification','reset':'Password recovery'}
+PURPOSES={'invite':'Invitation','verify':'Address verification','reset':'Password recovery','email_changed':'Email changed notification','password_changed':'Password changed notification'}
 
 def language(request,value,all=False):
     if value not in i18n.languages(request.state.db,all=all):raise ValueError('Invalid language')

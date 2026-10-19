@@ -56,10 +56,32 @@ def prepare(environ=None):
     return environ
 
 
+def check_storage(environ=None):
+    environ=os.environ if environ is None else environ
+    import tempfile
+    path=Path(environ.get('GATEARR_SECRETS_FILE','/data/bootstrap.json'))
+    database=Path(environ.get('DATABASE_URL','sqlite:////data/gatearr.db').removeprefix('sqlite:///'))
+    for directory in {path.parent,database.parent}:
+        directory.mkdir(parents=True,exist_ok=True)
+        with tempfile.TemporaryFile(dir=directory) as probe:probe.write(b'Gatearr storage check')
+    for file in (path,database):
+        if file.exists():
+            with file.open('r+b'):pass
+
+
 def main():
-    argparse.ArgumentParser(description='Start Gatearr and migrate its database').parse_args()
-    prepare()
-    subprocess.run([sys.executable,'-m','alembic','upgrade','head'],check=True)
+    parser=argparse.ArgumentParser(description='Start Gatearr and migrate its database')
+    parser.add_argument('--check',action='store_true',help='Check storage access without changing secrets or database')
+    args=parser.parse_args()
+    try:
+        check_storage()
+        if args.check:
+            print('Gatearr storage check passed. UID='+str(os.getuid())+' GID='+str(os.getgid()));return
+        prepare()
+        subprocess.run([sys.executable,'-m','alembic','upgrade','head'],check=True)
+    except PermissionError:
+        print('Gatearr cannot read/write its data directory. UID='+str(os.getuid())+' GID='+str(os.getgid())+'. For a bind mount, create the host directory and assign it to this UID/GID before starting. Keep bootstrap.json and the database; do not use chmod 777. See README: installation prerequisites.',file=sys.stderr)
+        raise SystemExit(78)
     os.execvp('uvicorn',['uvicorn','app.main:app','--host','0.0.0.0','--port','8000','--workers','1','--no-access-log','--proxy-headers','--forwarded-allow-ips',os.getenv('TRUSTED_PROXY_IPS','127.0.0.1')])
 
 if __name__=='__main__':main()

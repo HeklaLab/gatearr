@@ -13,8 +13,8 @@ from .mailer import config
 from .security import decrypt, digest
 
 log = logging.getLogger("gatearr.integrations")
-SERVICES = ("seerr", "tracearr")
-SECRET_CONFIG = {"smtp_password", "seerr_api_key", "tracearr_api_key", "tracearr_owner_password", "emby_api_key", "emby_url"}
+SERVICES = ("seerr",)
+SECRET_CONFIG = {"smtp_password", "seerr_api_key", "emby_api_key", "emby_url"}
 
 def enabled(db, service):
     return config(db, service + "_enabled") == "true"
@@ -65,76 +65,10 @@ def sync_seerr(db, user):
             raise SyncError('verification_failed')
         sync_seerr_notifications(db,client,user,"api/v1/user/"+str(user_id)+"/settings/notifications")
 
-def tracearr_account(db, client, user):
-    server_id = config(db, "tracearr_server_id")
-    key = decrypt(config(db, "tracearr_api_key"))
-    if not server_id or not key:
-        raise SyncError('configuration')
-    cursor, visited, matches = None, set(), set()
-    for _ in range(1000):
-        params = {"pageSize": 100}
-        if cursor:
-            params["cursor"] = cursor
-        page = request(client, "GET", "api/v2/public/users", headers={"Authorization": "Bearer " + key}, params=params)
-        if not isinstance(page.get("data"), list):
-            raise SyncError('unsupported_api')
-        for identity in page["data"]:
-            for account in identity.get("accounts", []):
-                if (account.get("server_id") == server_id and account.get("server_type") == media_kind(db) and not account.get("removed_at") and normalized_id(account.get("external_user_id", "")) == normalized_id(user.emby_id)):
-                    matches.add(account.get("server_user_id"))
-        cursor = page.get("meta", {}).get("nextCursor")
-        if not cursor:
-            break
-        if cursor in visited:
-            raise SyncError('invalid_pagination')
-        visited.add(cursor)
-    else:
-        raise SyncError('invalid_pagination')
-    if len(matches) != 1 or None in matches:
-        raise SyncError('not_found' if not matches else 'ambiguous')
-    return matches.pop()
-
-def tracearr_login(db, client):
-    email = config(db, "tracearr_owner_email")
-    password = decrypt(config(db, "tracearr_owner_password"))
-    if not email or not password:
-        raise SyncError('configuration')
-    # The public API is read-only for this operation. The owner-only dashboard API is explicit opt-in.
-    request(client, "POST", "api/v1/auth/sign-in/email", json={"email": email, "password": password, "rememberMe": False})
-    if not client.cookies:
-        raise SyncError('authentication')
-
-def sync_tracearr(db, user):
-    base = config(db, "tracearr_url")
-    if not base or config(db, "tracearr_internal_api") != "true":
-        raise SyncError('configuration')
-    parsed = urlsplit(base)
-    origin = parsed.scheme + "://" + parsed.netloc
-    with httpx.Client(base_url=base+"/", headers={"Origin": origin}, timeout=15, follow_redirects=False, trust_env=False) as client:
-        account_id = tracearr_account(db, client, user)
-        tracearr_login(db, client)
-        try:
-            path = "api/v1/users/" + quote(account_id, safe="")
-            remote = request(client, "GET", path + "/full")
-            account = remote.get("user", {})
-            if (account.get("serverId") != config(db, "tracearr_server_id") or normalized_id(account.get("externalId", "")) != normalized_id(user.emby_id)):
-                raise SyncError('identity_mismatch')
-            # contactEmail is for notifications/newsletters. Never rewrite the owner's login email or name.
-            request(client, "PATCH", path + "/identity", json={"contactEmail": user.email})
-            verified = request(client, "GET", path + "/full")
-            if verified.get("identity", {}).get("contactEmail", "").lower() != user.email.lower():
-                raise SyncError('verification_failed')
-            return sync_newsletter(client,user)
-        finally:
-            try:
-                request(client, "POST", "api/v1/auth/sign-out", json={})
-            except SyncError:
-                pass
-
 def sync_digest(db,user,service):
     mode=config(db,'seerr_notification_mode','unmanaged')
-    preference=user.newsletter_opt_in if service=='tracearr' else (True if mode=='forced' else user.seerr_notifications if mode=='optional' else None)
-    return digest(json.dumps([user.email,user.locale,preference,user.preferences_version,mode if service=='seerr' else 'newsletter']))
+    preference=True if mode=='forced' else user.seerr_notifications if mode=='optional' else None
+    return digest(json.dumps([user.email,user.locale,preference,user.preferences_version,mode]))
 
 
 def sync_seerr_notifications(db,client,user,path):
@@ -152,24 +86,6 @@ def sync_seerr_notifications(db,client,user,path):
     if verified.get('notificationTypes',{}).get('email') != body['notificationTypes']['email']:
         raise SyncError('verification_failed')
 
-
-def sync_newsletter(client,user):
-    if user.newsletter_opt_in is None:return None
-    path='api/v1/email/suppressions'
-    def state():
-        rows=request(client,'GET',path)
-        if not isinstance(rows,list):raise SyncError('unsupported_api')
-        return any(str(row.get('address','')).lower()==user.email.lower() for row in rows)
-    suppressed=state()
-    if user.newsletter_pending:
-        if user.newsletter_opt_in and suppressed:
-            request(client,'DELETE',path+'/'+quote(user.email,safe=''))
-        elif not user.newsletter_opt_in and not suppressed:
-            request(client,'POST',path,json={'address':user.email})
-        suppressed=state()
-        if (not suppressed)!=user.newsletter_opt_in:raise SyncError('verification_failed')
-    # A remote unsubscribe wins unless the member explicitly requested a new change.
-    return {'newsletter_opt_in':not suppressed,'newsletter_pending':False}
 
 def queue_user(db, user, force=False):
     if not user.emby_id or not user.email or not user.active:
@@ -209,7 +125,7 @@ def run_jobs():
                 continue
             preference_version=user.preferences_version
             try:
-                changes=(sync_seerr if job.service == "seerr" else sync_tracearr)(db, user)
+                changes=sync_seerr(db, user)
                 if isinstance(changes,dict):
                     result=db.execute(update(User).where(User.id==user.id,User.preferences_version==preference_version).values(**changes))
                     if result.rowcount != 1:

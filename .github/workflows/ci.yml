@@ -54,6 +54,9 @@ jobs:
           test "${#EXPECTED_TAG_SHA}" = '40'
           current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v0.1.0" --jq '.object.sha')
           test "$current" = "$EXPECTED_TAG_SHA"
+      - name: Verify stable tag matches the application version
+        if: github.ref_type == 'tag' && !contains(github.ref_name, '-')
+        run: test "$GITHUB_REF_NAME" = "v$(python -c 'from app.release import VERSION; print(VERSION)')"
       - name: Lowercase image name
         id: image
         env:
@@ -130,3 +133,35 @@ jobs:
           PYCODE
           gh release upload v0.1.0 gatearr.zip gatearr-docker.zip SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
           gh release edit v0.1.0 --title 'Gatearr 0.1.0 — First public release' --notes-file RELEASE_NOTES.md --repo "$GITHUB_REPOSITORY"
+
+  release_assets:
+    needs: [verify, publish]
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Attach versioned release packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(python -c 'from app.release import VERSION; print(VERSION)')
+          test "$GITHUB_REF_NAME" = "v$version"
+          git archive --format=zip --prefix=gatearr/ --output=gatearr.zip HEAD
+          python - <<'PYCODE'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import hashlib
+          with ZipFile('gatearr-docker.zip','w',ZIP_DEFLATED) as archive:
+              for name in ('compose.yaml','.env.example','.env.windows.example','UPGRADING.md','README.md'):
+                  archive.write(name,'gatearr/'+name)
+          Path('SHA256SUMS.txt').write_text(''.join(hashlib.sha256(Path(name).read_bytes()).hexdigest()+'  '+name+'\n' for name in ('gatearr.zip','gatearr-docker.zip')))
+          PYCODE
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "Gatearr $version" --notes-file RELEASE_NOTES.md --repo "$GITHUB_REPOSITORY"
+          fi
+          gh release upload "$GITHUB_REF_NAME" gatearr.zip gatearr-docker.zip SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"

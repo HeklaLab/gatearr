@@ -32,7 +32,7 @@ def test_first_run_requires_verified_media_and_optional_steps_can_be_skipped(cli
         assert decrypt(db.get(Config,'emby_api_key').value)=='key'
         assert db.scalar(select(User).where(User.emby_id=='user-1')).admin is False
         assert db.scalar(select(User).where(User.emby_id=='admin-1')).admin is True
-    for step in ('seerr','tracearr','smtp'):
+    for step in ('seerr','tools','smtp'):
         assert post(client,'/admin/setup/'+step,{'action':'skip'},'/admin/setup/'+step).status_code==303
     assert post(client,'/admin/setup/finish',{},'/admin/setup/finish').status_code==303
     assert 'My Gate' in client.get('/admin').text

@@ -51,3 +51,13 @@ Keep the old container and `backup-data` until the new installation is verified.
 Back up `/data`, keep the same volume/secret, then pull and recreate the container even if the displayed version is already 0.1.0. The initial tag/image was replaced once at the owner's request; future releases use a new version. The Updates page also displays the build reference to distinguish these builds.
 
 Migrations `0011` and `0012` add device journey defaults, group policy/synchronization state and temporary Seerr handoff tables. Existing guides or custom journeys are not replaced. Only the untouched former default palette is changed to the blue/cyan palette; customized themes remain. The footer starts with the existing signature until explicitly edited/published. Automatic Seerr login is disabled by default and needs the existing-proxy route described in README.md.
+
+## 0.2.0
+
+Keep your existing data volume/bind mount, encryption key and stored public URL. Back up the whole data directory before pulling/recreating the service. Run the storage preflight described in README if switching to a Linux bind mount.
+
+Migration `0013` adds audit events, theme/tool preferences, assistance and tool-session records. It removes retired Tracearr connection settings, synchronization/check records and newsletter columns. A downgrade does not recover deleted integration settings; restoring them requires your pre-upgrade backup. Emby/Jellyfin and Seerr configuration, account mappings, emails, groups and custom portal content are preserved.
+
+Admin navigation is grouped into Branding, Users and Services/How to. Existing URLs remain usable. Existing footer items still render centered until a new column layout is published. Existing custom palettes are retained. New admin tools and individual tool grants are disabled/empty by default; setup completion is not reset.
+
+Optional tool embedding needs separate public hostnames routed through the existing reverse proxy and private upstream authentication configured as documented. No new Caddy container is installed. Re-sign into Gatearr to create the temporary user sessions used by automatic media links and assistance.

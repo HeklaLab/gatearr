@@ -19,6 +19,8 @@ def sources(db):
     from . import footer
     for draft in (False,True):
         for item in footer.load(db,draft)['items']:add('footer:'+item['id']+':text',item['text'],'Footer · '+('draft' if draft else 'published'),maximum=2000)
+    for draft in (False,True):
+        for index,column in enumerate(footer.load(db,draft).get('columns',[])):add('footer:column:'+str(index),column,'Footer column '+str(index+1),'footer_html',10000)
     for item in db.scalars(select(MenuItem)):add('menu:'+str(item.id)+':label',item.label,'Menu '+item.menu_key,maximum=100)
     for service in db.scalars(select(AccessService)):
         add('service:'+service.key+':name',service.name,'Service '+service.key,maximum=100)
@@ -35,7 +37,7 @@ def sources(db):
     from .permissions import label
     for policy in db.scalars(select(PolicyState)):
         for key in json.loads(policy.observed):add('policy-label:'+key,label(key),'Media-server permissions',maximum=200)
-    for purpose in ('invite','verify','reset'):
+    for purpose in ('invite','verify','reset','email_changed','password_changed'):
         for part in ('subject','body','html'):
             source=html_source(db,purpose) if part=='html' else config(db,purpose+'_'+part,DEFAULTS[purpose+'_'+part])
             add('mail:'+purpose+':'+part,source,'Email · '+purpose,'html' if part=='html' else 'subject' if part=='subject' else 'mail',50000 if part=='html' else 300 if part=='subject' else 10000)

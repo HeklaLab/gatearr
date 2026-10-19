@@ -34,7 +34,7 @@ def probe(service,values):
 
 def checks(db,refresh=False):
     current=int(time.time());pending={};result={}
-    for service in ('emby','seerr','tracearr'):
+    for service in ('emby','seerr'):
         row=db.get(ConnectionCheck,service)
         if not configured(db,service):
             result[service]={'state':'unconfigured','detail':'Connection not configured','checked_at':None};continue

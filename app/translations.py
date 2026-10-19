@@ -100,7 +100,10 @@ def save(request:Request,data=Depends(form)):
         entry=next((item for item in sources(db) if item['key']==key and i18n.source_hash(item['source'])==data.get('source_hash')),None)
         if not entry or (key.startswith('mail:'))!=(scope=='email'):raise HTTPException(409,'The source text has changed. Reload the translation page.')
         if len(raw)>entry['maximum']:raise ValueError('Translation is too long')
-        if entry['kind'] in ('html','subject','mail'):value=rich_mail.validate(raw,html=entry['kind']=='html',subject=entry['kind']=='subject') if raw else ''
+        if entry['kind']=='footer_html':
+            from .footer import clean_html
+            value=clean_html(raw)
+        elif entry['kind'] in ('html','subject','mail'):value=rich_mail.validate(raw,html=entry['kind']=='html',subject=entry['kind']=='subject') if raw else ''
         else:value=validated_value(key,locale,raw,entry['source'])
         i18n.store_content(db,key,entry['source'],locale,value)
     else:raise ValueError('Invalid translation section')

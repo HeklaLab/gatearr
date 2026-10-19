@@ -7,6 +7,11 @@ from .security import decrypt
 from .rich_mail import interpolate,plain,document
 
 DEFAULTS = {'invite_subject': '${app_name} — welcome!', 'invite_body': 'Hello ${username},\n\nWelcome to ${app_name}. Confirm your email to access your account:\n${link}\n\nThis link expires in ${minutes} minutes.\n\n${app_name}', 'reset_subject': '${app_name} — reset your password', 'reset_body': 'Hello ${username},\n\nChoose a new password:\n${link}\n\nThis link expires in ${minutes} minutes. If you did not request it, ignore this message.\n\n${app_name}', 'verify_subject': '${app_name} — verify your email address', 'verify_body': 'Hello ${username},\n\nConfirm your email address:\n${link}\n\nThis link expires in ${minutes} minutes.\n\n${app_name}'}
+DEFAULTS.update({
+    'email_changed_subject':'${app_name} — email address changed',
+    'email_changed_body':'Hello ${username},\n\nAn administrator changed the email address on your account. If you did not expect this change, contact your administrator.\n${link}',
+    'password_changed_subject':'${app_name} — password changed',
+    'password_changed_body':'Hello ${username},\n\nAn administrator changed your account password. If you did not expect this change, contact your administrator.\n${link}'})
 DEFAULTS_BY_LOCALE = {"en": DEFAULTS}
 
 def config(db, key, default=""):

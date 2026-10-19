@@ -12,10 +12,10 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(320), unique=True)
     admin: Mapped[bool] = mapped_column(Boolean, default=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    theme_preference: Mapped[str] = mapped_column(String(10), default="auto", server_default="auto")
+    tool_access: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
     password_hash: Mapped[str | None] = mapped_column(Text)
     version: Mapped[int] = mapped_column(Integer, default=0)
-    newsletter_opt_in: Mapped[bool | None] = mapped_column(Boolean)
-    newsletter_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     seerr_notifications: Mapped[bool | None] = mapped_column(Boolean)
     preferences_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     emby_missing: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
@@ -123,6 +123,7 @@ class IconAsset(Base):
     __tablename__='icon_assets'
     digest: Mapped[str] = mapped_column(String(64),primary_key=True)
     content: Mapped[bytes] = mapped_column(LargeBinary)
+    mime: Mapped[str] = mapped_column(String(40),default='image/png',server_default='image/png')
 
 class ConnectionCheck(Base):
     __tablename__='connection_checks'
@@ -165,6 +166,41 @@ class SeerrSession(Base):
 
 class SeerrTicket(Base):
     __tablename__='seerr_tickets'
+    actor_digest: Mapped[str | None] = mapped_column(String(64))
     digest: Mapped[str] = mapped_column(String(64),primary_key=True)
     session_digest: Mapped[str] = mapped_column(ForeignKey('seerr_sessions.session_digest',ondelete='CASCADE'))
     expires: Mapped[int] = mapped_column(Integer)
+
+class AuditEvent(Base):
+    __tablename__='audit_events'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    at: Mapped[int] = mapped_column(Integer,index=True)
+    actor_id: Mapped[int | None] = mapped_column(Integer)
+    subject_id: Mapped[int | None] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(String(200))
+    outcome: Mapped[int] = mapped_column(Integer)
+    detail: Mapped[str] = mapped_column(Text,default='')
+
+class MediaSession(Base):
+    __tablename__='media_sessions'
+    session_digest: Mapped[str] = mapped_column(ForeignKey('sessions.digest',ondelete='CASCADE'),primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'))
+    payload: Mapped[str] = mapped_column(Text)
+    expires: Mapped[int] = mapped_column(Integer)
+
+class SupportSession(Base):
+    __tablename__='support_sessions'
+    session_digest: Mapped[str] = mapped_column(ForeignKey('sessions.digest',ondelete='CASCADE'),primary_key=True)
+    source_digest: Mapped[str] = mapped_column(ForeignKey('sessions.digest',ondelete='CASCADE'))
+    target_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'))
+    target_version: Mapped[int] = mapped_column(Integer)
+    expires: Mapped[int] = mapped_column(Integer)
+
+class ToolGrant(Base):
+    __tablename__='tool_grants'
+    digest: Mapped[str] = mapped_column(String(64),primary_key=True)
+    session_digest: Mapped[str] = mapped_column(ForeignKey('sessions.digest',ondelete='CASCADE'))
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'))
+    tool: Mapped[str] = mapped_column(String(20))
+    expires: Mapped[int] = mapped_column(Integer)
+    redeemed: Mapped[bool] = mapped_column(Boolean,default=False)

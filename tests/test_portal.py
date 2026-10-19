@@ -33,7 +33,7 @@ def setup(client,empty_journeys=False):
                 db.query(Guide).delete()
                 service=db.get(AccessService,'emby');service.access_draft=service.access_published=None;service.access_version=0;service.entry_mode='direct'
             db.commit()
-        for step in ('seerr','tracearr','smtp'):
+        for step in ('seerr','tools','smtp'):
             assert post(client,'/admin/setup/'+step,{'action':'skip'},'/admin/setup/'+step).status_code==303
         assert post(client,'/admin/setup/finish',{},'/admin/setup/finish').status_code==303
     return response
@@ -203,8 +203,8 @@ def test_branding_menu_smtp_encryption_and_template_validation(client):
     setup(client)
     response = post(client, '/admin/settings', {'app_name': 'Usarr', 'login_text': '<script>alert(1)</script>', 'logo_url': 'https://example.com/logo.png', 'public_url': 'http://testserver', 'emby_link': 'https://emby.example.com'}, '/admin')
     assert response.status_code == 303
-    assert post(client, '/admin/menu', {'label': 'Seerr', 'url': 'javascript:alert(1)', 'icon': '★', 'position': '1'}, '/admin').status_code == 400
-    assert post(client, '/admin/menu', {'label': 'Seerr', 'url': 'https://requests.example.com', 'icon': '★', 'position': '1', 'new_tab': 'on'}, '/admin').status_code == 303
+    assert post(client, '/admin/menu', {'label': 'Seerr', 'url': 'javascript:alert(1)', 'icon': 'link', 'position': '1'}, '/admin').status_code == 400
+    assert post(client, '/admin/menu', {'label': 'Seerr', 'url': 'https://requests.example.com', 'icon': 'link', 'position': '1', 'new_tab': 'on'}, '/admin').status_code == 303
     assert post(client, '/admin/smtp', {'smtp_host': 'smtp.example.com', 'smtp_port': '587', 'smtp_mode': 'starttls', 'smtp_username': 'smtp-user', 'smtp_password': 'smtp-secret', 'smtp_from': 'portal@example.com'}, '/admin').status_code == 303
     assert 'smtp-secret' not in client.get('/admin').text
     with SessionLocal() as db:
@@ -243,7 +243,7 @@ def test_linked_admin_uses_normal_email_recovery(client):
 def test_health_and_migration_schema(client):
     assert client.get('/healthz').json() == {'status': 'ok'}
     with SessionLocal() as db:
-        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0012'
+        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0013'
 
 
 def test_form_limits_and_null_origin(client):

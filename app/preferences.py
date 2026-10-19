@@ -13,10 +13,7 @@ def preferences(request: Request,data=Depends(form)):
     db=request.state.db
     limit(request,'preferences',str(user.id),maximum=20)
     service=data.get('service')
-    if service=='tracearr' and enabled(db,'tracearr'):
-        user.newsletter_opt_in=data.get('enabled')=='on'
-        user.newsletter_pending=True
-    elif service=='seerr' and enabled(db,'seerr') and config(db,'seerr_notification_mode','unmanaged')=='optional':
+    if service=='seerr' and enabled(db,'seerr') and config(db,'seerr_notification_mode','unmanaged')=='optional':
         user.seerr_notifications=data.get('enabled')=='on'
     else:raise HTTPException(403,'This preference is managed by the administrator')
     user.preferences_version+=1

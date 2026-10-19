@@ -1,5 +1,21 @@
 [
   {
+    "version": "0.2.0",
+    "date": "2026-10-19",
+    "changes": [
+      "Reorganized administration: Branding, Users/groups, Services/How to and Activity log.",
+      "Tracearr integration removed; stored connection secrets and queued synchronization jobs are deleted on upgrade.",
+      "Audited administrator assistance using live member sessions, with expiry and a visible return button.",
+      "Admin tools: optional, individually authorized Radarr, Sonarr and Bazarr reverse-proxy interfaces.",
+      "Direct email/password management with encrypted notification outbox and verification/reset links.",
+      "Editable light/dark palettes, gradients and forced, automatic or user-selected appearance.",
+      "Centered rich footer with one, two or three columns and PNG/SVG uploads.",
+      "Simplified service creation, How to choices and local Font Awesome icons.",
+      "Preserved setup form fields on connection failures, consistent controls and equal color columns.",
+      "Storage preflight diagnostics and documented installation prerequisites."
+    ]
+  },
+  {
     "version": "0.1.0",
     "date": "2026-10-19",
     "changes": [

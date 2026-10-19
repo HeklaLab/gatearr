@@ -19,7 +19,7 @@ def test_languages_public_account_and_errors(client):
     setup(client)
     assert post(client,'/language',{'locale':'en','next':'/admin'},'/admin').status_code == 303
     page=client.get('/admin').text
-    assert 'Portal builder' in page and 'Emails' in page
+    assert 'Branding' in page and 'Emails' in page
     page=client.get('/admin/emails').text
     assert 'SMTP server' in page and 'Email templates' in page
     assert 'No TLS (test network)' in page
@@ -78,7 +78,7 @@ def test_builder_draft_publish_preview_escape_and_menu_positions(client):
     published=client.get('/home').text
     assert 'Mon portail unique' in published and 'nav-right' in published and 'sidebar-right' in published
     assert '#123456' in client.get('/theme.css').text
-    assert post(client,'/admin/menu',{'label':'Tracearr','url':'https://tracearr.example.com','icon':'◈','position':'1','menu_key':'side'},'/admin').status_code==303
+    assert post(client,'/admin/menu',{'label':'Tracearr','url':'https://tracearr.example.com','icon':'link','position':'1','menu_key':'side'},'/admin').status_code==303
     assert builder_post(client,'/admin/portal/block',{'kind':'menu','region':'sidebar','order':'1','span':'12','menu_key':'side'}).status_code==303
     assert builder_post(client,'/admin/portal/publish',{}).status_code==303
     assert 'Tracearr' in client.get('/home').text
@@ -185,34 +185,6 @@ def test_seerr_exact_mapping_and_preserved_preferences(client,monkeypatch):
     assert captured[0]['locale']=='fr' and 'globalMovieQuotaLimit' not in captured[0]
 
 
-def test_tracearr_public_lookup_owner_write_and_contact_not_login(client,monkeypatch):
-    prepare_user(client);captured=[];remote_email='old@example.com'
-    server_id='11111111-1111-4111-8111-111111111111'
-    def handler(req):
-        nonlocal remote_email
-        captured.append((req.method,req.url.path))
-        if req.url.path=='/api/v2/public/users':
-            assert req.headers['authorization']=='Bearer remote-secret'
-            return httpx.Response(200,json={'data':[{'accounts':[{'server_id':server_id,'server_type':'emby','external_user_id':'user-1','server_user_id':'account-id','removed_at':None}]}],'meta':{'nextCursor':None}})
-        assert 'authorization' not in req.headers
-        if req.url.path.endswith('/sign-in/email'):
-            assert json.loads(req.content)=={'email':'owner@example.com','password':'owner-secret','rememberMe':False}
-            return httpx.Response(200,json={'user':{'role':'owner'}},headers={'set-cookie':'better-auth.session_token=session; Path=/; HttpOnly'})
-        assert 'better-auth.session_token=session' in req.headers.get('cookie','')
-        if req.method=='PATCH':
-            body=json.loads(req.content);assert body=={'contactEmail':'demo@example.com'};remote_email=body['contactEmail']
-            return httpx.Response(200,json={'success':True})
-        if req.url.path.endswith('/sign-out'):return httpx.Response(200,json={'success':True})
-        return httpx.Response(200,json={'user':{'serverId':server_id,'externalId':'user-1'},'identity':{'contactEmail':remote_email}})
-    real=httpx.Client
-    monkeypatch.setattr(integrations.httpx,'Client',lambda **kwargs:real(transport=httpx.MockTransport(handler),**kwargs))
-    with SessionLocal() as db:
-        configured(db,'tracearr')
-        for k,v in {'tracearr_server_id':server_id,'tracearr_internal_api':'true','tracearr_owner_email':'owner@example.com','tracearr_owner_password':encrypt('owner-secret')}.items():main.set_config(db,k,v)
-        db.commit()
-        integrations.sync_tracearr(db,db.scalar(select(User).where(User.emby_id=='user-1')))
-    assert ('PATCH','/api/v1/users/account-id/identity') in captured
-    assert captured[-1][1].endswith('/sign-out')
 
 
 def test_queue_verified_only_failure_retry_and_secret_redaction(client,monkeypatch):
@@ -278,7 +250,7 @@ def test_migration_preserves_existing_accounts_settings_and_menu(client):
     from alembic import command
     from alembic.config import Config as AlembicConfig
     setup(client)
-    post(client,'/admin/menu',{'label':'Service','url':'https://example.com','position':'1','icon':'★'},'/admin')
+    post(client,'/admin/menu',{'label':'Service','url':'https://example.com','position':'1','icon':'link'},'/admin')
     with SessionLocal() as db:
         main.set_config(db,'smtp_password',encrypt('preserved-secret'))
         db.commit()
@@ -295,7 +267,7 @@ def test_migration_preserves_existing_accounts_settings_and_menu(client):
 
 def test_bilingual_menu_labels_keep_structural_css(client):
     setup(client)
-    post(client,'/admin/menu',{'label':'Demandes','label_en':'Requests','url':'https://example.com','position':'1','icon':'★'},'/admin')
+    post(client,'/admin/menu',{'label':'Demandes','label_en':'Requests','url':'https://example.com','position':'1','icon':'link'},'/admin')
     post(client,'/language',{'locale':'en','next':'/home'},'/home')
     page=client.get('/home').text
     assert 'Requests' in page and 'Demandes' not in page

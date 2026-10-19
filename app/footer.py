@@ -13,8 +13,22 @@ from .main import form, require_admin, render, redirect
 router = APIRouter()
 DEFAULT = {'alignment':'left','enabled':True,'items':[{'id':'signature','kind':'text','text':'{app_name} · Your services, one place.','url':'','icon_url':'','position':10,'new_tab':False}]}
 
+def clean_html(value):
+    from .rich_mail import clean
+    # Public uploaded assets are the only relative URLs accepted.
+    from . import rich_mail
+    import nh3
+    def attr(tag,name,value):
+        if name in ('src','href') and re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(png|svg)',value):return value
+        return rich_mail.attribute(tag,name,value)
+    if len(value)>10000:raise ValueError('Footer column too long')
+    return nh3.clean(value,tags=rich_mail.TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attr,url_schemes={'https','http'},url_relative=lambda value:value if re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(png|svg)',value) else None,filter_style_properties={'color','text-align','font-weight','font-style','text-decoration'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
+
 def validate(value):
     if value.get('alignment') not in ('left','center','right') or type(value.get('enabled')) is not bool: raise ValueError('Invalid footer')
+    if 'columns' in value:
+        if not isinstance(value['columns'],list) or not 1<=len(value['columns'])<=3:raise ValueError('Choose one, two or three footer columns')
+        value['columns']=[clean_html(column) for column in value['columns']]
     items=value.get('items')
     if not isinstance(items,list) or len(items)>30: raise ValueError('A footer supports up to 30 items')
     identifiers=set()
@@ -26,7 +40,7 @@ def validate(value):
         url_ok(item.get('url',''),optional=item['kind']!='link')
         image=item.get('icon_url','')
         if item['kind']=='logo' and not image: raise ValueError('Choose a logo')
-        if image and not re.fullmatch(r'/media/icons/[a-f0-9]{64}\.png',image): url_ok(image)
+        if image and not re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(?:png|svg)',image): url_ok(image)
     return value
 
 def load(db,draft=False):
@@ -53,6 +67,7 @@ def display(db,value,locale,app_name):
         if item['id']=='signature' and source==DEFAULT['items'][0]['text'] and text==source:
             text=i18n.translate(source,locale,overrides=i18n.overrides(db,locale),base_overrides=i18n.overrides(db,'en'),app_name=app_name)
         item['text']=text.replace('{app_name}',app_name)
+    if 'columns' in value:value['columns']=[clean_html(i18n.content(db,'footer:column:'+str(index),column,locale)) for index,column in enumerate(value['columns'])]
     value['items'].sort(key=lambda item:(item['position'],item['id']))
     return value
 
@@ -72,6 +87,16 @@ def edit(request: Request,data=Depends(form)):
     db=request.state.db;value=load(db,True);action=data.get('action','save');expected=int(data.get('version','-1'))
     if action=='publish':save(db,value,expected,True)
     elif action=='reset':save(db,load(db),expected)
+    elif action=='columns':
+        count=int(data.get('count','1'))
+        if count not in (1,2,3):raise ValueError('Choose one, two or three footer columns')
+        columns=[clean_html(str(data.get('column_'+str(index),''))) for index in range(3)]
+        # Switching to fewer columns never discards content silently.
+        if any(column.strip() for column in columns[count:]):raise ValueError('Move content out of hidden columns before reducing their number')
+        value.update(columns=columns[:count],alignment='center');save(db,value,expected)
+    elif action=='upload':
+        icon_value(db,data)
+        db.commit()
     elif action=='settings':
         value.update(alignment=str(data.get('alignment','left')),enabled=data.get('enabled')=='on');save(db,value,expected)
     elif action=='delete':

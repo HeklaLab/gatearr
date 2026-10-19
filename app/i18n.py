@@ -36,7 +36,7 @@ def resolve(request,user=None):
     if candidates:return sorted(candidates,key=lambda item:item[0],reverse=True)[0][1]
     return BASE_LANGUAGE
 
-ACCOUNT_LABEL_KEYS={'newsletter':'Receive the newsletter','requests':'Receive notifications about my requests'}
+ACCOUNT_LABEL_KEYS={'requests':'Receive notifications about my requests'}
 ACCOUNT_LABEL_DEFAULTS={'en':ACCOUNT_LABEL_KEYS}
 
 def translation_key(locale,message):return 'ui_translation_'+locale+'_'+source_hash(canonical(message))

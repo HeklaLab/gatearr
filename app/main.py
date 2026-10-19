@@ -30,6 +30,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("gatearr")
 logging.getLogger("httpx").setLevel(logging.WARNING)
 templates = Jinja2Templates(directory="app/templates")
+templates.env.filters["fromjson"] = json.loads
+templates.env.filters["datetime"] = lambda value: time.strftime("%Y-%m-%d %H:%M:%S UTC",time.gmtime(value))
 
 def now():
     return int(time.time())
@@ -102,6 +104,9 @@ def deliver_mail():
         for job in jobs:
             try:
                 payload = json.loads(decrypt(job.payload))
+                if payload.get('notification'):
+                    if job.expires>now():send(db,payload['recipient'],payload['purpose'],payload['values'])
+                    db.delete(job);db.commit();continue
                 token = db.get(Token, digest(payload["token"]))
                 owner = db.get(User, token.user_id) if token else None
                 if job.expires <= now() or not token or token.used or not owner or not owner.active or token.version != owner.version:
@@ -171,10 +176,15 @@ def cookie(response, value, secure=None):
 
 @app.middleware("http")
 async def context(request: Request, call_next):
+    from .tools_proxy import target_for_host,handle
+    with SessionLocal() as proxy_db:proxy_target=target_for_host(proxy_db,request)
+    if proxy_target:
+        try:return await handle(request,proxy_target)
+        except HTTPException as exc:return Response(str(exc.detail),status_code=exc.status_code)
     # Ignore arbitrary Host / forwarded headers for links: the configured public URL is authoritative.
     if request.url.path == "/gatearr-login":
         return await call_next(request)
-    if request.url.path == "/healthz" or (request.url.path.startswith("/static/") or re.fullmatch(r"/media/icons/[a-f0-9]{64}\.png",request.url.path)):
+    if request.url.path == "/healthz" or (request.url.path.startswith("/static/") or re.fullmatch(r"/media/icons/[a-f0-9]{64}\.(?:png|svg)",request.url.path)):
         return await call_next(request)
     with SessionLocal() as db:
         raw = request.cookies.get("gatearr_session", "")
@@ -195,10 +205,20 @@ async def context(request: Request, call_next):
             db.commit()
             user = None
         request.state.db, request.state.session, request.state.user = db, session, user
-        request.state.locale = i18n.resolve(request, user)
+        request.state.actor=user
+        from .support import resolve
+        support,target=resolve(db,session,user)
+        request.state.support=support
+        if target:
+            request.state.user=target
+            if request.url.path.startswith('/admin') or (request.method not in ('GET','HEAD','OPTIONS') and request.url.path not in ('/support/stop','/logout')):
+                return Response('Assistance mode: return to your account before changing Gatearr settings.',status_code=403)
+        request.state.locale = i18n.resolve(request, request.state.user)
         request.state.rotated = False
         request.state.cookie_secure = settings.secure_cookie or urlsplit(config(db,"public_url",settings.public_url)).scheme=="https"
         response = await call_next(request)
+        # Failed forms may have staged writes. Release their transaction before independent audit I/O.
+        db.rollback()
         if fresh and not request.state.rotated:
             cookie(response, raw,request.state.cookie_secure)
         response.headers["Cache-Control"] = "no-store"
@@ -208,18 +228,29 @@ async def context(request: Request, call_next):
         if request.state.cookie_secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
         response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self'; img-src 'self' https: http:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        if request.url.path=="/services/emby/open":response.headers["Referrer-Policy"]="no-referrer"
+        if request.url.path.startswith("/tools/"):
+            key=request.url.path.rsplit("/",1)[-1]
+            tool_public=config(db,key+"_public_url") if key in ("radarr","sonarr","bazarr") else ""
+            if tool_public:response.headers["Content-Security-Policy"]="default-src 'self'; style-src 'self'; img-src 'self'; script-src 'self'; frame-src "+tool_public+"; frame-ancestors 'none'; base-uri 'none'; form-action "+tool_public
         if request.url.path=="/services/seerr/open":
             from .seerr_login import public_url
             target=public_url(db)
             if target:
                 response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("form-action 'self'","form-action 'self' "+target)
-        if request.url.path=="/admin/mail-editor":
+        if request.url.path in ("/admin/mail-editor","/admin/footer") or request.url.path.startswith(("/admin/access/","/tools/")):
             response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("style-src 'self'","style-src 'self' 'unsafe-inline'")
+        if not request.url.path.startswith('/static/'):
+            from .audit import record
+            actor=getattr(request.state,'audit_actor',None) or getattr(request.state,'actor',None) or user
+            effective=request.state.user
+            if request.url.path!='/theme.css' and not request.url.path.startswith('/media/icons/'):
+                await run_in_threadpool(record,actor.id if actor else None,getattr(request.state,'audit_subject',effective.id if effective else None),getattr(request.state,'audit_action',request.method+' '+request.url.path),response.status_code)
         return response
 
 async def form(request: Request):
     # Starlette bounds multipart fields; also limit body size for urlencoded forms.
-    accepts_icon=request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer")
+    accepts_icon=request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer","/admin/assets")
     chunks, length = [], 0
     async for chunk in request.stream():
         length += len(chunk)
@@ -243,7 +274,7 @@ async def form(request: Request):
         "/admin/settings": ("app_name", "public_url", "login_text", "logo_url", "emby_link"),
         "/admin/smtp": ("smtp_host", "smtp_port", "smtp_mode", "smtp_from"),
         "/admin/mail-templates": ("reset_subject", "reset_body", "verify_subject", "verify_body"),
-        "/admin/menu": ("label", "url", "icon", "position"),
+        "/admin/menu": ("label", "url", "position"),
         "/admin/menu/delete": ("id",),
         "/admin/user-email": ("id", "email"),
         "/language": ("locale",),
@@ -272,6 +303,8 @@ async def form(request: Request):
     if origin and (url_origin(origin) is None or (url_origin(origin)!=url_origin(expected.geturl()) and not (initial_setup and url_origin(origin)==url_origin(initial_origin)))):
         log.warning("Rejected form origin=%r expected=%r", origin[:200], f"{expected.scheme}://{expected.netloc}")
         raise HTTPException(403, 'Origin rejected')
+    safe_names={'app_name','public_url','media_server','url','browser_url','smtp_host','smtp_port','smtp_mode','smtp_username','smtp_from','notification_mode','user_id','radarr_url','radarr_public_url','sonarr_url','sonarr_public_url','bazarr_url','bazarr_public_url','radarr_enabled','sonarr_enabled','bazarr_enabled','proxy_acknowledge'}
+    request.state.form_values={key:value for key,value in data.items() if key in safe_names and isinstance(value,str)}
     return data
 
 def limit(request, action, identity="", maximum=5, window=900):
@@ -308,7 +341,12 @@ def render(request, template, **kwargs):
     base_translations = i18n.overrides(db,"en")
     from .connections import media_kind
     media_name="Jellyfin" if media_kind(db)=="jellyfin" else "Emby"
-    values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","footer_","release_","ui_translation_","_i18n_"))}
+    values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and not row.key.endswith("_api_key") and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","footer_","release_","ui_translation_","_i18n_","themes_"))}
+    setup_values=kwargs.get('setup_values',getattr(request.state,'form_values',{}))
+    if request.url.path.startswith(('/setup','/admin/setup/')):
+        values.update({key:('true' if key.endswith('_enabled') and value=='on' else value) for key,value in setup_values.items()})
+        if 'url' in setup_values:values['emby_url']=setup_values['url'];values['seerr_url']=setup_values['url']
+        if 'browser_url' in setup_values:values['emby_link']=setup_values['browser_url']
     values["login_source"]=config(db,"login_text", "Access your services and manage your account with ease.")
     values["login_text"] = i18n.content(db,'branding:login_text',config(db,'login_text','Access your services and manage your account with ease.'),locale)
     layout = kwargs.pop("layout", None) or portal.load(db)
@@ -334,22 +372,44 @@ def render(request, template, **kwargs):
     release_status = versioning.status(db) if request.state.user and request.state.user.admin else {}
     footer_layout = kwargs.pop("footer_layout",None) or footer.load(db)
     branded_name = i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale)
+    from .themes import load as load_themes
+    from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
-        "app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
+        "theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
+        "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"tool_names":("radarr","sonarr","bazarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
         "asset_version":str(max(Path("app/static/style.css").stat().st_mtime_ns,Path("app/static/mail-editor.js").stat().st_mtime_ns)), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
         "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,
-        "account_label_defaults": i18n.ACCOUNT_LABEL_DEFAULTS, "account_labels": {key: translator(i18n.ACCOUNT_LABEL_KEYS[key]) for key,default in i18n.ACCOUNT_LABEL_DEFAULTS.get(locale,i18n.ACCOUNT_LABEL_DEFAULTS["en"]).items()},
-        "seerr_notification_mode": config(db, "seerr_notification_mode", "unmanaged"), "newsletter_available": config(db,"tracearr_enabled") == "true",
+        "account_label_defaults": i18n.ACCOUNT_LABEL_DEFAULTS, "account_labels": {key: translator(i18n.ACCOUNT_LABEL_KEYS[key]) for key in i18n.ACCOUNT_LABEL_KEYS},
+        "seerr_notification_mode": config(db, "seerr_notification_mode", "unmanaged"),
         "seerr_access":access_href(db,"seerr") if seerr_public else "",
         "seerr_in_menu":any(item.access_service=="seerr" or item.label.casefold()=="seerr" or (seerr_public and item.url.rstrip("/")==seerr_public.rstrip("/")) for entries in menus.values() for item in entries),
-        "service_icon": lambda key: (db.get(AccessService,key).icon_url if db.get(AccessService,key) else ""), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
+        "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: (db.get(AccessService,key).icon_url if db.get(AccessService,key) else ""), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
         "layout": layout, "regions": portal.for_display(layout, locale, request.state.user,db), "menus": menus, "mail_locale": mail_locale,
         "content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
 
+def setup_error(request,message,status):
+    values=getattr(request.state,'form_values',{})
+    path=request.url.path
+    if request.method!='POST' or not values or not (path in ('/setup','/setup/admin') or path.startswith('/admin/setup/')):return None
+    if path=='/setup/admin':
+        from .first_run import administrator_page
+        request.state.setup_error=message
+        response=administrator_page(request)
+    elif path=='/setup':response=render(request,'setup.html',setup_values=values,setup_error=message)
+    else:
+        from .onboarding import page
+        response=page(request,path.rsplit('/',1)[-1])
+        # page() shares the same safe values through render().
+        if response.status_code==200:response=render(request,'onboarding.html',**request.state.setup_context,setup_error=message,setup_values=values)
+    response.status_code=status
+    return response
+
 @app.exception_handler(HTTPException)
 def http_error(request, exc):
+    preserved=setup_error(request,exc.detail,exc.status_code) if exc.status_code in (400,401,502,503) else None
+    if preserved is not None:return preserved
     response = render(request, "error.html", message=exc.detail)
     response.status_code = exc.status_code
     response.headers.update(exc.headers or {})
@@ -357,12 +417,16 @@ def http_error(request, exc):
 
 @app.exception_handler(ValueError)
 def validation_error(request, exc):
+    preserved=setup_error(request,str(exc),400)
+    if preserved is not None:return preserved
     response = render(request, "error.html", message=str(exc) if i18n.canonical(str(exc)) in i18n.CATALOGS["en"] else 'Invalid value.')
     response.status_code = 400
     return response
 
 @app.exception_handler(EmbyError)
 def emby_error(request, exc):
+    preserved=setup_error(request,"Media server unavailable or operation rejected. Check the address and API key.",502)
+    if preserved is not None:return preserved
     log.warning("Emby operation failed: %s", exc)
     response = render(request, "error.html", message='Emby is unavailable or rejected the operation. Check its configuration and try again.')
     response.status_code = 502
@@ -393,19 +457,19 @@ def invalidate(db, user):
 @app.get('/media/icons/{filename}')
 def uploaded_icon(filename:str):
     from .models import IconAsset
-    if not re.fullmatch(r'[a-f0-9]{64}\.png',filename):raise HTTPException(404,'Icon not found')
+    if not re.fullmatch(r'[a-f0-9]{64}\.(?:png|svg)',filename):raise HTTPException(404,'Icon not found')
     with SessionLocal() as db:
-        asset=db.get(IconAsset,filename[:-4])
+        asset=db.get(IconAsset,filename.rsplit('.',1)[0])
         if not asset:return Response(status_code=404)
-        return Response(content=asset.content,media_type='image/png',headers={'X-Content-Type-Options':'nosniff','Cache-Control':'public, max-age=31536000, immutable','Content-Security-Policy':"default-src 'none'; sandbox"})
+        return Response(content=asset.content,media_type=asset.mime,headers={'X-Content-Type-Options':'nosniff','Cache-Control':'public, max-age=31536000, immutable','Content-Security-Policy':"default-src 'none'; sandbox"})
 
-@app.get("/healthz")
+@app.api_route("/healthz",methods=["GET","HEAD"])
 def health():
     with SessionLocal() as db:
         db.execute(text("SELECT 1 FROM alembic_version"))
     return {"status": "ok"}
 
-@app.get("/")
+@app.api_route("/",methods=["GET","HEAD"])
 def index(request: Request):
     return redirect("/home" if request.state.user else "/login")
 
@@ -462,15 +526,22 @@ def login(request: Request, data=Depends(form)):
     if request.cookies.get("gatearr_language") in i18n.languages(db):
         user.locale = request.cookies["gatearr_language"]
         db.commit()
+    request.state.audit_actor=user
+    request.state.audit_subject=user.id
+    request.state.audit_action='auth.login'
     response=rotate(request,user)
     from .seerr_login import capture
     capture(db,user,password,request.state.new_session_digest)
+    from .support import capture as capture_media
+    capture_media(db,user,result,request.state.new_session_digest)
     return response
 
 @app.post("/logout")
 def logout(request: Request, data=Depends(form)):
     from .seerr_login import revoke
     revoke(request.state.db,request.state.session.digest)
+    from .support import revoke as revoke_media
+    revoke_media(request.state.db,request.state.session.digest)
     request.state.db.delete(request.state.session)
     request.state.db.commit()
     response = redirect("/login")
@@ -553,7 +624,6 @@ def verify_email(request: Request, data=Depends(form)):
     db = request.state.db
     token, user = valid_token(db, data.get("token", ""), "verify")
     consume(db, token)
-    user.newsletter_pending = user.newsletter_opt_in is not None
     user.preferences_version += 1
     user.email = token.email
     try:
@@ -728,13 +798,19 @@ def menu_save(request: Request, data=Depends(form)):
         raise ValueError('Label required')
     item.label_en = None
     service_key = str(data.get("access_service", ""))
+    if data.get('access_mode')=='howto' and not service_key:
+        service_key='service-'+str(item.id) if item.id else 'service-'+secrets.token_hex(6)
+        service=AccessService(key=service_key,name=item.label,browser_url=str(data.get('url','')),server_url=str(data.get('url','')),entry_mode='structured',access_version=0,access_draft='[]',access_published='[]')
+        db.add(service);db.flush()
+    if data.get('access_mode')=='direct':service_key=''
     if service_key and not db.get(AccessService, service_key):
         raise ValueError('Invalid service')
     item.access_service = service_key or None
     item.url = url_ok(data.get("url", ""), optional=bool(service_key))
     from .icons import icon_value
     item.icon_url = icon_value(db,data)
-    item.icon = str(data["icon"])[:30]
+    from .icons import font_icon
+    item.icon = font_icon(data.get('icon','link')) if not item.icon_url else 'link'
     item.position = int(data["position"])
     item.new_tab = data.get("new_tab") == "on"
     menu_key = str(data.get("menu_key", "main"))
@@ -745,7 +821,7 @@ def menu_save(request: Request, data=Depends(form)):
     db.flush()
     if data.get("label_en") and data["label"]!=item.label:i18n.store_content(db,"menu:"+str(item.id)+":label",item.label,"fr",str(data["label"])[:100])
     db.commit()
-    return redirect("/admin/services")
+    return redirect('/admin/access/'+service_key if data.get('access_mode')=='howto' else '/admin/services')
 
 @app.post("/admin/menu/delete")
 def menu_delete(request: Request, data=Depends(form)):
@@ -828,5 +904,28 @@ app.include_router(versioning_router)
 from .permissions import router as permissions_router
 app.include_router(permissions_router)
 
+from .audit import router as audit_router
+app.include_router(audit_router)
+from .themes import router as themes_router
+app.include_router(themes_router)
 from .seerr_login import router as seerr_login_router
 app.include_router(seerr_login_router)
+
+from .support import router as support_router
+app.include_router(support_router)
+from .user_management import router as user_management_router
+app.include_router(user_management_router)
+from .tools_proxy import router as tools_router
+app.include_router(tools_router)
+
+@app.post('/admin/assets')
+def upload_asset(request:Request,data=Depends(form)):
+    require_admin(request)
+    from .icons import icon_value
+    value=icon_value(request.state.db,data);request.state.db.commit()
+    return redirect('/admin/footer?'+urlencode({'asset':value}))
+
+@app.websocket('/{path:path}')
+async def proxy_websocket(socket:__import__('fastapi').WebSocket,path:str):
+    from .tools_proxy import websocket_proxy
+    await websocket_proxy(socket)

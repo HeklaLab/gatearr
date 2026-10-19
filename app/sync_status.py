@@ -25,7 +25,7 @@ def user_statuses(db, locale):
     result = {}
     for user in db.scalars(select(User)):
         statuses = []
-        for service,label in (('emby','Jellyfin' if config(db,'media_server')=='jellyfin' else 'Emby'),('seerr','Seerr'),('tracearr','Tracearr')):
+        for service,label in (('emby','Jellyfin' if config(db,'media_server')=='jellyfin' else 'Emby'),('seerr','Seerr')):
             if service!='emby' and not configured(db,service):continue
             if not user.emby_id:
                 statuses.append({'service':label,'color':'neutral','label':tr('Not applicable'),'detail':tr('Local administrator account without an Emby link')})

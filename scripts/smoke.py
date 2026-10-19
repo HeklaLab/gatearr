@@ -48,12 +48,12 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         assert '<html lang="en">' in client.get('/setup').text
         submit(client, '/setup', {'app_name':'Gatearr','public_url':base,'media_server':'emby','url':media_base,'api_key':'demo-emby-key'}, '/setup')
         submit(client,'/setup/admin',{'user_id':'demo-admin-1','password':'AdminPassword123!'},'/setup/admin')
-        for step in ('seerr','tracearr','smtp'):
+        for step in ('seerr','tools','smtp'):
             submit(client,'/admin/setup/'+step,{'action':'skip'},'/admin/setup/'+step)
         submit(client,'/admin/setup/finish',{},'/admin/setup/finish')
         submit(client, '/admin/smtp', {'smtp_host': smtp_host, 'smtp_port': smtp_port, 'smtp_mode': 'plain', 'smtp_from': 'portal@example.com', 'smtp_username': '', 'smtp_password': ''}, '/admin')
         submit(client, '/admin/settings', {'app_name': 'Gatearr', 'login_text': 'Your media world, all in one place.', 'logo_url': '', 'public_url': base, 'emby_link': 'https://emby.example.com'}, '/admin')
-        submit(client, '/admin/menu', {'label': 'Seerr', 'url': 'https://requests.example.com', 'icon': '✦', 'position': '10', 'new_tab': 'on'}, '/admin')
+        submit(client, '/admin/menu', {'label': 'Seerr', 'url': 'https://requests.example.com', 'icon': 'link', 'position': '10', 'new_tab': 'on'}, '/admin')
         submit(client, '/admin/sync', {}, '/admin')
         assert 'disabled' in client.get('/admin/users').text
         submit(client, '/admin/emby/clone', {'source_id':'demo-user-1','name':'cloned-demo','password':'ClonedPassword123!','copy_options':['Policy','Configuration','DisplayPreferences']}, '/admin/emby')
@@ -63,7 +63,6 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         assert 'Films' in client.get('/admin/users/'+cloned_id).text
         submit(client, '/admin/emby/copy', {'id':cloned_id,'source_id':'demo-user-1','copy_options':['Configuration','DisplayPreferences'],'acknowledge':'on'}, '/admin/users/'+cloned_id)
         submit(client, '/admin/integrations', {'service':'seerr','enabled':'on','url':services_base+'/seerr','api_key':'demo-seerr-key','notification_mode':'optional'}, '/admin/integrations')
-        submit(client, '/admin/integrations', {'service':'tracearr','enabled':'on','url':services_base+'/tracearr','api_key':'demo-tracearr-key','server_id':'11111111-1111-4111-8111-111111111111','owner_email':'owner@example.com','owner_password':'DemoOwnerPassword123!','internal_api':'on'}, '/admin/integrations')
         def layout_version():
             return re.search(r'name="version" value="(\d+)"',client.get('/admin/portal').text)[1]
         submit(client, '/admin/portal/block', {'version':layout_version(),'kind':'text','region':'main','order':'11','span':'12','title':'Welcome to Gatearr','body':'Your movie night starts here. Find your films, shows and requests in one place.'}, '/admin/portal')
@@ -75,7 +74,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         submit(client, '/admin/guides/service', {'key':'emby','name':'Emby','browser_url':'https://emby.example.com','server_url':'https://media.example.com:8920'}, '/admin/guides')
         assert 'Emby on Windows' in client.get('/admin/guides').text
         assert 'Emby on Android' in client.get('/admin/guides').text
-        assert 'Gatearr 0.1.0' in client.get('/admin/updates').text
+        assert 'Gatearr 0.2.0' in client.get('/admin/updates').text
         submit(client,'/admin/footer',{'version':0,'kind':'link','text':'Community','url':'https://community.example.com','position':20},'/admin/footer')
         assert 'community.example.com' not in client.get('/forgot').text
         assert 'community.example.com' in client.get('/admin/footer/preview').text
@@ -134,7 +133,6 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         submit(client, '/account/email', {'email': 'demo@example.com', 'current': 'DemoPassword123!'}, '/account')
         verify = reader('verify-email')
         submit(client, '/verify-email', {'token': verify}, '/verify-email?token=' + verify)
-        submit(client, '/account/preferences', {'service':'tracearr','enabled':'on'}, '/account')
         submit(client, '/account/preferences', {'service':'seerr','enabled':'on'}, '/account')
         submit(client, '/account/password', {'current': 'DemoPassword123!', 'password': 'ChangedPassword123!', 'confirm': 'ChangedPassword123!'}, '/account')
         assert client.get('/account').status_code == 401
@@ -154,14 +152,14 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         deadline=time.monotonic()+40
         while time.monotonic()<deadline:
             page=client.get('/admin/integrations').text
-            if page.count('Synchronized') >= 2:
+            if page.count('Synchronized') >= 1:
                 break
             time.sleep(1)
         else:
-            raise AssertionError('Email not propagated to both services')
+            raise AssertionError('Email not propagated to Seerr')
         statuses=client.get('/admin/users').text
         assert statuses.count('sync-green') >= 3 and 'Last success:' in statuses
-    print('Smoke passed: setup, native clone, library access, settings copy, English block builder, draft/publish, nested application journeys, PNG icons, newsletter and Seerr preferences, hover sync indicators, email proof, password change/reset and automatic Seerr/Tracearr propagation.')
+    print('Smoke passed: setup, native clone, library access, settings copy, English block builder, draft/publish, nested application journeys, PNG icons and Seerr preferences, hover sync indicators, email proof, password change/reset and automatic Seerr propagation.')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

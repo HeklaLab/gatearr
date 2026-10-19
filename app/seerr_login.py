@@ -71,14 +71,15 @@ def launch(request:Request):
         if not url:raise HTTPException(404,'Configure the public Seerr URL in API connections')
         return redirect(url)
     limit(request,'seerr-launch',maximum=20)
-    row=db.get(SeerrSession,request.state.session.digest)
-    if not row or row.expires<=int(time.time()):
+    from .support import source_digest
+    row=db.get(SeerrSession,source_digest(request))
+    if not row or row.user_id!=user.id or row.expires<=int(time.time()):
         return render(request,'message.html',message='Sign out and sign in to Gatearr again to prepare automatic Seerr login.')
     from .emby import emby
     if emby.user(user.emby_id).get('Policy',{}).get('IsDisabled'):raise HTTPException(403,'Account disabled')
     ticket=secrets.token_urlsafe(32)
     db.execute(delete(SeerrTicket).where(SeerrTicket.expires<int(time.time())))
-    db.add(SeerrTicket(digest=digest(ticket),session_digest=row.session_digest,expires=int(time.time())+60));db.commit()
+    db.add(SeerrTicket(digest=digest(ticket),session_digest=row.session_digest,actor_digest=request.state.session.digest,expires=int(time.time())+60));db.commit()
     return render(request,'seerr_handoff.html',handoff_url=public_url(db)+'/gatearr-login',handoff_ticket=ticket)
 
 @router.post('/gatearr-login')
@@ -102,7 +103,15 @@ async def redeem(request:Request):
         db.execute(__import__('sqlalchemy').text('BEGIN IMMEDIATE'))
         ticket=db.get(SeerrTicket,digest(raw));now=int(time.time())
         if not ticket or ticket.expires<=now:return PlainTextResponse('Expired handoff',status_code=403)
+        issuer=db.get(Session,ticket.actor_digest) if ticket.actor_digest else None
+        if not issuer or issuer.expires<=now:return PlainTextResponse('Issuer session expired',status_code=403)
+        actor=db.get(User,issuer.user_id)
+        if not actor or not actor.active or actor.version!=issuer.version:return PlainTextResponse('Issuer session expired',status_code=403)
         row=db.get(SeerrSession,ticket.session_digest);session=db.get(Session,ticket.session_digest)
+        if ticket.actor_digest!=ticket.session_digest:
+            from .models import SupportSession
+            assistance=db.get(SupportSession,ticket.actor_digest)
+            if not actor.admin or not assistance or assistance.expires<=now or assistance.source_digest!=ticket.session_digest or not row or assistance.target_id!=row.user_id:return PlainTextResponse('Assistance expired',status_code=403)
         user=db.get(User,row.user_id) if row else None
         if not row or not session or not user or not user.active or user.emby_missing or session.version!=user.version or min(row.expires,session.expires)<=now:return PlainTextResponse('Session expired',status_code=403)
         payload=json.loads(decrypt(row.payload))
