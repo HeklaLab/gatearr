@@ -26,7 +26,7 @@ def edit(client,gid,data):
 
 
 def test_guide_publication_device_choices_localization_and_placeholders(client):
-    setup(client)
+    setup(client,empty_journeys=True)
     assert post(client,'/admin/guides/service',{'key':'emby','name':'Emby','server_url':'https://media.example.com:8920','browser_url':'https://media.example.com/web'},'/admin/guides').status_code==303
     gid=create(client)
     assert edit(client,gid,guide_data()).status_code==303
@@ -87,7 +87,8 @@ def test_custom_service_guides_in_menus_and_30_step_editor(client):
     assert post(client,'/admin/guides/service',{'key':'seerr','name':'Seerr','browser_url':'https://requests.example.com'},'/admin/guides').status_code==303
     response=post(client,'/admin/menu',{'label':'Demandes','url':'','access_service':'seerr','icon':'★','position':'2'},'/admin')
     assert response.status_code==303,response.text
-    assert 'href="https://requests.example.com"' in client.get('/home').text
+    assert 'href="/access/seerr"' in client.get('/home').text
+    assert 'href="https://requests.example.com"' in client.get('/access/seerr').text
     assert post(client,'/admin/menu',{'label':'Bad','url':'','access_service':'missing','icon':'★','position':'2'},'/admin').status_code==400
     gid=create(client)
     data=guide_data(step_count='30')

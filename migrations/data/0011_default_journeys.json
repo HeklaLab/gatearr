@@ -1,0 +1,422 @@
+{
+  "emby": {
+    "nodes": [
+      {
+        "id": "default_browser",
+        "parent": "",
+        "kind": "browser",
+        "title": "Browser",
+        "position": 0,
+        "icon_url": ""
+      },
+      {
+        "id": "default_computer",
+        "parent": "",
+        "kind": "group",
+        "title": "Computer",
+        "position": 10,
+        "icon_url": ""
+      },
+      {
+        "id": "default_phone",
+        "parent": "",
+        "kind": "group",
+        "title": "Phone",
+        "position": 20,
+        "icon_url": ""
+      },
+      {
+        "id": "default_windows",
+        "parent": "default_computer",
+        "kind": "guide",
+        "title": "Windows",
+        "position": 10,
+        "icon_url": "",
+        "guide_key": "windows"
+      },
+      {
+        "id": "default_mac",
+        "parent": "default_computer",
+        "kind": "guide",
+        "title": "Mac",
+        "position": 20,
+        "icon_url": "",
+        "guide_key": "mac"
+      },
+      {
+        "id": "default_android",
+        "parent": "default_phone",
+        "kind": "guide",
+        "title": "Android",
+        "position": 10,
+        "icon_url": "",
+        "guide_key": "android"
+      },
+      {
+        "id": "default_apple",
+        "parent": "default_phone",
+        "kind": "guide",
+        "title": "iPhone",
+        "position": 20,
+        "icon_url": "",
+        "guide_key": "apple"
+      }
+    ],
+    "guides": [
+      {
+        "key": "windows",
+        "title": "Emby on Windows",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "desktop",
+        "position": 10,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Emby using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Open Microsoft Store",
+            "link_url": "https://apps.microsoft.com/detail/9NBLGGH4T70L",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "mac",
+        "title": "Emby on Mac",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "desktop",
+        "position": 20,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Emby using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Open Mac App Store",
+            "link_url": "https://apps.apple.com/app/emby/id992180193",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "android",
+        "title": "Emby on Android",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "mobile",
+        "position": 30,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Emby using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Open Google Play",
+            "link_url": "https://play.google.com/store/apps/details?id=com.mb.android",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "apple",
+        "title": "Emby on iPhone",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "mobile",
+        "position": 40,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Emby using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Open App Store",
+            "link_url": "https://apps.apple.com/app/emby/id992180193",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      }
+    ]
+  },
+  "jellyfin": {
+    "nodes": [
+      {
+        "id": "default_browser",
+        "parent": "",
+        "kind": "browser",
+        "title": "Browser",
+        "position": 0,
+        "icon_url": ""
+      },
+      {
+        "id": "default_computer",
+        "parent": "",
+        "kind": "group",
+        "title": "Computer",
+        "position": 10,
+        "icon_url": ""
+      },
+      {
+        "id": "default_phone",
+        "parent": "",
+        "kind": "group",
+        "title": "Phone",
+        "position": 20,
+        "icon_url": ""
+      },
+      {
+        "id": "default_windows",
+        "parent": "default_computer",
+        "kind": "guide",
+        "title": "Windows",
+        "position": 10,
+        "icon_url": "",
+        "guide_key": "windows"
+      },
+      {
+        "id": "default_mac",
+        "parent": "default_computer",
+        "kind": "guide",
+        "title": "Mac",
+        "position": 20,
+        "icon_url": "",
+        "guide_key": "mac"
+      },
+      {
+        "id": "default_android",
+        "parent": "default_phone",
+        "kind": "guide",
+        "title": "Android",
+        "position": 10,
+        "icon_url": "",
+        "guide_key": "android"
+      },
+      {
+        "id": "default_apple",
+        "parent": "default_phone",
+        "kind": "guide",
+        "title": "iPhone",
+        "position": 20,
+        "icon_url": "",
+        "guide_key": "apple"
+      }
+    ],
+    "guides": [
+      {
+        "key": "windows",
+        "title": "Jellyfin on Windows",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "desktop",
+        "position": 10,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Jellyfin using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Download the desktop app",
+            "link_url": "https://jellyfin.org/clients/",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "mac",
+        "title": "Jellyfin on Mac",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "desktop",
+        "position": 20,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Jellyfin using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Download the desktop app",
+            "link_url": "https://jellyfin.org/clients/",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "android",
+        "title": "Jellyfin on Android",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "mobile",
+        "position": 30,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Jellyfin using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Open Google Play",
+            "link_url": "https://play.google.com/store/apps/details?id=org.jellyfin.mobile",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "apple",
+        "title": "Jellyfin on iPhone",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "mobile",
+        "position": 40,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Jellyfin using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Open App Store",
+            "link_url": "https://apps.apple.com/app/jellyfin-mobile/id1480192618",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      }
+    ]
+  }
+}

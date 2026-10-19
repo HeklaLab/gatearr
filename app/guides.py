@@ -15,6 +15,10 @@ router = APIRouter()
 DEVICES = ('mobile', 'tv', 'tablet', 'desktop', 'other')
 
 def service_url(db, service):
+    if service.key=='seerr':
+        from .seerr_login import enabled,public_url
+        if enabled(db):return '/services/seerr/open'
+        return service.browser_url or public_url(db)
     return service.browser_url or (config(db, 'emby_link') if service.key == 'emby' else '')
 
 def access_href(db, key):
@@ -167,6 +171,16 @@ def create_guide(request: Request, data=Depends(form)):
     row.draft=json.dumps(normalize(db,value,row.id),ensure_ascii=False)
     db.commit()
     return redirect('/admin/guides/'+str(row.id))
+
+
+@router.post('/admin/guides/defaults')
+def add_defaults(request: Request, data=Depends(form)):
+    require_admin(request)
+    from .default_journeys import seed
+    if not seed(request.state.db,activate=True):
+        raise ValueError('Existing journeys are preserved. Edit them in Build submenus.')
+    request.state.db.commit()
+    return redirect('/admin/guides')
 
 @router.get('/admin/guides/{guide_id}')
 def edit_guide(request: Request, guide_id: int):

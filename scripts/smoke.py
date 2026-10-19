@@ -73,6 +73,26 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         submit(client, '/admin/portal/publish', {'version':layout_version()}, '/admin/portal')
         assert 'Welcome to Gatearr' in client.get('/home').text
         submit(client, '/admin/guides/service', {'key':'emby','name':'Emby','browser_url':'https://emby.example.com','server_url':'https://media.example.com:8920'}, '/admin/guides')
+        assert 'Emby on Windows' in client.get('/admin/guides').text
+        assert 'Emby on Android' in client.get('/admin/guides').text
+        assert 'Gatearr 0.1.0' in client.get('/admin/updates').text
+        submit(client,'/admin/footer',{'version':0,'kind':'link','text':'Community','url':'https://community.example.com','position':20},'/admin/footer')
+        assert 'community.example.com' not in client.get('/forgot').text
+        assert 'community.example.com' in client.get('/admin/footer/preview').text
+        submit(client,'/admin/footer',{'version':1,'action':'publish'},'/admin/footer')
+        assert 'community.example.com' in client.get('/forgot').text
+        users_page=client.get('/admin/users').text
+        demo_id=re.search(r'href="/admin/users/(\d+)">demo(?: |<)',users_page)[1]
+        group=client.post('/admin/groups',data={'csrf':csrf(client,'/admin/groups'),'name':'Demo members'})
+        assert group.status_code==303
+        group_path=group.headers['location']
+        submit(client,group_path,{'version':0,'members':demo_id,'permission':['SimultaneousStreamLimit','EnableSubtitleDownloading'],'value_SimultaneousStreamLimit':'2','value_EnableSubtitleDownloading':'false','library_mode':'selected','libraries':['11111111111111111111111111111111']},group_path)
+        deadline=time.monotonic()+45
+        while time.monotonic()<deadline:
+            detail=client.get('/admin/users/'+demo_id).text
+            if 'sync-green' in detail and 'name="value" min="0" max="2147483647" value="2"' in detail:break
+            time.sleep(1)
+        else:raise AssertionError('Group permission readback did not complete')
         guide_ids={}
         for device,fr,en in [('desktop','Emby sur Mac','Emby on Mac'),('desktop','Emby sur Windows','Emby on Windows'),('mobile','Emby sur Android','Emby on Android'),('mobile','Emby sur iPhone','Emby on iPhone'),('tv','Emby sur TV','Emby on TV')]:
             created=client.post('/admin/guides/create',data={'csrf':csrf(client,'/admin/guides'),'service_key':'emby','title':en},follow_redirects=False)

@@ -16,6 +16,9 @@ def sources(db):
     for draft in (False,True):
         for block in portal.load(db,draft)['blocks']:
             for field in ('title','body','alt'):add('block:'+block['id']+':'+field,block.get(field,''),'Block '+block['id']+(' · draft' if draft else ' · published'))
+    from . import footer
+    for draft in (False,True):
+        for item in footer.load(db,draft)['items']:add('footer:'+item['id']+':text',item['text'],'Footer · '+('draft' if draft else 'published'),maximum=2000)
     for item in db.scalars(select(MenuItem)):add('menu:'+str(item.id)+':label',item.label,'Menu '+item.menu_key,maximum=100)
     for service in db.scalars(select(AccessService)):
         add('service:'+service.key+':name',service.name,'Service '+service.key,maximum=100)
@@ -28,6 +31,10 @@ def sources(db):
             for field in ('title','summary'):add(prefix+':'+field,article.get(field,''),'Guide '+str(guide.id)+' · '+column,maximum=200 if field=='title' else 2000)
             for step in article['steps']:
                 for field in ('title','body','link_label'):add(prefix+':'+step['id']+':'+field,step.get(field,''),'Guide '+str(guide.id)+' · '+step['id']+' · '+column)
+    from .models import PolicyState
+    from .permissions import label
+    for policy in db.scalars(select(PolicyState)):
+        for key in json.loads(policy.observed):add('policy-label:'+key,label(key),'Media-server permissions',maximum=200)
     for purpose in ('invite','verify','reset'):
         for part in ('subject','body','html'):
             source=html_source(db,purpose) if part=='html' else config(db,purpose+'_'+part,DEFAULTS[purpose+'_'+part])

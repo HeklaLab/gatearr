@@ -31,3 +31,7 @@ docker compose -f compose.yaml -f compose.build.yaml up -d --build --wait
 ```
 
 This explicit override builds `gatearr:local`; the deployment Compose never builds source automatically. `compose.demo.yaml` remains a separate isolated mock environment used by CI. There is no bundled reverse proxy.
+
+Before each future release, update `app/release.py` VERSION, append the changelog entry in `app/releases.json`, and update CHANGELOG.md/release notes. Keep changelog history so an installed build can display earlier changes.
+
+The manual workflow offers a narrowly gated, one-time initial-release correction. On main, select `replace_initial_v010` and supply the exact existing v0.1.0 tag SHA. Verification and multiarchitecture publication run first. A separate short-lived job with repository write permission then rechecks the lease, moves only v0.1.0 and refreshes release assets/notes. Ordinary publishing has read-only repository permission. Do not use this exception for subsequent releases.

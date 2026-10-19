@@ -5,6 +5,15 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      replace_initial_v010:
+        description: Replace the initial v0.1.0 release (one-time owner-authorized correction)
+        type: boolean
+        default: false
+      expected_tag_sha:
+        description: Current v0.1.0 commit SHA (required for replacement)
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -35,6 +44,16 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Verify the one-time replacement lease
+        if: inputs.replace_initial_v010 == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_TAG_SHA: ${{ inputs.expected_tag_sha }}
+        run: |
+          test "$(python -c 'from app.release import VERSION; print(VERSION)')" = '0.1.0'
+          test "${#EXPECTED_TAG_SHA}" = '40'
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v0.1.0" --jq '.object.sha')
+          test "$current" = "$EXPECTED_TAG_SHA"
       - name: Lowercase image name
         id: image
         env:
@@ -56,6 +75,9 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
+            type=raw,value=0.1.0,enable=${{ inputs.replace_initial_v010 == true }}
+            type=raw,value=0.1,enable=${{ inputs.replace_initial_v010 == true }}
+            type=raw,value=latest,enable=${{ inputs.replace_initial_v010 == true }}
           labels: |
             org.opencontainers.image.title=Gatearr
             org.opencontainers.image.description=Your media services, one account portal
@@ -64,6 +86,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          build-args: GATEARR_BUILD_REVISION=${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -72,3 +95,38 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: mode=max
           sbom: true
+
+  refresh_initial_release:
+    needs: [verify, publish]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.replace_initial_v010 == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace the first release and downloadable packages
+        if: inputs.replace_initial_v010 == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_TAG_SHA: ${{ inputs.expected_tag_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(python -c 'from app.release import VERSION; print(VERSION)')" = '0.1.0'
+          test "${#EXPECTED_TAG_SHA}" = '40'
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v0.1.0" --jq '.object.sha')
+          test "$current" = "$EXPECTED_TAG_SHA"
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/v0.1.0" -f sha="$GITHUB_SHA" -F force=true
+          git archive --format=zip --prefix=gatearr/ --output=gatearr.zip HEAD
+          python - <<'PYCODE'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import hashlib
+          with ZipFile('gatearr-docker.zip','w',ZIP_DEFLATED) as archive:
+              for name in ('compose.yaml','.env.example','.env.windows.example','UPGRADING.md','README.md'):
+                  archive.write(name,'gatearr/'+name)
+          Path('SHA256SUMS.txt').write_text(''.join(hashlib.sha256(Path(name).read_bytes()).hexdigest()+'  '+name+'\n' for name in ('gatearr.zip','gatearr-docker.zip')))
+          PYCODE
+          gh release upload v0.1.0 gatearr.zip gatearr-docker.zip SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
+          gh release edit v0.1.0 --title 'Gatearr 0.1.0 — First public release' --notes-file RELEASE_NOTES.md --repo "$GITHUB_REPOSITORY"

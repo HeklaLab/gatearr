@@ -132,6 +132,10 @@ async def scheduled():
         await asyncio.sleep(5)
         await run_in_threadpool(deliver_mail)
         await run_in_threadpool(run_jobs)
+        from .permissions import run_pending
+        await run_in_threadpool(run_pending)
+        from .versioning import refresh_due
+        await run_in_threadpool(refresh_due)
         if now() >= next_sync:
             await run_in_threadpool(maintenance)
             next_sync = now() + max(1, settings.sync_minutes) * 60
@@ -156,7 +160,9 @@ async def lifespan(app):
     except asyncio.CancelledError:
         pass
 
-app = FastAPI(title="Gatearr", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+from .release import VERSION, BUILD_REVISION
+
+app = FastAPI(title="Gatearr", version=VERSION, lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 app.state.public_url = settings.public_url
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -166,6 +172,8 @@ def cookie(response, value, secure=None):
 @app.middleware("http")
 async def context(request: Request, call_next):
     # Ignore arbitrary Host / forwarded headers for links: the configured public URL is authoritative.
+    if request.url.path == "/gatearr-login":
+        return await call_next(request)
     if request.url.path == "/healthz" or (request.url.path.startswith("/static/") or re.fullmatch(r"/media/icons/[a-f0-9]{64}\.png",request.url.path)):
         return await call_next(request)
     with SessionLocal() as db:
@@ -200,13 +208,18 @@ async def context(request: Request, call_next):
         if request.state.cookie_secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
         response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self'; img-src 'self' https: http:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        if request.url.path=="/services/seerr/open":
+            from .seerr_login import public_url
+            target=public_url(db)
+            if target:
+                response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("form-action 'self'","form-action 'self' "+target)
         if request.url.path=="/admin/mail-editor":
             response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("style-src 'self'","style-src 'self' 'unsafe-inline'")
         return response
 
 async def form(request: Request):
     # Starlette bounds multipart fields; also limit body size for urlencoded forms.
-    accepts_icon=request.url.path in ("/admin/menu","/admin/guides/service")
+    accepts_icon=request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer")
     chunks, length = [], 0
     async for chunk in request.stream():
         length += len(chunk)
@@ -215,7 +228,7 @@ async def form(request: Request):
         chunks.append(chunk)
     # Preserve the bounded body for Starlette's form parser after streaming it once.
     request._body = b"".join(chunks)
-    data = await request.form(max_fields=400 if request.url.path.startswith(("/admin/guides/", "/admin/access/")) else 100, max_files=1 if accepts_icon else 0)
+    data = await request.form(max_fields=2000 if request.url.path.startswith("/admin/groups/") else 400 if request.url.path.startswith(("/admin/guides/", "/admin/access/")) else 100, max_files=1 if accepts_icon else 0)
     supplied = str(data.get("csrf", ""))
     if not secrets.compare_digest(supplied, request.state.session.csrf):
         raise HTTPException(403, 'Form expired. Reload the page.')
@@ -295,7 +308,7 @@ def render(request, template, **kwargs):
     base_translations = i18n.overrides(db,"en")
     from .connections import media_kind
     media_name="Jellyfin" if media_kind(db)=="jellyfin" else "Emby"
-    values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","ui_translation_","_i18n_"))}
+    values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","footer_","release_","ui_translation_","_i18n_"))}
     values["login_source"]=config(db,"login_text", "Access your services and manage your account with ease.")
     values["login_text"] = i18n.content(db,'branding:login_text',config(db,'login_text','Access your services and manage your account with ease.'),locale)
     layout = kwargs.pop("layout", None) or portal.load(db)
@@ -314,11 +327,23 @@ def render(request, template, **kwargs):
             result=result.replace('Emby','Jellyfin')
             if message=='EMBY':result='JELLYFIN'
         return result
+    from . import footer, versioning
+    from .seerr_login import public_url as seerr_public_url
+    seerr_public = seerr_public_url(db)
+    from datetime import datetime, timezone
+    release_status = versioning.status(db) if request.state.user and request.state.user.admin else {}
+    footer_layout = kwargs.pop("footer_layout",None) or footer.load(db)
+    branded_name = i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale)
     return templates.TemplateResponse(request=request, name=template, context={
+        "app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
+        "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "global_footer":footer.display(db,footer_layout,locale,branded_name),
         "asset_version":str(max(Path("app/static/style.css").stat().st_mtime_ns,Path("app/static/mail-editor.js").stat().st_mtime_ns)), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
         "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,
         "account_label_defaults": i18n.ACCOUNT_LABEL_DEFAULTS, "account_labels": {key: translator(i18n.ACCOUNT_LABEL_KEYS[key]) for key,default in i18n.ACCOUNT_LABEL_DEFAULTS.get(locale,i18n.ACCOUNT_LABEL_DEFAULTS["en"]).items()},
         "seerr_notification_mode": config(db, "seerr_notification_mode", "unmanaged"), "newsletter_available": config(db,"tracearr_enabled") == "true",
+        "seerr_access":access_href(db,"seerr") if seerr_public else "",
+        "seerr_in_menu":any(item.access_service=="seerr" or item.label.casefold()=="seerr" or (seerr_public and item.url.rstrip("/")==seerr_public.rstrip("/")) for entries in menus.values() for item in entries),
         "service_icon": lambda key: (db.get(AccessService,key).icon_url if db.get(AccessService,key) else ""), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
         "layout": layout, "regions": portal.for_display(layout, locale, request.state.user,db), "menus": menus, "mail_locale": mail_locale,
         "content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
@@ -356,6 +381,7 @@ def rotate(request, user, destination=None):
     response = redirect(destination or ("/admin/setup" if pending else "/home"))
     cookie(response, raw,settings.secure_cookie or urlsplit(config(db,"public_url",settings.public_url)).scheme=="https")
     request.state.rotated = True
+    request.state.new_session_digest = digest(raw)
     return response
 
 def invalidate(db, user):
@@ -436,10 +462,15 @@ def login(request: Request, data=Depends(form)):
     if request.cookies.get("gatearr_language") in i18n.languages(db):
         user.locale = request.cookies["gatearr_language"]
         db.commit()
-    return rotate(request, user)
+    response=rotate(request,user)
+    from .seerr_login import capture
+    capture(db,user,password,request.state.new_session_digest)
+    return response
 
 @app.post("/logout")
 def logout(request: Request, data=Depends(form)):
+    from .seerr_login import revoke
+    revoke(request.state.db,request.state.session.digest)
     request.state.db.delete(request.state.session)
     request.state.db.commit()
     response = redirect("/login")
@@ -788,3 +819,14 @@ app.include_router(onboarding_router)
 
 from .email_editor import router as email_editor_router
 app.include_router(email_editor_router)
+
+from .footer import router as footer_router
+app.include_router(footer_router)
+from .versioning import router as versioning_router
+app.include_router(versioning_router)
+
+from .permissions import router as permissions_router
+app.include_router(permissions_router)
+
+from .seerr_login import router as seerr_login_router
+app.include_router(seerr_login_router)

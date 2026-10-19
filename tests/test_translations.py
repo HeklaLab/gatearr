@@ -67,8 +67,8 @@ def test_footer_fully_customizable_and_recovery_hint_removed(client):
     key='{app_name} · Your services, one place.'
     assert change(client,key,'Mon portail · Bienvenue chez nous.').status_code==303
     page=client.get('/forgot').text
-    assert '<footer>Mon portail · Bienvenue chez nous.</footer>' in page
+    assert 'Mon portail · Bienvenue chez nous.</span>' in page
     assert 'Sans adresse vérifiée' not in page
     assert 'La récupération du compte administrateur local' not in page
     assert change(client,key,action='reset').status_code==303
-    assert '<footer>Gatearr · Your services, one place.</footer>' in client.get('/forgot').text
+    assert 'Gatearr · Your services, one place.</span>' in client.get('/forgot').text

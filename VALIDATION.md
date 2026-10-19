@@ -1,8 +1,12 @@
-## Container distribution preparation
+# Validation — 19 October 2026
 
-- Official supplied PNG copied unchanged and used as the default Gatearr branding; custom names and logos retain their own branding.
-- 103 tests passed locally after integration. Deployment/source/demo Compose files pass Compose JSON schema validation.
-- GitHub Actions gates multiarchitecture container publication on the tests and Docker/SMTP smoke. Docker execution and GHCR publication must be confirmed by the actual workflow before claiming this release is available.
+- **127 automated tests passed** locally, including footer publication/validation, default journeys, release version checks and failed-network handling, policy merge/individual overrides/readback/drift, group removal, sensitive permissions, and Seerr handoff identity/origin/expiry/replay protection.
+- Full isolated HTTP/SMTP smoke passed with the included media/service simulators: existing authentication, account recovery, cloning, library access, mail, translation and service synchronization, plus version page, default guides, footer publication and queued group policy readback.
+- Browser inspection verified the fresh default blue/cyan theme and logo without an added background, the footer editor and per-permission confirmation indicators.
+- No local Docker engine is available. The actual Docker build/smoke and AMD64/ARM64 image publication are gated by GitHub Actions. This document records local checks; the release workflow provides the container validation result.
+- Native Emby/Jellyfin/Seerr instances and a real reverse proxy were not used for these new tests. Validate policy availability and automatic Seerr login against the deployed versions. Existing server-owned/authentication fields remain read-only; unsupported policy fields are not invented.
+
+## Earlier regression evidence
 
 # Validation — 16 October 2026
 
@@ -27,6 +31,6 @@ The [Emby virtual-folder contract](https://betadev.emby.media/reference/RestAPI/
 
 Tracearr's current [identity schema](https://github.com/connorgallopo/Tracearr/blob/main/packages/shared/src/schemas.ts) has no writable locale. Its [language implementation](https://github.com/connorgallopo/Tracearr/blob/main/packages/translations/src/language.ts) reads client storage and browser/device settings. **Gatearr cannot synchronize Tracearr interface language through this API.** Contact email/newsletter synchronization remains supported and is verified separately. No success state is fabricated for language synchronization. Tracearr's internal write API can change between versions.
 
-The new release has not been built/run locally inside Docker because no Docker engine is available in this workspace. The repository contains CI Docker build/smoke steps; a successful build of the earlier release was supplied by the user from Windows. The executed integration tests use the included simulators and HTTP mock transports, not the user's Windows Emby, Seerr or Tracearr instances. The corrected GUID mapping still needs a live single-library check on that Emby server.
+The release has not been built/run locally inside Docker because no Docker engine is available in this workspace. The repository contains CI Docker build/smoke steps; a successful build of the earlier release was supplied by the user from Windows. The executed integration tests use the included simulators and HTTP mock transports, not the user's Windows Emby, Seerr or Tracearr instances. The corrected GUID mapping still needs a live single-library check on that Emby server.
 
 Setup must remain private until completed. Without an installation token, an unconfigured public portal cannot determine its owner solely from an arbitrary visitor's chosen media-server URL/key. CSRF, rate limits and first-admin password proof remain active.

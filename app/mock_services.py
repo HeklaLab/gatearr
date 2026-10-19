@@ -109,3 +109,21 @@ def unsuppress(request:Request,address:str):
 def seerr_list(request:Request):
     public(request,'seerr')
     return {'results':[{'id':2,'jellyfinUserId':'demo-user-1'}],'pageInfo':{'results':1}}
+
+@app.post('/seerr/api/v1/auth/jellyfin')
+async def seerr_session_login(request: Request):
+    data=await request.json()
+    if data.get('username')!='demo' or data.get('password') not in ('DemoPassword123!','ResetPassword123!'):
+        raise HTTPException(401)
+    from fastapi.responses import JSONResponse
+    response=JSONResponse({'id':2})
+    response.set_cookie('connect.sid','demo-seerr-session',httponly=True)
+    return response
+
+@app.get('/seerr/api/v1/auth/me')
+def seerr_session_me(request: Request):
+    if request.cookies.get('connect.sid')!='demo-seerr-session':raise HTTPException(401)
+    return {'id':2}
+
+@app.post('/seerr/api/v1/auth/logout')
+def seerr_session_logout():return {'status':'ok'}

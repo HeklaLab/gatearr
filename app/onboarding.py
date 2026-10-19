@@ -54,6 +54,9 @@ def connect_media(db,data):
     if service and browser:
         service.browser_url=browser
         service.server_url=browser
+    from .default_journeys import seed,seed_seerr
+    seed(db, activate=True)
+    seed_seerr(db)
     db.commit()
     sync_users(db)
     set_config(db,'onboarding_media_verified','true')

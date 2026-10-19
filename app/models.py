@@ -130,3 +130,41 @@ class ConnectionCheck(Base):
     state: Mapped[str] = mapped_column(String(20))
     detail: Mapped[str] = mapped_column(String(100))
     checked_at: Mapped[int] = mapped_column(Integer)
+
+class PermissionGroup(Base):
+    __tablename__='permission_groups'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100),unique=True)
+    policy: Mapped[str] = mapped_column(Text,default='{}')
+    version: Mapped[int] = mapped_column(Integer,default=0)
+
+class GroupMember(Base):
+    __tablename__='group_members'
+    group_id: Mapped[int] = mapped_column(ForeignKey('permission_groups.id',ondelete='CASCADE'),primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+
+class PolicyState(Base):
+    __tablename__='policy_states'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    baseline: Mapped[str] = mapped_column(Text,default='{}')
+    overrides: Mapped[str] = mapped_column(Text,default='{}')
+    desired: Mapped[str] = mapped_column(Text,default='{}')
+    observed: Mapped[str] = mapped_column(Text,default='{}')
+    confirmed: Mapped[str] = mapped_column(Text,default='{}')
+    version: Mapped[int] = mapped_column(Integer,default=0)
+    pending: Mapped[bool] = mapped_column(Boolean,default=False)
+    error: Mapped[str] = mapped_column(String(100),default='')
+    checked_at: Mapped[int | None] = mapped_column(Integer)
+
+class SeerrSession(Base):
+    __tablename__='seerr_sessions'
+    session_digest: Mapped[str] = mapped_column(ForeignKey('sessions.digest',ondelete='CASCADE'),primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'))
+    payload: Mapped[str] = mapped_column(Text)
+    expires: Mapped[int] = mapped_column(Integer)
+
+class SeerrTicket(Base):
+    __tablename__='seerr_tickets'
+    digest: Mapped[str] = mapped_column(String(64),primary_key=True)
+    session_digest: Mapped[str] = mapped_column(ForeignKey('seerr_sessions.session_digest',ondelete='CASCADE'))
+    expires: Mapped[int] = mapped_column(Integer)

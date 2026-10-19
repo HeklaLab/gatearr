@@ -11,7 +11,7 @@ from . import i18n
 
 REGIONS = ('login', 'header', 'sidebar', 'main', 'footer')
 KINDS = ('welcome', 'text', 'image', 'button', 'menu', 'services', 'account', 'guides', 'spacer')
-DEFAULT = {'nav_position': 'top', 'sidebar_position': 'left', 'theme': {'accent': '#b9f479', 'button_hover':'#ccff96', 'bg': '#10151b', 'surface': '#1a222c', 'text': '#edf3f9', 'muted': '#aab8c9'}, 'blocks': [{'id': 'welcome', 'kind': 'welcome', 'region': 'main', 'order': 10, 'span': 12, 'title': 'Welcome, {username}.', 'body': 'All your services, one place.', 'alt': ''}, {'id': 'services', 'kind': 'services', 'region': 'main', 'order': 20, 'span': 12, 'menu_key': 'main', 'include_emby': True, 'title': '', 'body': '', 'alt': ''}, {'id': 'account', 'kind': 'account', 'region': 'main', 'order': 30, 'span': 12, 'title': 'My account', 'body': 'Manage your details and password.', 'alt': ''}]}
+DEFAULT = {'nav_position': 'top', 'sidebar_position': 'left', 'theme': {'accent': '#159eff', 'button_hover':'#45cdf4', 'bg': '#edf4ff', 'surface': '#ffffff', 'text': '#12234a', 'muted': '#526789', 'ink':'#051c40'}, 'blocks': [{'id': 'welcome', 'kind': 'welcome', 'region': 'main', 'order': 10, 'span': 12, 'title': 'Welcome, {username}.', 'body': 'All your services, one place.', 'alt': ''}, {'id': 'services', 'kind': 'services', 'region': 'main', 'order': 20, 'span': 12, 'menu_key': 'main', 'include_emby': True, 'title': '', 'body': '', 'alt': ''}, {'id': 'account', 'kind': 'account', 'region': 'main', 'order': 30, 'span': 12, 'title': 'My account', 'body': 'Manage your details and password.', 'alt': ''}]}
 
 def load(db, draft=False):
     raw = config(db, 'portal_draft' if draft else 'portal_published')

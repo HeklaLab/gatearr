@@ -122,11 +122,23 @@ def emby_user(request: Request, local_id: int):
     user = request.state.db.get(User, local_id)
     if not user or not user.emby_id:
         raise HTTPException(404, 'Emby account not found')
-    remote=emby.user(user.emby_id);available=emby.libraries()
+    from .permissions import observe,fields
+    from .models import PolicyState
+    from .emby import EmbyError
+    try:
+        remote=emby.user(user.emby_id);available=emby.libraries()
+        remote_users=emby.users();options=emby.copy_options();policy_offline=False
+    except EmbyError:
+        cached=request.state.db.get(PolicyState,user.id)
+        if not cached:raise
+        remote={'Policy':__import__('json').loads(cached.observed)};available=[];remote_users=[];options=[];policy_offline=True
+        cached.error='Media server unreachable; showing the last observed permissions';request.state.db.commit()
     normalize=lambda value:str(value).replace('-','').lower()
     selected={normalize(value) for value in remote.get('Policy',{}).get('EnabledFolders',[]) or []}
-    remote.setdefault('Policy',{})['EnabledFolders']=[item['Id'] for item in available if normalize(item['Id']) in selected]
-    return render(request,'emby_user.html',member=user,remote=remote,libraries=available,remote_users=emby.users(),options=emby.copy_options())
+    if not policy_offline:remote.setdefault('Policy',{})['EnabledFolders']=[item['Id'] for item in available if normalize(item['Id']) in selected]
+    from .permissions import observe,fields
+    policy_state=cached if policy_offline else observe(request.state.db,user,remote.get('Policy',{}))
+    return render(request,'emby_user.html',policy_state=policy_state,permission_fields=fields(remote.get('Policy',{}),policy_state),member=user,remote=remote,libraries=available,remote_users=remote_users,options=options)
 
 @router.post('/admin/emby/libraries')
 def libraries_save(request: Request, data=Depends(form)):
@@ -142,7 +154,13 @@ def libraries_save(request: Request, data=Depends(form)):
     if data.get('action')=='remove_all':
         selected=[]
         all_folders=False
+    from .permissions import state,encoded,recompute,observe
+    prior=emby.user(user.emby_id).get('Policy',{})
+    row=state(request.state.db,user,prior)
     emby.assign_libraries(user.emby_id,selected,all_folders)
+    overrides=__import__('json').loads(row.overrides);overrides.update(EnableAllFolders=all_folders,EnabledFolders=sorted(set(selected)))
+    row.overrides=encoded(overrides);recompute(request.state.db,user,row);row.pending=False
+    observe(request.state.db,user,emby.user(user.emby_id).get('Policy',{}))
     return redirect('/admin/users/'+str(user.id)+'?saved=libraries')
 
 @router.post('/admin/emby/copy')

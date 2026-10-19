@@ -52,7 +52,7 @@ def test_nested_journey_direct_mode_icons_and_no_help_navigation(client):
 
 
 def test_journey_validation_conflicts_and_draft_deletion(client):
-    setup(client)
+    setup(client,empty_journeys=True)
     nodes(client,kind='group',title_fr='Computer',position=1)
     with SessionLocal() as db:
         row=db.get(AccessService,'emby');tree=access.load(row,True);ident=tree[0]['id'];version=row.access_version
@@ -183,7 +183,7 @@ def test_newsletter_worker_stores_remote_preference_without_marking_stale(client
 def test_upgrade_migrates_existing_published_guides_into_explicit_journey(client):
     from alembic import command
     from alembic.config import Config as AlembicConfig
-    setup(client);gid=create(client)
+    setup(client,empty_journeys=True);gid=create(client)
     assert edit(client,gid,guide_data('publish')).status_code==303
     configuration=AlembicConfig('alembic.ini')
     command.downgrade(configuration,'0004')

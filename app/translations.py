@@ -31,7 +31,7 @@ def source_link(key):
     if parts[0]=='mail':return '/admin/mail-editor?purpose='+parts[1]
     if parts[0]=='guide':return '/admin/guides/'+parts[1]
     if parts[0]=='journey':return '/admin/access/'+parts[1]
-    return {'branding':'/admin/branding','menu':'/admin/services','block':'/admin/portal','service':'/admin/guides'}.get(parts[0],'/admin')
+    return {'policy-label':'/admin/users','footer':'/admin/footer','branding':'/admin/branding','menu':'/admin/services','block':'/admin/portal','service':'/admin/guides'}.get(parts[0],'/admin')
 
 @router.get('/admin/translations')
 def translations(request:Request):

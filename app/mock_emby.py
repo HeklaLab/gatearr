@@ -11,7 +11,7 @@ app = FastAPI()
 DB = os.getenv("MOCK_DB", "/data/mock.db")
 COPY_OPTIONS = [{"Id": "Policy", "Name": "Library access and permissions"}, {"Id": "Configuration", "Name": "User configuration"}, {"Id": "DisplayPreferences", "Name": "Home screen and display preferences"}]
 LIBRARIES = [{"ItemId":"1001","Guid":"11111111111111111111111111111111","Name":"Movies"}, {"ItemId":"1002","Guid":"22222222222222222222222222222222","Name":"Films"}, {"ItemId":"1003","Guid":"33333333333333333333333333333333","Name":"TV Shows"}]
-DEFAULT_PROFILE = {"Policy": {"IsAdministrator": False, "EnableAllFolders": False, "EnabledFolders": ["11111111111111111111111111111111","22222222222222222222222222222222"]}, "Configuration": {"OrderedViews": ["films", "movies"], "HidePlayedInLatest": True}, "DisplayPreferences": {"homeSections": ["myMedia", "continueWatching", "latestMedia"]}}
+DEFAULT_PROFILE = {"Policy": {"SimultaneousStreamLimit":0,"EnableSubtitleDownloading":True,"EnableSubtitleManagement":False,"EnableMediaPlayback":True,"EnableContentDownloading":False,"EnableRemoteAccess":True,"RemoteClientBitrateLimit":0,"ExcludedSubFolders":[],"IsAdministrator": False, "EnableAllFolders": False, "EnabledFolders": ["11111111111111111111111111111111","22222222222222222222222222222222"]}, "Configuration": {"OrderedViews": ["films", "movies"], "HidePlayedInLatest": True}, "DisplayPreferences": {"homeSections": ["myMedia", "continueWatching", "latestMedia"]}}
 API_KEY = os.getenv("MOCK_API_KEY", "demo-emby-key")
 def connection():
     db = sqlite3.connect(DB)

@@ -1,0 +1,18 @@
+[
+  {
+    "version": "0.1.0",
+    "date": "2026-10-19",
+    "changes": [
+      "First public Gatearr release with Docker images for AMD64 and ARM64.",
+      "Version and changelog page, with administrator notifications for new GitHub releases.",
+      "Global footer builder with text, links, uploaded PNG logos and draft previews.",
+      "Editable default Windows, Mac, Android and iPhone application journeys.",
+      "Customizable portal, menus, guides, branding and database-managed translations.",
+      "Emby and Jellyfin accounts, library permissions and account self-service.",
+      "SMTP, visual email templates, secure recovery and Seerr/Tracearr synchronization.",
+      "Blue and cyan default theme with a transparent logo.",
+      "Complete media permission editor, verified per-field synchronization and user groups with shared library access.",
+      "Default Seerr journey and opt-in automatic session handoff through the existing reverse proxy."
+    ]
+  }
+]

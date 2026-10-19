@@ -19,7 +19,7 @@ def csrf(client, path='/login'):
 def post(client, path, data, page='/login'):
     return client.post(path, data={'csrf': csrf(client, page), **data}, follow_redirects=False)
 
-def setup(client):
+def setup(client,empty_journeys=False):
     client.cookies.set("gatearr_language","fr")
     response=post(client, '/setup', {'app_name':'Gatearr','public_url':'http://testserver','media_server':'emby','url':'http://emby.test/emby','api_key':'test-api-key'}, '/setup')
     if response.status_code==303:
@@ -28,6 +28,10 @@ def setup(client):
         with SessionLocal() as db:
             owner=db.scalar(select(User).where(User.emby_id=='admin-1'))
             owner.email='owner@example.com'  # Fixture-only verified contact address.
+            if empty_journeys:
+                from app.models import Guide,AccessService
+                db.query(Guide).delete()
+                service=db.get(AccessService,'emby');service.access_draft=service.access_published=None;service.access_version=0;service.entry_mode='direct'
             db.commit()
         for step in ('seerr','tracearr','smtp'):
             assert post(client,'/admin/setup/'+step,{'action':'skip'},'/admin/setup/'+step).status_code==303
@@ -239,7 +243,7 @@ def test_linked_admin_uses_normal_email_recovery(client):
 def test_health_and_migration_schema(client):
     assert client.get('/healthz').json() == {'status': 'ok'}
     with SessionLocal() as db:
-        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0010'
+        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0012'
 
 
 def test_form_limits_and_null_origin(client):

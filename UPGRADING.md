@@ -45,3 +45,9 @@ When the standard new database path does not exist, bootstrap locates a single e
 Your browser will need a new login because the session cookie name changed. Revision `0010` deliberately removes the previously bundled French language and its translations; affected accounts fall back to English. Recreate any additional language in Translations. The unified user language controls interface/email and the supported Seerr synchronization; Tracearr's locale remains a client-side setting without an API.
 
 Keep the old container and `backup-data` until the new installation is verified. Never delete the data volume as an upgrade step.
+
+## Refreshed first release — 0.1.0
+
+Back up `/data`, keep the same volume/secret, then pull and recreate the container even if the displayed version is already 0.1.0. The initial tag/image was replaced once at the owner's request; future releases use a new version. The Updates page also displays the build reference to distinguish these builds.
+
+Migrations `0011` and `0012` add device journey defaults, group policy/synchronization state and temporary Seerr handoff tables. Existing guides or custom journeys are not replaced. Only the untouched former default palette is changed to the blue/cyan palette; customized themes remain. The footer starts with the existing signature until explicitly edited/published. Automatic Seerr login is disabled by default and needs the existing-proxy route described in README.md.

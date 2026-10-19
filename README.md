@@ -172,3 +172,32 @@ python scripts/smoke.py
 The demo uses simulated media/Seerr/Tracearr services and Mailpit at http://localhost:8025. At setup enter `http://mock-emby:8096/emby` and the demo key `demo-emby-key`, then choose `portal-admin` / `AdminPassword123!`. The ordinary account is `demo` / `DemoPassword123!`; the smoke test changes it to `ResetPassword123!`. Demo credentials are deliberately test-only. The demo stack is isolated and must stay private.
 
 See [VALIDATION.md](VALIDATION.md) for executed checks and limits, and [CHANGELOG.md](CHANGELOG.md) for changes. External contracts: [Emby libraries](https://betadev.emby.media/reference/RestAPI/LibraryStructureService/getLibraryVirtualfoldersQuery.html), [Seerr user settings](https://github.com/seerr-team/seerr/blob/develop/server/routes/user/usersettings.ts), [Tracearr identity schema](https://github.com/connorgallopo/Tracearr/blob/main/packages/shared/src/schemas.ts), [Tracearr client language](https://github.com/connorgallopo/Tracearr/blob/main/packages/translations/src/language.ts).
+
+## Version, footer and access administration
+
+**Administration → Updates** shows the installed version/build, bundled changelog and latest GitHub release. Checks run at most every six hours and can be disabled. Administrators see an update indicator; connection failures remain visible rather than reporting a successful check. A refreshed build of the same initial version is detected using the release tag's commit reference.
+
+**Footer** manages a global draft with text, links and uploaded PNG logos, alignment and ordering. Preview before publishing. Existing custom portal colors and journeys are preserved. Default device guides can be added from **Guides** only when no existing guides/journeys would be replaced. Their steps and store links remain editable and translatable.
+
+**Users → user → Media-server permissions** exposes the policy returned by the connected server, including simultaneous streams and subtitle downloading. Authentication provider identifiers and server-maintained counters are read-only. Sensitive administrator/disabled changes need explicit confirmation. The adjacent status shows confirmed, pending/different, or failed readback; merely reading a remote change never overwrites it.
+
+**Groups** applies shared policy and libraries to selected users. Library grants combine across groups. Restrictive permissions win and the smallest positive stream/bitrate limit wins (zero means unlimited). Conflicting structured settings require an explicit individual override. Individual overrides take priority; removing membership restores the original value for fields formerly managed by the group. Changes queue for application and verification. Use the user page to inspect or retry errors.
+
+## Optional automatic Seerr login
+
+Configure the Seerr API and public HTTPS URL in **API connections**, then enable automatic login. Existing Seerr accounts must already be imported and linked to the same media-server identity. Sign out and back in to Gatearr to prepare the Seerr session. Gatearr never retains the password or includes credentials in a link. An encrypted, temporary Seerr session is bound to the Gatearr session; the handoff ticket expires after 60 seconds and can be used once.
+
+On the **Seerr public hostname**, route only `/gatearr-login` to Gatearr using your existing reverse proxy. For an existing Caddy Docker deployment, adapt the upstream names/ports to your shared Docker network:
+
+```caddyfile
+requests.example.com {
+    handle /gatearr-login {
+        reverse_proxy gatearr:8000
+    }
+    handle {
+        reverse_proxy seerr:5055
+    }
+}
+```
+
+Preserve the original Host header. Gatearr's public URL and Seerr's public URL must match their actual browser origins. Other reverse proxies need the equivalent route. No proxy is bundled. Without this opt-in configuration, the journey opens the ordinary Seerr login page. Gatearr attempts to end its captured Seerr session on logout; independently created Seerr sessions follow Seerr's own expiry rules. This integration is tested against simulators; validate your installed Seerr version and proxy before enabling it for users.

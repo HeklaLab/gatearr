@@ -51,6 +51,8 @@ class FakeEmby:
 
 @pytest.fixture
 def fake(monkeypatch):
+    monkeypatch.setattr('app.versioning.refresh_due',lambda:None)
+    monkeypatch.setattr('app.permissions.run_pending',lambda:None)
     instance = FakeEmby()
     monkeypatch.setattr(main, 'emby', instance)
     monkeypatch.setattr('app.onboarding.probe_media', lambda kind,base,key: {'id':'test-media-server','name':'Test media','count':len(instance.users())})

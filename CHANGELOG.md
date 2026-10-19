@@ -1,10 +1,15 @@
-# Container distribution (unreleased)
-
-- Include the official Gatearr logo as the default brand image; custom portal names and logos remain configurable.
-- Add tested GHCR publication for AMD64 and ARM64, stable version tags and a separate development channel.
-- Use a published container in deployment Compose, with an explicit source-build override and data-preserving update instructions.
-
 # Changes
+
+## 0.1.0 — 2026-10-19
+
+- First public multiarchitecture Docker release, refreshed once at the owner's request.
+- Installed version/build, admin changelog and GitHub update indicator.
+- Global footer builder with text, links, PNG logos and draft previews.
+- Editable Windows/Mac/Android/iPhone guides and default Seerr journey.
+- Transparent logo styling and matching blue/cyan default theme.
+- Complete media policy editor, per-field readback indicators and shared user groups/libraries.
+- Optional Seerr automatic session handoff through the existing reverse proxy, with expiring single-use tickets.
+
 
 ## 2026-10-16 — Unified Gatearr portal
 

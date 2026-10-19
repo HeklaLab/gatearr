@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+ARG GATEARR_BUILD_REVISION=
+ENV GATEARR_BUILD_REVISION=${GATEARR_BUILD_REVISION}
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && groupadd -g 10001 portal && useradd -u 10001 -g portal portal && mkdir /data && chown portal:portal /data
