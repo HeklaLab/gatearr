@@ -121,7 +121,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
             add_node('guide',label,label,parent,guide_id=guide_ids['Emby on '+label])
         version=re.search(r'name="version" value="(\d+)"',client.get('/admin/access/emby').text)[1]
         submit(client,'/admin/access/emby',{'action':'publish','version':version},'/admin/access/emby')
-        submit(client,'/admin/guides/service',{'key':'emby','name':'Emby','entry_mode':'structured','icon_url':base+'/static/demo-emby.png','browser_url':'https://emby.example.com','server_url':'https://media.example.com:8920'},'/admin/guides')
+        submit(client,'/admin/guides/service',{'key':'emby','name':'Emby','entry_mode':'structured','icon':'film','browser_url':'https://emby.example.com','server_url':'https://media.example.com:8920'},'/admin/guides')
         assert 'href="/access/emby"' in client.get('/home').text
         assert 'Browser' in client.get('/access/emby').text
         submit(client, '/language', {'locale':'en','next':'/home'}, '/home')

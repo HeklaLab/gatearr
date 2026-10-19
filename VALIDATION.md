@@ -1,3 +1,11 @@
+# Validation — Gatearr 0.2.2 — 19 October 2026
+
+- **152 automated tests passed** locally with Python 3.12; one existing Starlette/httpx deprecation warning remains.
+- Full HTTP/SMTP smoke passed with the isolated simulators: setup, import/cloning, library access, account mail/recovery, nested How to, portal publication, image upload, Seerr and group policy readback.
+- New checks cover all 2,060 bundled Font Awesome Free icon/style entries and WOFF2 fonts, visual-picker controls, brand/regular rendering, safe icon identifiers, rejection of external service icon URLs, retained uploads and persistent How to icon choices.
+- Tool regressions cover private root/prefixed URLs, partial disabled optional services, explicit API-key and URL Base errors, form preservation without secret disclosure, automatic configured-tool access for admins and unchanged member grants, including custom layouts without service blocks.
+- Browser checks verified icon search/selection/save and the clearer navigation/control layout. GitHub Actions gates the Docker startup/health/smoke and AMD64/ARM64 release. No local Docker engine or real native tool instance was used; validate native URL Base/authentication on your server.
+
 # Validation — Gatearr 0.2.1 — 19 October 2026
 
 - **145 automated tests passed** locally with Python 3.12; one existing Starlette/httpx deprecation warning remains.

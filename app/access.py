@@ -30,7 +30,11 @@ def validate(db,service,nodes,publish=False):
         if node.get('kind') not in ('group','browser','link','guide') or type(node.get('position')) is not int:raise ValueError('Invalid journey entry')
         if not str(node.get('title','')).strip():raise ValueError('Title required')
         if not isinstance(node.get('title',''),str) or len(node.get('title',''))>200:raise ValueError('Guide text is too long')
-        url_ok(node.get('icon_url',''),optional=True)
+        image=node.get('icon_url','')
+        if image and not re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(?:png|svg)',image):url_ok(image)
+        if node.get('icon'):
+            from .icons import font_icon
+            font_icon(node['icon'])
         if node['kind']=='link':url_ok(node.get('url',''))
         if node['kind']=='guide':
             guide=db.get(Guide,int(node.get('guide_id',0)))
@@ -122,7 +126,9 @@ def edit(request: Request,key: str,data=Depends(form)):
     elif action=='save':
         ident=str(data.get('id','')) or secrets.token_hex(8)
         if data.get('id') and not any(node['id']==ident for node in nodes):raise HTTPException(404,'Submenu not found')
-        node={'id':ident,'kind':str(data.get('kind','group')),'parent':str(data.get('parent','')),'position':int(data.get('position','10')),**{field:str(data[field]) for field in ('title','title_fr','title_en') if field in data},'icon_url':str(data.get('icon_url','')),'url':str(data.get('url','')),'guide_id':int(data.get('guide_id','0') or '0')}
+        from .icons import local_icon_value,font_icon
+        image=local_icon_value(db,data)
+        node={'icon':font_icon(data.get('icon','link')),'id':ident,'kind':str(data.get('kind','group')),'parent':str(data.get('parent','')),'position':int(data.get('position','10')),**{field:str(data[field]) for field in ('title','title_fr','title_en') if field in data},'icon_url':image,'url':str(data.get('url','')),'guide_id':int(data.get('guide_id','0') or '0')}
         if node['kind']=='guide' and not node['guide_id']:
             if service.access_version!=expected:raise HTTPException(409,'The How to changed. Reload this page.')
             guide=Guide(service_key=key,draft=json.dumps({'title':node['title'],'summary':'','device':'other','steps':[]}),version=0)

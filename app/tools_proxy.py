@@ -16,24 +16,47 @@ router=APIRouter();TOOLS=('radarr','sonarr','bazarr')
 HOP={'connection','keep-alive','proxy-authenticate','proxy-authorization','te','trailer','transfer-encoding','upgrade','host','content-length','cookie','authorization','x-api-key','x-emby-token','forwarded','x-forwarded-for','x-forwarded-host','x-forwarded-proto'}
 
 def allowed_tools(db,user):
+    if not user:return []
     grants=json.loads(user.tool_access) if user else []
-    return [key for key in TOOLS if key in grants and config(db,key+'_enabled')=='true']
+    return [key for key in TOOLS if (user.admin or key in grants) and config(db,key+'_enabled')=='true']
 
 def configure_tools(request,data):
     require_admin(request);db=request.state.db;prepared={}
     for tool in TOOLS:
         active=data.get(tool+'_enabled')=='on'
-        base=url_ok(str(data.get(tool+'_url','')),optional=not active)
+        entered=str(data.get(tool+'_url','')).strip()
+        if not active:
+            # An unused/partially filled optional service must not block another connection.
+            prepared[tool]={'base':config(db,tool+'_url'),'key':decrypt(config(db,tool+'_api_key')),'active':False}
+            continue
+        title=tool.capitalize()
+        try:base=url_ok(entered)
+        except ValueError:raise HTTPException(400,title+': enter a complete private HTTP(S) URL, for example http://192.168.0.5:7878')
+        parsed=urlsplit(base)
+        if parsed.query or parsed.fragment or parsed.path.rstrip('/') not in ('',prefix(tool)):
+            raise HTTPException(400,title+': use the private server root URL or its /tools/'+tool+'/app path, without query parameters')
+        base=parsed.scheme+'://'+parsed.netloc
         key=str(data.get(tool+'_api_key','')).strip() or decrypt(config(db,tool+'_api_key'))
-        if active:
-            if not key:raise ValueError('API key required')
-            if urlsplit(base).path not in ('','/') or urlsplit(base).query or urlsplit(base).fragment:raise ValueError('Enter the private server root URL, without the URL Base path')
-            path='/api/system/status' if tool=='bazarr' else '/api/v3/system/status'
+        if not key:raise HTTPException(400,title+': enter the API key')
+        path='/api/system/status' if tool=='bazarr' else '/api/v3/system/status'
+        try:
+            with httpx.Client(timeout=8,trust_env=False,follow_redirects=False) as client:
+                response=client.get(base+prefix(tool)+path,headers={'X-Api-Key':key})
+                if response.status_code in (401,403):raise HTTPException(400,title+': API key rejected (HTTP '+str(response.status_code)+'). Check the key in the native application.')
+                if response.status_code>=400:raise ValueError()
+                result=response.json()
+                if not isinstance(result,dict) or not result:raise ValueError()
+        except httpx.RequestError:raise HTTPException(400,title+': server unreachable from Gatearr. Check its private address, port and firewall.')
+        except ValueError:
+            # Distinguish a working root API from a missing native URL Base.
             try:
-                with httpx.Client(timeout=8,trust_env=False,follow_redirects=False) as client:r=client.get(base.rstrip('/')+prefix(tool)+path,headers={'X-Api-Key':key});r.raise_for_status();result=r.json()
-                if not isinstance(result,dict) or not result:raise ValueError('Invalid connection response')
-            except (httpx.HTTPError,ValueError):raise ValueError('Tool connection failed. Check the private URL, API key and native URL Base: '+prefix(tool))
-            if data.get('proxy_acknowledge')!='on':raise ValueError('Confirm the private upstream and proxy authentication setup')
+                with httpx.Client(timeout=8,trust_env=False,follow_redirects=False) as client:
+                    root=client.get(base+path,headers={'X-Api-Key':key})
+                    reachable=root.status_code==200 and isinstance(root.json(),dict)
+            except (httpx.HTTPError,ValueError):reachable=False
+            if reachable:raise HTTPException(400,title+': server and API key are valid. Set URL Base in the native application to '+prefix(tool)+', restart it, then verify again.')
+            raise HTTPException(400,title+': connection check failed (HTTP '+str(response.status_code)+'). Check the API key and native URL Base '+prefix(tool)+'.')
+        if data.get('proxy_acknowledge')!='on':raise HTTPException(400,'Confirm the private upstream and proxy authentication setup')
         prepared[tool]={'base':base,'key':key,'active':active}
     for tool,v in prepared.items():
         for suffix,value in {'url':v['base'],'api_key':encrypt(v['key']) if v['key'] else '','enabled':'true' if v['active'] else 'false'}.items():set_config(db,tool+'_'+suffix,value)

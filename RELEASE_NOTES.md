@@ -1,25 +1,20 @@
-Gatearr **0.2.1** fixes administration clarity, dark appearance and footer editing, and moves admin tools onto the portal hostname.
+Gatearr **0.2.2** fixes interface clarity, service icons and tool connection feedback.
 
-- Dark-only appearance with a darker, subtle background gradient and editable colors.
-- Clear active parent/child administration navigation and consistent button spacing.
-- Radarr, Sonarr and Bazarr embedded under /tools on the portal hostname, with per-request permissions.
-- Footer editor shows only the selected columns, with rich text and inline PNG/SVG uploads; hidden drafts are retained.
-- Hide the language selector when only one language is enabled.
-- Readable audit actions, username snapshots and redacted change details.
+- Increase button and navigation contrast and align service fields and user invitation controls.
+- Replace text-only icon lists with a searchable visual picker for all 2,060 bundled Font Awesome Free 6.7.2 icons, including Solid, Regular and Brands.
+- Remove external icon URL input from services and How to choices; keep PNG/SVG uploads and validated Font Awesome selections.
+- Fix tool connection diagnostics, accept private root or prefixed URLs and ignore incomplete disabled optional tools. Preserve safe form fields on error without exposing API keys.
+- Show every enabled Radarr, Sonarr and Bazarr application to Gatearr administrators automatically, including custom portals without service blocks. Member tool grants remain independent.
 
-### Updating
-Back up the complete data volume and retain its encryption key, then run:
+### Update
+Back up the full data volume and retain its encryption key, then:
 ```sh
 docker compose pull
 docker compose up -d --wait
 ```
-Use `ghcr.io/heklalab/gatearr:0.2.1` or `:latest` (AMD64/ARM64).
+Image: `ghcr.io/heklalab/gatearr:0.2.2` or `:latest`, for Linux AMD64/ARM64. Startup applies the service-icon migration without changing accounts or credentials. Existing image uploads remain available. Old remote service icons remain visible until that service is edited; new edits accept only uploaded images or Font Awesome Free.
 
-### Admin tools configuration change
-Public tool hostnames are no longer used. Configure each native application's URL Base as `/tools/radarr/app`, `/tools/sonarr/app` or `/tools/bazarr/app`, restart that application, then verify its private URL/API key in Gatearr. The portal wrapper remains `/tools/radarr`, `/tools/sonarr` or `/tools/bazarr`. No extra Caddy site is required. Keep private upstream ports restricted and native proxy authentication configured as documented.
+### Radarr, Sonarr and Bazarr
+The native application's URL Base must still be `/tools/radarr/app`, `/tools/sonarr/app` or `/tools/bazarr/app`, followed by a native app restart. Enter either its private server root or that prefixed URL in Gatearr. If the root API works but URL Base is missing, Gatearr now explains this directly rather than displaying “Invalid value”. Rejected keys and unreachable servers also have explicit messages. No native security setting is changed automatically.
 
-Tools now share Gatearr's browser origin. Use trusted applications and grant access deliberately: their native interfaces expose their normal full administrative capabilities. Gatearr checks the session and tool grant on every proxied request and during WebSockets; no Gatearr cookies are forwarded upstream.
-
-Existing accounts, keys, permissions and content persist. The dark palette replaces the light appearance. Old footer items are converted into an editable rich column; no legacy editor is shown, and reducing the visible columns keeps the hidden draft content.
-
-Automated tests and HTTP/SMTP smoke use simulators; verify actual native application versions and proxy settings on your test server.
+Admins can access all enabled tools; other users retain their individual grants. Tools remain under the Gatearr hostname with the documented native-authentication and trusted-application prerequisites. Test the actual native versions and proxy on your server; automated tests and Docker smoke use simulators.

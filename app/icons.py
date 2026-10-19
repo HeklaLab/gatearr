@@ -87,7 +87,20 @@ def icon_value(db,data):
     return url_ok(value,optional=True)
 
 
-FA_ICONS={'user-circle':'f2bd','users':'f0c0','palette':'f53f','envelope':'f0e0','plug':'f1e6','layer-group':'f5fd','language':'f1ab','clock-rotate-left':'f1da','arrows-rotate':'f021','gears':'f085','film':'f008','tv':'f26c','music':'f001','book':'f02d','house':'f015','globe':'f0ac','circle-question':'f059','download':'f019','play':'f04b','link':'f0c1','mobile-screen':'f3cf','desktop':'f390','shield-halved':'f3ed'}
+import json
+from pathlib import Path
+_FONT_DATA=json.loads(Path(__file__).with_name('fontawesome.json').read_text())
+FA_ICONS=_FONT_DATA['icons']
+def icon_class(value):return _FONT_DATA['classes'].get(value,'fa-solid fa-link')
+
+def local_icon_value(db,data):
+    # Old local asset references remain supported; external URL input is retired.
+    value=str(data.get('icon_url') or data.get('existing_icon') or '')
+    if value and not re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(?:png|svg)',value):raise ValueError('Upload a PNG/SVG image or choose a Font Awesome icon')
+    from starlette.datastructures import FormData
+    pairs=[(k,v) for k,v in data.multi_items() if k!='icon_url']
+    pairs.append(('icon_url',value))
+    return icon_value(db,FormData(pairs))
 
 def font_icon(value):
     value=str(value or 'link')

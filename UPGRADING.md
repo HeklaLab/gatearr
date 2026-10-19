@@ -1,3 +1,9 @@
+# Upgrading to 0.2.2
+
+Back up the data volume and retain its encryption key. Migration 0014 adds a Font Awesome icon choice for How to services and retains accounts, secrets and uploaded images. New service edits no longer accept external icon URLs; older icons stay visible until edited. Choose an uploaded PNG/SVG or the full visual Font Awesome Free picker instead.
+
+Gatearr administrators now have automatic access to every enabled admin tool, matching the home-page shortcuts. Non-admin grants remain individual. The existing URL Base/native authentication prerequisites still apply; tool errors now explain rejected keys, connectivity and missing URL Base while retaining non-secret form fields.
+
 # Upgrading to 0.2.1
 
 Back up all of `/data` and retain its existing key. Accounts and permissions are unchanged. The dark theme is now the only appearance; its palette remains editable. The bundled dark preset becomes darker, while custom dark colors are retained.

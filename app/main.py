@@ -236,7 +236,7 @@ async def context(request: Request, call_next):
             target=public_url(db)
             if target:
                 response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("form-action 'self'","form-action 'self' "+target)
-        if request.url.path in ("/admin/mail-editor","/admin/footer") or request.url.path.startswith(("/admin/access/","/tools/")):
+        if request.url.path in ("/admin/mail-editor","/admin/footer","/admin/services","/admin/guides") or request.url.path.startswith(("/admin/access/","/tools/")):
             response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("style-src 'self'","style-src 'self' 'unsafe-inline'")
         if not request.url.path.startswith('/static/'):
             from .audit import record
@@ -248,7 +248,7 @@ async def context(request: Request, call_next):
 
 async def form(request: Request):
     # Starlette bounds multipart fields; also limit body size for urlencoded forms.
-    accepts_icon=request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer","/admin/assets")
+    accepts_icon=request.url.path.startswith("/admin/access/") or request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer","/admin/assets")
     chunks, length = [], 0
     async for chunk in request.stream():
         length += len(chunk)
@@ -385,13 +385,19 @@ def render(request, template, **kwargs):
         "seerr_notification_mode": config(db, "seerr_notification_mode", "unmanaged"),
         "seerr_access":access_href(db,"seerr") if seerr_public else "",
         "seerr_in_menu":any(item.access_service=="seerr" or item.label.casefold()=="seerr" or (seerr_public and item.url.rstrip("/")==seerr_public.rstrip("/")) for entries in menus.values() for item in entries),
-        "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: (db.get(AccessService,key).icon_url if db.get(AccessService,key) else ""), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
+        "font_icon_class":__import__("app.icons",fromlist=["icon_class"]).icon_class, "service_font":lambda key:(db.get(AccessService,key).icon if db.get(AccessService,key) else "link"), "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: (db.get(AccessService,key).icon_url if db.get(AccessService,key) else ""), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
         "layout": layout, "regions": portal.for_display(layout, locale, request.state.user,db), "menus": menus, "mail_locale": mail_locale,
         "content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
 
 def setup_error(request,message,status):
     values=getattr(request.state,'form_values',{})
     path=request.url.path
+    if request.method=='POST' and path=='/admin/tools':
+        from .admin_features import integrations
+        request.state.setup_error=message
+        response=integrations(request)
+        response.status_code=status
+        return response
     if request.method!='POST' or not values or not (path in ('/setup','/setup/admin') or path.startswith('/admin/setup/')):return None
     if path=='/setup/admin':
         from .first_run import administrator_page
@@ -807,8 +813,8 @@ def menu_save(request: Request, data=Depends(form)):
         raise ValueError('Invalid service')
     item.access_service = service_key or None
     item.url = url_ok(data.get("url", ""), optional=bool(service_key))
-    from .icons import icon_value
-    item.icon_url = icon_value(db,data)
+    from .icons import local_icon_value
+    item.icon_url = local_icon_value(db,data)
     from .icons import font_icon
     item.icon = font_icon(data.get('icon','link')) if not item.icon_url else 'link'
     item.position = int(data["position"])

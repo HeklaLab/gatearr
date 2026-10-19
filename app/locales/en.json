@@ -940,5 +940,18 @@
   "Email template updated": "Email template updated",
   "Email templates updated": "Email templates updated",
   "Update notification settings changed": "Update notification settings changed",
-  "Checked for updates": "Checked for updates"
+  "Checked for updates": "Checked for updates",
+  "Gatearr administrators can access every enabled admin tool. Individual tool grants apply to other accounts.": "Gatearr administrators can access every enabled admin tool. Individual tool grants apply to other accounts.",
+  "Search icons": "Search icons",
+  "Show more icons": "Show more icons",
+  "Unable to load icons. Try again.": "Unable to load icons. Try again.",
+  "Font Awesome Free": "Font Awesome Free",
+  "Choose an icon": "Choose an icon",
+  "Style": "Style",
+  "All icons": "All icons",
+  "PNG/SVG upload or the full bundled Font Awesome Free collection. Choose an icon to replace an uploaded image.": "PNG/SVG upload or the full bundled Font Awesome Free collection. Choose an icon to replace an uploaded image.",
+  "Upload a PNG/SVG image or choose a Font Awesome icon": "Upload a PNG/SVG image or choose a Font Awesome icon",
+  "Solid": "Solid",
+  "Regular": "Regular",
+  "Brands": "Brands"
 }

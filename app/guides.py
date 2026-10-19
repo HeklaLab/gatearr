@@ -147,8 +147,9 @@ def save_service(request: Request, data=Depends(form)):
     # Force port parsing now, not later in member-facing rendering.
     if address and (parsed.query or parsed.fragment or (parsed.port is not None and not 1 <= parsed.port <= 65535)):
         raise ValueError('Invalid URL')
-    from .icons import icon_value
-    row.icon_url = icon_value(db,data)
+    from .icons import local_icon_value,font_icon
+    row.icon_url = local_icon_value(db,data)
+    row.icon = font_icon(data.get('icon','link')) if not row.icon_url else 'link'
     mode = str(data.get('entry_mode',row.entry_mode or 'direct'))
     if mode not in ('direct','structured'):
         raise ValueError('Mode de parcours invalide')

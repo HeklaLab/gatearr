@@ -101,7 +101,7 @@ def test_tool_ticket_origin_acl_replay_and_revocation(client):
     page=client.get('/tools/radarr');assert page.status_code==200 and 'secret' not in page.text and 'private.test' not in page.text
     assert 'src="/tools/radarr/app/"' in page.text and 'radarr.test' not in page.text
     with SessionLocal() as db:
-        owner=db.scalar(select(User).where(User.admin.is_(True)));owner.tool_access='[]';db.commit()
+        owner=db.scalar(select(User).where(User.admin.is_(True)));owner.tool_access='[]';owner.admin=False;db.commit()
     assert client.get('/tools/radarr/app/').status_code==401
 
 

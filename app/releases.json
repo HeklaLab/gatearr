@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.2.2",
+    "date": "2026-10-19",
+    "changes": [
+      "Increase button and navigation contrast and align service fields and user invitation controls.",
+      "Replace text-only icon lists with a searchable visual picker for all 2,060 bundled Font Awesome Free 6.7.2 icons, including Solid, Regular and Brands.",
+      "Remove external icon URL input from services and How to choices; keep PNG/SVG uploads and validated Font Awesome selections.",
+      "Fix tool connection diagnostics, accept private root or prefixed URLs and ignore incomplete disabled optional tools. Preserve safe form fields on error without exposing API keys.",
+      "Show every enabled Radarr, Sonarr and Bazarr application to Gatearr administrators automatically, including custom portals without service blocks. Member tool grants remain independent."
+    ]
+  },
+  {
     "version": "0.2.1",
     "date": "2026-10-19",
     "changes": [

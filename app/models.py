@@ -93,6 +93,7 @@ class AccessService(Base):
     browser_url: Mapped[str] = mapped_column(Text, default="")
     server_url: Mapped[str] = mapped_column(Text, default="")
     icon_url: Mapped[str] = mapped_column(Text, default="", server_default="")
+    icon: Mapped[str] = mapped_column(String(80), default="link", server_default="link")
     entry_mode: Mapped[str] = mapped_column(String(20), default="direct", server_default="direct")
     access_draft: Mapped[str | None] = mapped_column(Text)
     access_published: Mapped[str | None] = mapped_column(Text)

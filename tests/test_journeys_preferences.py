@@ -22,16 +22,16 @@ def nodes(client, action='save', **values):
 def test_nested_journey_direct_mode_icons_and_no_help_navigation(client):
     setup(client);gid=create(client)
     assert edit(client,gid,guide_data('publish')).status_code==303
-    assert post(client,'/admin/guides/service',{'key':'emby','name':'Emby','browser_url':'https://media.test','entry_mode':'direct','icon_url':'https://cdn.test/emby.png'},'/admin/guides').status_code==303
+    assert post(client,'/admin/guides/service',{'key':'emby','name':'Emby','browser_url':'https://media.test','entry_mode':'direct','icon':'film'},'/admin/guides').status_code==303
     assert 'href="/services/emby/open"' in client.get('/home').text
     assert 'href="/help"' not in client.get('/home').text
-    assert 'https://cdn.test/emby.png' in client.get('/home').text
+    assert 'fa-solid fa-film' in client.get('/home').text
     for kind,title,parent in [('browser','Browser',''),('group','Computer',''),('group','Mobile','')]:
         assert nodes(client,kind=kind,title_fr=title,title_en=title,parent=parent,position=1).status_code==303
     with SessionLocal() as db:tree=access.load(db.get(AccessService,'emby'),True)
     desktop=next(node['id'] for node in tree if node['title']=='Computer')
     mobile=next(node['id'] for node in tree if node['title']=='Mobile')
-    assert nodes(client,kind='guide',title_fr='Mac',title_en='Mac',parent=desktop,guide_id=gid,position=2,icon_url='https://cdn.test/mac.png').status_code==303
+    assert nodes(client,kind='guide',title_fr='Mac',title_en='Mac',parent=desktop,guide_id=gid,position=2,icon='brands:apple').status_code==303
     assert nodes(client,kind='link',title_fr='iPhone',title_en='iPhone',parent=mobile,url='https://apps.apple.com/example',position=2).status_code==303
     # Draft remains private; direct mode is not inferred from a published guide.
     assert client.get('/access/emby',follow_redirects=False).headers['location']=='/services/emby/open'
@@ -41,14 +41,14 @@ def test_nested_journey_direct_mode_icons_and_no_help_navigation(client):
     root=client.get('/access/emby').text
     assert 'Computer' in root and 'Mobile' in root and '>Mac<' not in root
     page=client.get('/access/emby/'+desktop).text
-    assert 'Mac' in page and 'https://cdn.test/mac.png' in page
+    assert 'Mac' in page and 'fa-brands fa-apple' in page
     assert '/access/emby/guide/'+str(gid) in page
     assert client.get('/access/emby/guide/'+str(gid)).status_code==200
     # The admin can switch back to a direct link without losing the saved journey.
     post(client,'/admin/guides/service',{'key':'emby','name':'Emby','browser_url':'https://media.test','entry_mode':'direct'},'/admin/guides')
     assert 'href="/services/emby/open"' in client.get('/home').text
-    assert post(client,'/admin/menu',{'label':'Requests','url':'https://requests.test','icon':'link','icon_url':'https://cdn.test/requests.png','position':2},'/admin').status_code==303
-    assert 'https://cdn.test/requests.png' in client.get('/account').text
+    assert post(client,'/admin/menu',{'label':'Requests','url':'https://requests.test','icon':'link','icon':'brands:github','position':2},'/admin').status_code==303
+    assert 'fa-brands fa-github' in client.get('/account').text
 
 
 def test_journey_validation_conflicts_and_draft_deletion(client):

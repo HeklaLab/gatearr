@@ -35,8 +35,8 @@ def test_menu_upload_create_edit_keep_and_url_alternative(client):
     assert upload(client,data=fields,raw=png(3,3)).status_code==303
     with SessionLocal() as db:assert db.get(MenuItem,uid).icon_url!=url
     fields['icon_url']='https://example.com/remote.png'
-    assert post(client,'/admin/menu',fields,'/admin').status_code==303
-    with SessionLocal() as db:assert db.get(MenuItem,uid).icon_url==fields['icon_url']
+    assert post(client,'/admin/menu',fields,'/admin').status_code==400
+    with SessionLocal() as db:assert db.get(MenuItem,uid).icon_url!=fields['icon_url']
 
 
 def test_guided_service_upload_add_and_edit(client):

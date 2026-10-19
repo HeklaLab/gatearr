@@ -1,0 +1,13 @@
+'use strict';
+let catalogPromise;
+const catalog=()=>catalogPromise||(catalogPromise=fetch('/static/fontawesome-icons.json').then(r=>{if(!r.ok)throw new Error();return r.json();}).catch(error=>{catalogPromise=null;throw error;}));
+const classes=id=>{const parts=id.split(':');return parts.length===2?'fa-'+parts[0]+' fa-'+parts[1]:'fa-solid fa-'+id;};
+document.querySelectorAll('[data-icon-picker]').forEach(root=>{
+ const toggle=root.querySelector('.icon-picker-toggle'),panel=root.querySelector('.icon-picker-panel'),grid=root.querySelector('.icon-grid'),search=root.querySelector('[data-icon-search]'),style=root.querySelector('[data-icon-style]'),more=root.querySelector('[data-icon-more]'),status=root.querySelector('[role=status]'),value=root.querySelector('input[name=icon]'),image=root.querySelector('input[name=existing_icon]'),file=root.querySelector('input[type=file]');
+ let icons=[],limit=96;
+ const render=()=>{const q=search.value.trim().toLowerCase();const filtered=icons.filter(icon=>(!style.value||icon.style===style.value)&&(!q||(icon.label+' '+icon.id+' '+icon.search).toLowerCase().includes(q)));grid.replaceChildren();for(const icon of filtered.slice(0,limit)){const button=document.createElement('button');button.type='button';button.className='icon-option';button.title=icon.label+' · '+icon.style;button.setAttribute('aria-label',button.title);button.setAttribute('aria-pressed',String(icon.id===value.value));const glyph=document.createElement('i');glyph.className=classes(icon.id);glyph.setAttribute('aria-hidden','true');button.append(glyph);button.addEventListener('click',()=>{value.value=icon.id;image.value='';file.value='';const preview=document.createElement('i');preview.className=classes(icon.id);preview.setAttribute('aria-hidden','true');toggle.querySelector('i,img').replaceWith(preview);panel.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.focus();});grid.append(button);}status.textContent=Math.min(limit,filtered.length)+' / '+filtered.length+' · '+icons.length;more.hidden=limit>=filtered.length;};
+ toggle.addEventListener('click',async()=>{panel.hidden=!panel.hidden;toggle.setAttribute('aria-expanded',String(!panel.hidden));if(panel.hidden)return;status.textContent='…';try{icons=await catalog();render();search.focus();}catch{status.textContent=root.dataset.loadError;}});
+ search.addEventListener('input',()=>{limit=96;render();});style.addEventListener('change',()=>{limit=96;render();});more.addEventListener('click',()=>{limit+=96;render();});
+ panel.addEventListener('keydown',e=>{if(e.key==='Escape'){panel.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.focus();}});
+ file.addEventListener('change',()=>{if(file.files.length)image.value='';});
+});
