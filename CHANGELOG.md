@@ -1,3 +1,8 @@
+# 0.2.3 — 2026-10-20
+
+- Fix unreadable Radarr, Sonarr and Bazarr pages caused by compressed upstream responses: preserve wire bytes and Content-Encoding together.
+- Replace the browser Accept-Encoding header instead of combining it with identity; preserve streamed HTML, scripts and images without optional server-side decompressors.
+
 # 0.2.2 — 2026-10-19
 
 - Increase button and navigation contrast and align service fields and user invitation controls.

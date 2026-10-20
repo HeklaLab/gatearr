@@ -4,6 +4,7 @@ import httpx
 import pytest
 from sqlalchemy import select
 from app import main, versioning, footer, default_journeys, access, i18n
+from app.release import VERSION
 from app.db import SessionLocal
 from app.models import Config, Guide, AccessService
 from test_portal import setup, post, csrf, logout, login_user
@@ -27,7 +28,7 @@ def test_version_page_and_update_notification_are_admin_only_and_escaped(client,
     setup(client);calls=remote(monkeypatch)
     assert post(client,'/admin/updates/check',{},'/admin/updates').status_code==303
     page=client.get('/admin/updates').text
-    assert 'Gatearr 0.2.2' in page and '0.3.0' in page and 'Installed release history' in page
+    assert ('Gatearr '+VERSION) in page and '0.3.0' in page and 'Installed release history' in page
     assert '&lt;script&gt;untrusted&lt;/script&gt;' in page and 'malicious.test' not in page
     assert 'class="update-notice"' in client.get('/account').text
     assert len(calls)==1
@@ -55,7 +56,7 @@ def test_release_cache_backoff_failure_retention_and_opt_out(client,monkeypatch)
     assert 'GitHub could not be reached' not in client.get('/admin/updates').text
 
 
-@pytest.mark.parametrize('tag,available',[('0.0.9',False),('0.1.0',False),('0.2.1',False),('0.2.2',False),('0.2.3',True),('0.10.0',True)])
+@pytest.mark.parametrize('tag,available',[('0.0.9',False),('0.1.0',False),('0.2.1',False),('0.2.2',False),('0.2.3',False),('0.2.4',True),('0.10.0',True)])
 def test_semantic_version_comparison(client,monkeypatch,tag,available):
     setup(client);remote(monkeypatch,version=tag)
     monkeypatch.setattr(versioning,'BUILD_REVISION','')
@@ -63,12 +64,12 @@ def test_semantic_version_comparison(client,monkeypatch,tag,available):
 
 
 def test_same_version_rebuild_and_invalid_release_are_handled(client,monkeypatch):
-    setup(client);remote(monkeypatch,version='0.2.2');monkeypatch.setattr(versioning,'BUILD_REVISION','a'*40)
+    setup(client);remote(monkeypatch,version=VERSION);monkeypatch.setattr(versioning,'BUILD_REVISION','a'*40)
     with SessionLocal() as db:assert versioning.check(db,True)['available']
     remote(monkeypatch,version='../../bad')
     with SessionLocal() as db:
         state=versioning.check(db,True)
-        assert state['state']=='error' and state['url']=='https://github.com/HeklaLab/gatearr/releases/tag/v0.2.2'
+        assert state['state']=='error' and state['url']=='https://github.com/HeklaLab/gatearr/releases/tag/v'+VERSION
     assert 'Updates and changelog' in client.get('/admin').text
 
 

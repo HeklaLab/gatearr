@@ -62,10 +62,10 @@ def test_subpath_proxy_assets_redirects_origin_and_revocation(client,monkeypatch
     original=httpx.AsyncClient
     async def upstream(request):
         observed.append(request)
-        if request.url.path.endswith('/redirect'):return httpx.Response(302,headers={'Location':'http://private.test:7878/tools/radarr/app/movies'})
-        if request.url.path.endswith('/bad'):return httpx.Response(302,headers={'Location':'/login'})
-        if request.url.path.endswith('/app.js'):return httpx.Response(200,content=b'window.loaded=true;',headers={'Content-Type':'application/javascript'})
-        return httpx.Response(200,content=b'<base href="/tools/radarr/app/"><script src="app.js"></script>',headers={'Content-Type':'text/html'})
+        if request.url.path.endswith('/redirect'):return httpx.Response(302,stream=httpx.ByteStream(b''),headers={'Location':'http://private.test:7878/tools/radarr/app/movies'})
+        if request.url.path.endswith('/bad'):return httpx.Response(302,stream=httpx.ByteStream(b''),headers={'Location':'/login'})
+        if request.url.path.endswith('/app.js'):return httpx.Response(200,stream=httpx.ByteStream(b'window.loaded=true;'),headers={'Content-Type':'application/javascript'})
+        return httpx.Response(200,stream=httpx.ByteStream(b'<base href="/tools/radarr/app/"><script src="app.js"></script>'),headers={'Content-Type':'text/html'})
     monkeypatch.setattr(tools_proxy.httpx,'AsyncClient',lambda **kw:original(transport=httpx.MockTransport(upstream),**kw))
     page=client.get('/tools/radarr');assert '<iframe' in page.text and 'src="/tools/radarr/app/"' in page.text
     response=client.get('/tools/radarr/app/');assert response.status_code==200 and "frame-ancestors 'self'" in response.headers['Content-Security-Policy']

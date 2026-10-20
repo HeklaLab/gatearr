@@ -119,7 +119,7 @@ def test_proxy_strips_browser_credentials_streams_and_uses_fixed_upstream(client
     observed=[]
     async def transport(req):
         observed.append(req)
-        return httpx.Response(200,content=b'<html>Radarr UI</html>',headers={'content-type':'text/html','set-cookie':'upstream=private','x-frame-options':'DENY'})
+        return httpx.Response(200,stream=httpx.ByteStream(b'<html>Radarr UI</html>'),headers={'content-type':'text/html','set-cookie':'upstream=private','x-frame-options':'DENY'})
     original=httpx.AsyncClient
     monkeypatch.setattr(tools_proxy.httpx,'AsyncClient',lambda **kwargs:original(transport=httpx.MockTransport(transport),**kwargs))
     with SessionLocal() as db:

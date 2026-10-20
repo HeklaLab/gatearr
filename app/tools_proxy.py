@@ -116,14 +116,16 @@ async def handle(request,tool):
     url=base.rstrip('/')+request.scope['raw_path'].decode('ascii')
     if request.url.query:url+='?'+request.url.query
     headers={k:v for k,v in request.headers.items() if k.lower() not in HOP and not k.lower().startswith(('x-forwarded-','sec-'))}
-    headers.update({'X-Api-Key':key,'Accept-Encoding':'identity'})
+    # Replace the lowercase browser header: mixed-case duplicates are combined by HTTPX.
+    headers['accept-encoding']='identity'
+    headers['X-Api-Key']=key
     client=httpx.AsyncClient(timeout=httpx.Timeout(60,connect=10),trust_env=False,follow_redirects=False)
     try:
         req=client.build_request(request.method,url,headers=headers,content=body)
         upstream=await client.send(req,stream=True)
     except httpx.HTTPError:
         await client.aclose();return Response('Tool unavailable',502)
-    output={k:v for k,v in upstream.headers.items() if k.lower() not in HOP|{'set-cookie','content-security-policy','x-frame-options','content-encoding'}}
+    output={k:v for k,v in upstream.headers.items() if k.lower() not in HOP|{'set-cookie','content-security-policy','x-frame-options'}}
     location=output.get('location')
     if location:
         parsed=urlsplit(urljoin(str(upstream.request.url),location))
@@ -136,7 +138,9 @@ async def handle(request,tool):
     record(actor,subject,'tool.'+tool+'.'+request.method,upstream.status_code)
     async def stream():
         try:
-            async for chunk in upstream.aiter_bytes():yield chunk
+            # Forward wire bytes and Content-Encoding together, including formats
+            # HTTPX cannot decode (e.g. Brotli or Zstandard without optional extras).
+            async for chunk in upstream.aiter_raw():yield chunk
         finally:await upstream.aclose();await client.aclose()
     return StreamingResponse(stream(),status_code=upstream.status_code,headers=output)
 

@@ -1,3 +1,10 @@
+# Validation — Gatearr 0.2.3 — 20 October 2026
+
+- **170 automated tests passed** locally with Python 3.12; one existing Starlette/httpx deprecation warning remains.
+- Regression coverage verifies that outgoing Accept-Encoding is replaced, not duplicated, and responses preserve Content-Encoding with original streamed bytes. Real Brotli/Zstandard HTML fixtures work without optional HTTPX decoders; gzip, deflate, stacked and unknown encodings cover HTML, JavaScript and binary images.
+- Existing proxy authorization, origin, redirect, credential stripping, revocation and WebSocket tests remain in the full suite. GitHub Actions gates release on the full tests and Docker startup/HTTP/SMTP smoke.
+- No local Docker engine or user's native Radarr instance was used; the local upstream responses are simulated.
+
 # Validation — Gatearr 0.2.2 — 19 October 2026
 
 - **152 automated tests passed** locally with Python 3.12; one existing Starlette/httpx deprecation warning remains.

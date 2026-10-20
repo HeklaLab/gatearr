@@ -1,3 +1,7 @@
+# Upgrading to 0.2.3
+
+The embedded-tool proxy now preserves compressed responses correctly, fixing unreadable Radarr/Sonarr/Bazarr pages. Pull the new image and recreate the Gatearr container; no additional native application settings or migration are required when upgrading from 0.2.2.
+
 # Upgrading to 0.2.2
 
 Back up the data volume and retain its encryption key. Migration 0014 adds a Font Awesome icon choice for How to services and retains accounts, secrets and uploaded images. New service edits no longer accept external icon URLs; older icons stay visible until edited. Choose an uploaded PNG/SVG or the full visual Font Awesome Free picker instead.
