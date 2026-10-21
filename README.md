@@ -30,6 +30,12 @@ An Emby Smart TV guide with the server address and step-by-step connection instr
 
 ![Gatearr v0.3.2 Emby Smart TV access guide](screenshots/gatearr-guide-v032.png)
 
+### Create and edit Access guides
+
+Administrators can reorder steps, edit instructions and links, add images and preview the result while building a guide.
+
+![Gatearr v0.3.2 administrator editing an Emby Access guide with live preview](screenshots/gatearr-guide-editor-v032.png)
+
 ### Password recovery by email
 
 Users can request a recovery link from the sign-in screen without contacting the administrator.
