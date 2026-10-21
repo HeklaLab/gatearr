@@ -216,7 +216,9 @@ def test_branding_menu_smtp_encryption_and_template_validation(client):
     logout(client)
     assert '&lt;script&gt;' in client.get('/login').text
     login_user(client)
-    page = client.get('/account').text
+    with SessionLocal() as db:
+        layout=__import__('app.portal',fromlist=['load']).load(db);row=next(b for b in layout['blocks'] if b['kind']=='applications');row['applications'].append('menu:'+str(db.scalar(select(MenuItem.id))));main.set_config(db,'portal_published',__import__('json').dumps(layout));db.commit()
+    page = client.get('/home').text
     assert 'Usarr' in page and 'Seerr' in page and 'noopener noreferrer' in page
 
 def test_failed_mail_retries_without_exposing_secrets(client, monkeypatch):
@@ -243,7 +245,7 @@ def test_linked_admin_uses_normal_email_recovery(client):
 def test_health_and_migration_schema(client):
     assert client.get('/healthz').json() == {'status': 'ok'}
     with SessionLocal() as db:
-        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0015'
+        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0016'
 
 
 def test_form_limits_and_null_origin(client):

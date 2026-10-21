@@ -37,7 +37,7 @@ def manage(request:Request,uid:int,data=Depends(form)):
         user.email=email;user.preferences_version+=1
         db.commit();invalidate(db,user);queue_user(db,user,force=True)
     elif action=='password':
-        password_ok(data.get('password',''))
+        password_ok(data.get('password',''),db)
         if data.get('password')!=data.get('confirm'):raise ValueError('Passwords do not match')
         if not user.email:raise ValueError('The user needs an email address')
         if not config(db,'smtp_host'):raise ValueError('Configure SMTP before changing account credentials')

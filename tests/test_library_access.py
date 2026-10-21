@@ -26,7 +26,7 @@ def test_user_library_page_current_access_edit_remove_and_permissions(client,mon
     assert 'name="access_mode" value="all" checked' in page
     assert 'name="libraries" value="movies" checked' in page
     assert 'name="libraries" value="films" checked' in page
-    assert 'Manage libraries' in client.get('/admin/users').text
+    assert 'username-link' in client.get('/admin/users').text
     response=post(client,'/admin/emby/libraries',{'id':uid,'access_mode':'selected','libraries':['films']},path)
     assert response.status_code==303
     page=client.get(response.headers['location']).text

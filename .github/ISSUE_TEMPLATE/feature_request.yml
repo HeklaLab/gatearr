@@ -1,0 +1,11 @@
+name: Request a feature
+description: Suggest an improvement to Gatearr
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What would you like to improve?
+      description: Explain your use case and the behavior you would like. Do not include private addresses or credentials.
+    validations:
+      required: true

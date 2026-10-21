@@ -8,7 +8,7 @@ import httpx
 
 
 def csrf(client, path):
-    response = client.get(path)
+    response = client.get(path, follow_redirects=True)
     response.raise_for_status()
     match = re.search(r'name="csrf" value="([^"]+)"', response.text)
     assert match, f'No CSRF field on {path}'
@@ -74,8 +74,8 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         submit(client, '/admin/portal/publish', {'version':layout_version()}, '/admin/portal')
         assert 'Welcome to Gatearr' in client.get('/home').text
         submit(client, '/admin/guides/service', {'key':'emby','name':'Emby','browser_url':'https://emby.example.com','server_url':'https://media.example.com:8920'}, '/admin/guides')
-        assert 'Emby on Windows' in client.get('/admin/guides').text
-        assert 'Emby on Android' in client.get('/admin/guides').text
+        assert 'Emby on Windows' in client.get('/admin/design/home/howto/emby').text
+        assert 'Emby on Android' in client.get('/admin/design/home/howto/emby').text
         assert 'Gatearr '+json.loads((Path(__file__).resolve().parents[1]/'app/releases.json').read_text())[0]['version'] in client.get('/admin/updates').text
         submit(client,'/admin/footer',{'version':0,'kind':'link','text':'Community','url':'https://community.example.com','position':20},'/admin/footer')
         assert 'community.example.com' not in client.get('/forgot').text
@@ -148,7 +148,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
             logo=client.get('/static/services/'+key+'.png');assert logo.status_code==200 and logo.content.startswith(b'\x89PNG')
         submit(client, '/logout', {}, '/account')
         submit(client, '/login', {'name': 'demo', 'password': 'DemoPassword123!'}, '/login')
-        assert 'Seerr' in client.get('/account').text
+        assert 'Seerr' in client.get('/home').text
         assert client.get('/admin').status_code == 403
         assert 'Emby on mobile' in client.get('/access/emby').text
         assert client.get('/help/'+guide_id+'?preview=1').status_code == 403

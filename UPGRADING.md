@@ -1,3 +1,9 @@
+# Upgrading to 0.3.1
+
+Back up the persistent data volume before updating. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.3.1` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+Existing application blocks are adapted without overwriting stored snapshots. Inspect the migrated rows in Portal builder, select their applications and publish when ready. My account can now be placed explicitly. Existing enabled-tool access for Gatearr administrators is migrated to explicit grants; subsequent access is controlled solely by each user’s tool checkboxes. Existing How to content, translations, accounts and connections are retained. Password rules keep the former 12-character minimum until an administrator changes the policy; disabling complexity permits nonempty passwords up to 256 characters, subject to the media server.
+
 # Upgrading to 0.3.0
 
 Back up `/data`, including its encryption key. Pull `ghcr.io/heklalab/gatearr:0.3.0` and recreate the Gatearr container. Migration 0015 installs twenty disabled language entries, leaving existing enabled languages, names and translation overrides intact.

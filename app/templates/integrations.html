@@ -3,4 +3,4 @@
 }
 handle {
     reverse_proxy seerr:5055
-}</pre><p class="hint">{{ _('No password or API key is included in application links. Only existing Seerr accounts matched by media user ID are accepted.') }}</p></section><section class="card">{% include 'tools_setup_form.html' %}</section>{% endblock %}
+}</pre><p class="hint">{{ _('No password or API key is included in application links. Only existing Seerr accounts matched by media user ID are accepted.') }}</p></section><section class="card">{% include 'tools_setup_form.html' %}</section><section><h2>{{ _('Applications') }}</h2>{% include 'application_settings.html' %}</section>{% endblock %}{% block scripts %}<script src="/static/icon-picker.js" defer></script><script src="/static/applications.js" defer></script>{% endblock %}

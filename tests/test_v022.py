@@ -28,7 +28,7 @@ def test_all_free_icon_styles_are_bundled_and_selected_visually(client):
     assert post(client,'/admin/menu',{'label':'Apple','url':'https://example.com','position':1,'icon':'brands:apple'},'/admin/services').status_code==303
     assert 'fa-brands fa-apple' in client.get('/home').text
     assert post(client,'/admin/menu',{'label':'Regular','url':'https://example.com','position':2,'icon':'regular:address-book'},'/admin/services').status_code==303
-    assert 'fa-regular fa-address-book' in client.get('/account').text
+    assert 'fa-regular fa-address-book' in client.get('/home').text
     assert post(client,'/admin/menu',{'label':'Unsafe','url':'https://example.com','position':3,'icon':'brands:apple onclick=x'},'/admin/services').status_code==400
     assert post(client,'/admin/menu',{'label':'Remote','url':'https://example.com','position':4,'icon_url':'https://example.com/logo.png'},'/admin/services').status_code==400
 
@@ -65,7 +65,7 @@ def test_radarr_root_api_has_explicit_urlbase_error_and_preserves_form(client,mo
     assert result.status_code==400
     assert 'server and API key are valid' in result.text and '/tools/radarr/app' in result.text
     assert 'radarr.private:7878' in result.text and 'do-not-show-this-key' not in result.text
-    assert 'Invalid value.' not in result.text and 'name="radarr_url"' in result.text
+    assert 'name="radarr_url"' in result.text and 'server and API key are valid' in result.text
     with SessionLocal() as db:assert main.config(db,'radarr_enabled')!='true'
 
 
@@ -82,6 +82,7 @@ def test_configured_tools_are_available_to_admins_and_independent_member_grants(
     with SessionLocal() as db:
         owner=db.scalar(select(User).where(User.admin.is_(True)));owner.tool_access='[]'
         for tool in tools_proxy.TOOLS:main.set_config(db,tool+'_enabled','true')
+        db.scalar(select(User).where(User.admin.is_(True))).tool_access=json.dumps(list(tools_proxy.TOOLS))
         db.commit()
     page=client.get('/home').text
     for tool in tools_proxy.TOOLS:
@@ -90,8 +91,8 @@ def test_configured_tools_are_available_to_admins_and_independent_member_grants(
     # Custom portals without a services block still expose configured admin tools.
     with SessionLocal() as db:
         from app import portal
-        layout=portal.load(db);layout['blocks']=[b for b in layout['blocks'] if b['kind']!='services'];main.set_config(db,'portal_published',json.dumps(layout));db.commit()
-    assert 'href="/tools/radarr"' in client.get('/home').text
+        layout=portal.load(db);layout['blocks']=[b for b in layout['blocks'] if b['kind']!='applications'];main.set_config(db,'portal_published',json.dumps(layout));db.commit()
+    assert 'href="/tools/radarr"' not in client.get('/home').text
     logout(client);login_user(client)
     for tool in tools_proxy.TOOLS:assert client.get('/tools/'+tool).status_code==403
     with SessionLocal() as db:

@@ -32,7 +32,7 @@ def test_english_is_default_and_dynamic_languages_can_be_prepared_and_enabled(cl
     assert language(client,'../../x').status_code==400
     assert post(client,'/admin/translations/languages/en',{'name':'English'},'/admin/translations').status_code==400
     assert post(client,'/admin/translations/languages/es',{'name':'Español'},'/admin/translations').status_code==303
-    assert '<html lang="en">' in client.get('/account').text
+    assert '<html lang="en">' in client.get('/home').text
 
 
 def test_source_editors_have_one_field_per_element_and_mail_language_is_dynamic(client):
@@ -41,7 +41,7 @@ def test_source_editors_have_one_field_per_element_and_mail_language_is_dynamic(
         page=client.get(path).text
         for field in ('title_fr','title_en','body_fr','body_en','login_text_en','label_en'):
             assert 'name="'+field+'"' not in page
-    assert 'Español' in client.get('/account').text
+    assert 'Español' in client.get('/home').text
     assert post(client,'/account/language',{'locale':'es'},'/account').status_code==303
     post(client,'/language',{'locale':'fr','next':'/account'},'/account')
     with SessionLocal() as db:
@@ -90,8 +90,8 @@ def test_guides_journeys_menus_and_branding_use_the_created_language(client):
     assert translate(client,'journey:emby:'+ident+':title','Teléfono').status_code==303
     assert post(client,'/admin/access/emby',{'version':1,'action':'publish'},'/admin/access/emby').status_code==303
     post(client,'/language',{'locale':'es','next':'/home'},'/home')
-    assert 'Solicitudes' in client.get('/account').text
-    assert 'Puerta' in client.get('/account').text
+    assert 'Solicitudes' in client.get('/home').text
+    assert 'Puerta' in client.get('/home').text
     assert 'name="app_name" value="Gatearr"' in client.get('/admin/branding').text
     assert 'Teléfono' in client.get('/access/emby').text
     page=client.get(f'/access/emby/guide/{gid}').text

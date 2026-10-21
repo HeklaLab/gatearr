@@ -19,7 +19,7 @@ from starlette.concurrency import run_in_threadpool
 from .db import SessionLocal
 from .models import User, Session, Token, Config, MenuItem, RateBucket, MailJob, AccessService
 from .settings import settings
-from .security import digest, password_ok, email_ok, url_ok, encrypt, decrypt, origin as url_origin
+from .security import digest, password_ok, password_policy, email_ok, url_ok, encrypt, decrypt, origin as url_origin
 from .emby import emby, EmbyError
 from .mailer import config, send, DEFAULTS, mail_template
 from . import rich_mail
@@ -236,7 +236,7 @@ async def context(request: Request, call_next):
             target=public_url(db)
             if target:
                 response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("form-action 'self'","form-action 'self' "+target)
-        if request.url.path in ("/admin/mail-editor","/admin/footer","/admin/services","/admin/guides","/admin/portal") or request.url.path.startswith(("/admin/access/","/admin/design/","/admin/guides/","/admin/visual-howto/","/admin/visual-guide/","/tools/")):
+        if request.url.path in ("/admin/mail-editor","/admin/footer","/admin/integrations","/admin/services","/admin/guides","/admin/portal") or request.url.path.startswith(("/admin/access/","/admin/design/","/admin/guides/","/admin/visual-howto/","/admin/visual-guide/","/tools/")):
             response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'")
         if request.url.path in ('/admin/portal','/admin/footer') or request.url.path.startswith(('/admin/design/','/admin/access/','/admin/guides/')):
             response.headers['Content-Security-Policy']+="; frame-src 'self'"
@@ -382,7 +382,7 @@ def render(request, template, **kwargs):
     from .themes import load as load_themes
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
-        "clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
+        "password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
         "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"tool_names":("radarr","sonarr","bazarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
@@ -572,7 +572,7 @@ def account(request: Request):
 def change_password(request: Request, data=Depends(form)):
     user = require_user(request)
     limit(request, "password", str(user.id))
-    password_ok(data["password"])
+    password_ok(data["password"],request.state.db)
     if data["password"] != data.get("confirm"):
         raise ValueError('Passwords do not match')
     if not user.emby_id:raise HTTPException(403,'Media account required')
@@ -679,7 +679,7 @@ def reset_password(request: Request, data=Depends(form)):
     limit(request, "reset_use", maximum=10)
     db = request.state.db
     token, user = valid_token(db, data.get("token", ""), "reset")
-    password_ok(data["password"])
+    password_ok(data["password"],request.state.db)
     if data["password"] != data.get("confirm"):
         raise ValueError('Passwords do not match')
     remote = emby.user(user.emby_id)
@@ -707,6 +707,7 @@ def admin_section(request:Request,section:str):
     # Only these exact section names belong to this route; static routes are registered below.
     if section not in ADMIN_SECTIONS:raise HTTPException(404,'Section not found')
     require_admin(request)
+    if section=='services':return redirect('/admin/integrations')
     from .sync_status import user_statuses
     db=request.state.db
     return render(request,'applications.html' if section=='services' else 'admin.html',section=section,section_title=ADMIN_SECTIONS[section],sync_statuses=user_statuses(db,request.state.locale),users=list(db.scalars(select(User).where(User.emby_id.is_not(None)).order_by(User.id))),items=list(db.scalars(select(MenuItem).order_by(MenuItem.position,MenuItem.id))),mail_defaults=DEFAULTS)
@@ -835,7 +836,7 @@ def menu_save(request: Request, data=Depends(form)):
     db.flush()
     if data.get("label_en") and data["label"]!=item.label:i18n.store_content(db,"menu:"+str(item.id)+":label",item.label,"fr",str(data["label"])[:100])
     db.commit()
-    return redirect('/admin/access/'+service_key if data.get('access_mode')=='howto' else '/admin/services')
+    return redirect('/admin/design/home/howto/'+service_key if data.get('access_mode')=='howto' else '/admin/integrations')
 
 @app.post("/admin/menu/delete")
 def menu_delete(request: Request, data=Depends(form)):
@@ -844,7 +845,7 @@ def menu_delete(request: Request, data=Depends(form)):
     db.execute(delete(MenuItem).where(MenuItem.id == int(data["id"])))
     set_config(db,"menu_version",str(int(config(db,"menu_version","0"))+1))
     db.commit()
-    return redirect("/admin/services")
+    return redirect("/admin/integrations")
 
 @app.post("/admin/user-email")
 def admin_email(request: Request, data=Depends(form)):

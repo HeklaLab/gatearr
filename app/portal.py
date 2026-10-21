@@ -10,14 +10,16 @@ from .security import url_ok
 from . import i18n
 
 REGIONS = ('login', 'header', 'sidebar', 'main', 'footer')
-KINDS = ('welcome', 'text', 'image', 'button', 'menu', 'services', 'account', 'guides', 'spacer', 'columns', 'login_form', 'logo', 'divider', 'application')
+KINDS = ('welcome', 'text', 'image', 'button', 'menu', 'services', 'account', 'guides', 'spacer', 'columns', 'login_form', 'logo', 'divider', 'application', 'applications')
 DEFAULT = {'nav_position': 'top', 'sidebar_position': 'left', 'theme': {'accent': '#159eff', 'button_hover':'#45cdf4', 'bg': '#edf4ff', 'surface': '#ffffff', 'text': '#12234a', 'muted': '#526789', 'ink':'#051c40'}, 'blocks': [{'id': 'welcome', 'kind': 'welcome', 'region': 'main', 'order': 10, 'span': 12, 'title': 'Welcome, {username}.', 'body': 'All your services, one place.', 'alt': ''}, {'id': 'services', 'kind': 'services', 'region': 'main', 'order': 20, 'span': 12, 'menu_key': 'main', 'include_emby': True, 'title': '', 'body': '', 'alt': ''}, {'id': 'account', 'kind': 'account', 'region': 'main', 'order': 30, 'span': 12, 'title': 'My account', 'body': 'Manage your details and password.', 'alt': ''}]}
 
 def load(db, draft=False):
     raw = config(db, 'portal_draft' if draft else 'portal_published')
     if not raw:
-        return deepcopy(DEFAULT)
-    return validate(json.loads(raw))
+        from .applications import normalize
+        return normalize(DEFAULT,db)
+    from .applications import normalize
+    return validate(normalize(json.loads(raw),db))
 
 def validate(layout):
     if layout.get('nav_position') not in ('top', 'left', 'right'):
@@ -42,6 +44,10 @@ def validate(layout):
                 raise ValueError('Block text too long')
         from .page_design import asset_url,link_url,validate_style
         validate_style(block.get('style',{}))
+        if block['kind']=='applications':
+            selected=block.get('applications',[])
+            if not isinstance(selected,list) or len(selected)>100 or any(not isinstance(k,str) or not re.fullmatch(r'(?:access:[a-z0-9_-]{1,80}|menu:[0-9]+|account|radarr|sonarr|bazarr)',k) for k in selected) or len(set(selected))!=len(selected):raise ValueError('Invalid application selection')
+            if block.get('columns',3) not in (1,2,3,4,5,6) or block['span']!=12 or block.get('parent') or block['region']!='main':raise ValueError('Applications use a full row in the main content')
         if block['kind']=='image':asset_url(block.get('url',''))
         if block['kind']=='button':link_url(block.get('url',''),layout.get('page')=='login')
         if block['kind']=='columns' and block.get('columns',2) not in (1,2,3):raise ValueError('Choose one, two or three columns')
@@ -78,7 +84,7 @@ def localized(block,name,locale,db=None):
 
 def for_display(layout,locale,user=None,db=None):
     layout=deepcopy(layout);regions={key:[] for key in REGIONS};indexed={}
-    for block in sorted(layout['blocks'],key=lambda block:(block['kind']=='account',block['order'],block['id'])):
+    for block in sorted(layout['blocks'],key=lambda block:(block['order'],block['id'])):
         if block['id']=='account' and block['kind']=='account' and block.get('title')=='My account' and block.get('body')=='Manage your details and password.' and any(b['kind']=='services' for b in layout['blocks']):continue
         if block['kind']=='application' and block.get('service_key') in ('radarr','sonarr','bazarr') and db is not None:
             from .tools_proxy import allowed_tools
@@ -93,8 +99,10 @@ def for_display(layout,locale,user=None,db=None):
             block['body']=clean_html(block['body'])
         block['slots']=[[] for _ in range(block.get('columns',2))] if block['kind']=='columns' else []
         indexed[block['id']]=block
-    applications=[b for b in indexed.values() if b['kind'] in ('services','application')]
-    if applications:applications[-1]['account_last']=True
+    from .applications import catalog
+    available={a['key']:a for a in catalog(db,user,locale=locale)} if db is not None else {}
+    for b in indexed.values():
+        if b['kind']=='applications':b['cards']=[available[key] for key in b.get('applications',[]) if key in available]
     for block in indexed.values():
         if block.get('parent'):
             parent=indexed.get(block['parent'])

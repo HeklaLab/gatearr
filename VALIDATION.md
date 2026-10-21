@@ -1,3 +1,14 @@
+# Validation — Gatearr 0.3.1 — 21 October 2026
+
+- **198 automated tests passed** for the full application suite, with one existing Starlette/httpx deprecation warning.
+- Automated regressions cover explicit application selection/order across multiple full-width rows, absence of injected account/tool cards, administrator and member tool grants, safe row validation, and preservation of existing administrator grants during migration 0016.
+- Password-policy coverage exercises complexity rules, optional enforcement, length bounds, CSRF/admin access and rejection before remote mutations in self-service changes, resets, administrator changes and account cloning.
+- Existing authentication, reset tokens, email notifications, proxy compression/WebSocket authorization, library permissions, groups and translation regressions remain in the full suite.
+- Browser checks verify that clicking Emby in the preview selects its block without navigation or a blank screen, application checkboxes/order work, and language management is compact. The demo uses simulated servers; no user's live Emby or native tool was modified.
+- New interface labels in language packs fall back to editable English where translations have not yet been supplied. Fixed interface entries are separated from authored page/How to content and mail templates; stored overrides are retained.
+- Full isolated HTTP/SMTP smoke passed against running Uvicorn and simulated Emby/Seerr services, including setup, cloning, library/group permissions, visual previews/publication and account recovery.
+- Docker startup, health and HTTP/SMTP smoke are gated by GitHub Actions before multi-platform publication. No local Docker engine is available.
+
 # Validation — Gatearr 0.3.0 — 20 October 2026
 
 - **189 automated tests passed** locally on Python 3.12; one existing Starlette/httpx deprecation warning remains.

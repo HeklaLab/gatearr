@@ -1,10 +1,29 @@
 # Gatearr
 
+## Gatearr is your media portal’s front door
+
+Give users the Gatearr address as their homepage: they sign in with their Emby or Jellyfin account, manage their account, then open the applications they are allowed to use. Gatearr complements the media server and Seerr; each can retain its own address behind your existing reverse proxy.
+
+For example:
+
+| Application | Example public address |
+| --- | --- |
+| Gatearr (main entry point) | `https://example.com` |
+| Emby or Jellyfin | `https://play.example.com` |
+| Seerr | `https://request.example.com` |
+
+These are reserved example domains. Configure your actual addresses in the setup wizard and **Applications & API**. No additional reverse proxy is bundled. Native admin tools use Gatearr paths such as `/tools/radarr`, with explicit per-user permission.
+
+In **Portal builder**, each **Applications** block fills one row. Select applications (including **My account**), choose the column count and drag them into order. Add another row for a different group. **How to** choices and guides are created from this builder; Radarr, Sonarr and Bazarr open their integrated interface directly.
+
+**Security → Password policy** controls minimum length and required character types for passwords set through Gatearr, including resets, administrator changes and new cloned accounts. Existing login credentials remain valid; the media server may impose additional rules.
+
+
 A customizable, self-hosted account portal for Emby and Jellyfin. Sign in with your media account, manage your account and open the services published by your administrator.
 
 Python 3.12, FastAPI, SQLAlchemy/Alembic and SQLite/WAL. One application container and one persistent data volume. English is the source language. Twenty additional pretranslated language packs are bundled but disabled by default; activate them and edit interface, content and email text in Translations. No reverse proxy is bundled.
 
-## Visual studio (0.3.0)
+## Visual studio (0.3.1)
 
 Open **Administration → Branding → Visual studio** and choose **Before sign-in**, **After sign-in** or **Footer**. Drag a block from the palette into the real page preview, or click to add it. Click a block to edit its text, width, alignment, visibility, image and colors. Columns accept nested blocks; choose one, two or three columns without entering layout numbers. The sign-in form can be moved and aligned left, center or right, but a sign-in page must retain exactly one visible form.
 
@@ -65,7 +84,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.0` for a controlled version. Public container pulls require no GitHub credentials. Repository/release downloads require your GitHub login while the source repository remains private; GitHub release checks inside Gatearr also require a public repository and report an access failure while it is private.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.1` for a controlled version. Public container pulls require no GitHub credentials. Repository/release downloads require your GitHub login while the source repository remains private; GitHub release checks inside Gatearr also require a public repository and report an access failure while it is private.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 

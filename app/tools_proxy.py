@@ -18,7 +18,7 @@ HOP={'connection','keep-alive','proxy-authenticate','proxy-authorization','te','
 def allowed_tools(db,user):
     if not user:return []
     grants=json.loads(user.tool_access) if user else []
-    return [key for key in TOOLS if (user.admin or key in grants) and config(db,key+'_enabled')=='true']
+    return [key for key in TOOLS if key in grants and config(db,key+'_enabled')=='true']
 
 def configure_tools(request,data):
     require_admin(request);db=request.state.db;prepared={}

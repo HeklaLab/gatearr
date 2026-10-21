@@ -129,8 +129,7 @@ def read_guide(request: Request, guide_id: int, key: str | None = None):
 @router.get('/admin/guides')
 def admin_guides(request: Request):
     require_admin(request)
-    rows = list(request.state.db.scalars(select(Guide).order_by(Guide.id)))
-    return render(request,'guides_admin.html',guides=[{'row':row, 'content':json.loads(row.draft)} for row in rows])
+    return redirect('/admin/portal')
 
 @router.post('/admin/guides/service')
 def save_service(request: Request, data=Depends(form)):
@@ -140,6 +139,7 @@ def save_service(request: Request, data=Depends(form)):
     name = str(data.get('name','')).strip()
     if not re.fullmatch(r'[a-z0-9_-]{1,40}',key) or not name or len(name)>100:
         raise ValueError('Invalid service')
+    if key in ('radarr','sonarr','bazarr'):raise ValueError('How to is unavailable for this application')
     row = db.get(AccessService,key) or AccessService(key=key)
     row.name = name
     row.browser_url = url_ok(str(data.get('browser_url','')),optional=True)
@@ -158,13 +158,14 @@ def save_service(request: Request, data=Depends(form)):
     row.server_url = address
     db.add(row)
     db.commit()
-    return redirect('/admin/access/'+key if mode=='structured' else '/admin/services')
+    return redirect('/admin/integrations')
 
 @router.post('/admin/guides/create')
 def create_guide(request: Request, data=Depends(form)):
     require_admin(request)
     db = request.state.db
     key = str(data.get('service_key',''))
+    if key in ('radarr','sonarr','bazarr'):raise ValueError('How to is unavailable for this application')
     if not db.get(AccessService,key):
         raise ValueError('Invalid service')
     value = validated(data)

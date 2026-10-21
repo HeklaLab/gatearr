@@ -1,0 +1,17 @@
+name: Report an issue
+description: Report a Gatearr problem
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Gatearr version
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem, expected behavior and steps to reproduce. Remove API keys, passwords, tokens and private domains from logs or screenshots.
+    validations:
+      required: true

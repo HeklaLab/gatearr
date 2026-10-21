@@ -48,7 +48,7 @@ def test_nested_journey_direct_mode_icons_and_no_help_navigation(client):
     post(client,'/admin/guides/service',{'key':'emby','name':'Emby','browser_url':'https://media.test','entry_mode':'direct'},'/admin/guides')
     assert 'href="/services/emby/open"' in client.get('/home').text
     assert post(client,'/admin/menu',{'label':'Requests','url':'https://requests.test','icon':'link','icon':'brands:github','position':2},'/admin').status_code==303
-    assert 'fa-brands fa-github' in client.get('/account').text
+    assert 'fa-brands fa-github' in client.get('/home').text
 
 
 def test_journey_validation_conflicts_and_draft_deletion(client):
@@ -93,7 +93,7 @@ def test_api_connection_ui_encryption_current_url_and_key(client,monkeypatch):
     assert observed[0].url.host=='new-backend.test'
     assert observed[0].headers['X-Emby-Token']=='private-new-emby-key'
     logout(client);login_user(client)
-    assert 'new-backend.test' not in client.get('/account').text
+    assert 'new-backend.test' not in client.get('/home').text
     assert client.get('/admin/integrations').status_code==403
     assert post(client,'/admin/connections/emby',{'url':'https://evil.test'},'/account').status_code==403
 

@@ -79,8 +79,8 @@ def test_my_account_after_automatic_tools_and_added_applications(client):
     value['blocks'].append({'id':'last-app','kind':'application','region':'main','span':12,'order':100,'service_key':'emby','title':'Another application'})
     assert design(client,'home','publish',value).status_code==200
     html=client.get('/home').text
-    assert html.rindex('Another application')<html.rindex('Manage my account')
-    assert html.index('/tools/radarr')<html.rindex('Manage my account')
+    assert html.rindex('Another application')>html.rindex('Manage my account')
+    assert 'href="/tools/radarr"' not in html  # No explicit grant.
     for key in ('emby','jellyfin','seerr','radarr','sonarr','bazarr'):
         r=client.get('/static/services/'+key+'.png');assert r.status_code==200 and r.content.startswith(b'\x89PNG')
 

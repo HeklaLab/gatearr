@@ -11,7 +11,7 @@ def change(client,key,value='',locale='fr',action='save'):
 
 def test_translations_customize_public_recovery_and_account_labels(client):
     setup(client,locale='fr')
-    assert i18n.translate('Translations','fr') in client.get('/admin').text
+    assert i18n.translate('Translations / Labels','fr') in client.get('/admin').text
     for key,value in [('ACCOUNT RECOVERY','RETROUVER MON ACCÈS'),('A fresh start.','Un nouvel accès.'),("Enter the verified email address of your Emby account. You will receive a link valid for 30 minutes.",'Saisissez votre adresse pour recevoir le lien.'),('Receive notifications about my requests','Suivre mes demandes')]:
         assert change(client,key,value).status_code==303
     assert change(client,'A fresh start.','Recover your access','en').status_code==303

@@ -33,3 +33,23 @@ def authored(value):
         for v in value:authored(v)
 authored(json.loads((root/'app/journey_defaults.json').read_text()))
 path.write_text(json.dumps(catalog,indent=2,ensure_ascii=False)+'\n');print('English sources:',len(catalog))
+
+# Only actual UI literals belong in the fixed-interface editor. Preserve the full
+# catalog for legacy overrides and default authored-content fallback translations.
+from jinja2 import Environment,nodes
+interface=set()
+def ui(value):
+    if isinstance(value,str) and value in catalog and re.match(r'[A-Z][A-Za-z ]',value) and '${' not in value and not any(x in value for x in ('<','=', '\n','" if ',"' if ")):interface.add(value)
+for file in (root/'app/templates').glob('*.html'):
+    for node in Environment().parse(file.read_text()).find_all(nodes.Const):ui(node.value)
+for file in [root/'app/static/studio.js',root/'app/static/visual-howto.js',root/'app/static/applications.js']:
+    for m in re.finditer(r"'((?:\\.|[^'\\])*)'",file.read_text()):
+        try:ui(ast.literal_eval(m[0]))
+        except (ValueError,SyntaxError):pass
+for file in (root/'app').glob('*.py'):
+    for n in ast.walk(ast.parse(file.read_text())):
+        if isinstance(n,ast.Raise) and isinstance(n.exc,ast.Call):
+            for arg in n.exc.args:
+                if isinstance(arg,ast.Constant):ui(arg.value)
+(root/'app/interface_keys.json').write_text(json.dumps(sorted(interface),indent=2,ensure_ascii=False)+'\n')
+print('Fixed interface keys:',len(interface))

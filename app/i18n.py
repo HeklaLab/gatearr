@@ -8,6 +8,7 @@ ROOT=Path(__file__).parent
 CATALOGS={p.stem:json.loads(p.read_text()) for p in (ROOT/'locales').glob('*.json') if p.stem!='languages'}
 LEGACY_KEYS=json.loads((ROOT/'legacy_i18n.json').read_text())
 BASE_LANGUAGE='en'
+INTERFACE_KEYS=frozenset(json.loads((ROOT/'interface_keys.json').read_text()))
 
 def canonical(message):return LEGACY_KEYS.get(str(message),str(message))
 def source_hash(value):return hashlib.sha256(value.encode()).hexdigest()

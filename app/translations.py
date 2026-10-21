@@ -9,6 +9,7 @@ from .main import form,require_admin,render,redirect,set_config
 from .models import Config,Language,ContentTranslation
 from .content_catalog import sources
 router=APIRouter()
+LANGUAGE_CHOICES={'en': 'English', 'fr': 'Français', 'es': 'Español', 'de': 'Deutsch', 'it': 'Italiano', 'pt-br': 'Português (Brasil)', 'nl': 'Nederlands', 'pl': 'Polski', 'ru': 'Русский', 'uk': 'Українська', 'cs': 'Čeština', 'sv': 'Svenska', 'da': 'Dansk', 'nb': 'Norsk bokmål', 'fi': 'Suomi', 'tr': 'Türkçe', 'ar': 'العربية', 'he': 'עברית', 'ja': '日本語', 'ko': '한국어', 'zh-cn': '简体中文', 'pt': 'Português (Portugal)', 'el': 'Ελληνικά', 'ro': 'Română', 'hu': 'Magyar', 'bg': 'Български', 'sk': 'Slovenčina', 'hr': 'Hrvatski', 'id': 'Bahasa Indonesia', 'vi': 'Tiếng Việt', 'th': 'ไทย', 'hi': 'हिन्दी', 'is': 'Íslenska'}
 
 def validated_value(key,locale,value,source=None):
     value=value.strip();source=source if source is not None else i18n.CATALOGS['en'][i18n.canonical(key)]
@@ -39,12 +40,13 @@ def translations(request:Request):
     available=i18n.languages(db,all=True)
     locale=request.query_params.get('edit_locale','en')
     if locale not in available:raise HTTPException(400,'Invalid language')
-    scope=request.query_params.get('scope','all')
+    scope=request.query_params.get('scope','interface')
     if scope not in ('all','interface','content','email'):raise HTTPException(400,'Invalid translation section')
     query=request.query_params.get('q','')[:200];page=max(1,int(request.query_params.get('page','1')))
     custom=i18n.overrides(db,locale);rows=[]
     if scope in ('all','interface'):
-        for key,source in i18n.CATALOGS['en'].items():
+        for key in sorted(i18n.INTERFACE_KEYS):
+            source=i18n.CATALOGS['en'][key]
             default=i18n.CATALOGS.get(locale,{}).get(key,'')
             value=custom.get(key,default)
             rows.append({'key':key,'source':source,'default':default,'value':value,'custom':key in custom,'translated':bool(value),'context':'Interface','hash':'','kind':'text','maximum':5000,'scope':'interface'})
@@ -59,14 +61,19 @@ def translations(request:Request):
     rows=[row for row in rows if query.casefold() in '\n'.join((row['key'],row['source'],row['value'],row['context'])).casefold()]
     rows.sort(key=lambda row:(row['context'],row['source'].casefold()));pages=1;page=1
     def href(number):return '/admin/translations?'+urlencode({'edit_locale':locale,'scope':scope,'q':query,'page':number})
-    return render(request,'translations.html',entries=rows,edit_locale=locale,scope=scope,query=query,page=page,pages=pages,total=len(rows),translated=translated,total_sources=total_sources,managed_languages=list(db.scalars(select(Language).order_by(Language.code))),all_languages=available,previous=href(page-1) if page>1 else '',next_page=href(page+1) if page<pages else '')
+    return render(request,'translations.html',entries=rows,edit_locale=locale,scope=scope,query=query,page=page,pages=pages,total=len(rows),translated=translated,total_sources=total_sources,managed_languages=list(db.scalars(select(Language).order_by(Language.code))),all_languages={code:name for code,name in available.items() if code in i18n.languages(db) or code==locale},language_choices={code:name for code,name in LANGUAGE_CHOICES.items() if code not in i18n.languages(db)},previous=href(page-1) if page>1 else '',next_page=href(page+1) if page<pages else '')
 
 @router.post('/admin/translations/languages')
 def create_language(request:Request,data=Depends(form)):
     require_admin(request);db=request.state.db
-    code=str(data.get('code','')).strip().lower();name=str(data.get('name','')).strip()
+    named=data.get('language')
+    if named and named not in LANGUAGE_CHOICES:raise ValueError('Choose a supported language')
+    code=str(named or data.get('code','')).strip().lower();name=LANGUAGE_CHOICES[named] if named else str(data.get('name','')).strip()
     if len(code)>10 or not re.fullmatch(r'[a-z]{2,3}(?:-[a-z0-9]{2,6})?',code) or not name or len(name)>80:raise ValueError('Use a language code such as de, es or pt-br and a name')
-    if db.get(Language,code):raise HTTPException(409,'This language already exists')
+    existing=db.get(Language,code)
+    if existing and named:
+        existing.enabled=True;db.commit();return redirect('/admin/translations?edit_locale='+code)
+    if existing:raise HTTPException(409,'This language already exists')
     if len(i18n.languages(db,all=True))>=32:raise ValueError('A maximum of 32 languages is supported')
     db.add(Language(code=code,name=name,enabled=data.get('enabled')=='on'));db.commit()
     return redirect('/admin/translations?edit_locale='+code)

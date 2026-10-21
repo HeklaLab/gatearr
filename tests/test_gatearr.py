@@ -105,11 +105,11 @@ def test_builder_move_delete_restore(client):
     setup(client)
     with SessionLocal() as db:
         published=portal.load(db)
-    assert builder_post(client,'/admin/portal/move',{'block_id':'account','direction':'up'}).status_code==303
+    assert builder_post(client,'/admin/portal/move',{'block_id':'services','direction':'up'}).status_code==303
     with SessionLocal() as db:
         ordered=sorted(portal.load(db,True)['blocks'],key=lambda b:b['order'])
-        assert ordered[1]['id']=='account'
-    assert builder_post(client,'/admin/portal/delete',{'block_id':'account'}).status_code==303
+        assert ordered[0]['id']=='services'
+    assert builder_post(client,'/admin/portal/delete',{'block_id':'services'}).status_code==303
     assert builder_post(client,'/admin/portal/reset',{}).status_code==303
     with SessionLocal() as db:assert portal.load(db,True)==published
 
@@ -271,7 +271,7 @@ def test_bilingual_menu_labels_keep_structural_css(client):
     post(client,'/language',{'locale':'en','next':'/home'},'/home')
     page=client.get('/home').text
     assert 'Requests' in page and 'Demandes' not in page
-    assert 'class="services"' in page and 'class="Service cards"' not in page
+    assert 'class="application-grid"' in page and 'class="Service cards"' not in page
 
 
 def test_disabled_service_jobs_do_not_starve_enabled_service(client,monkeypatch):

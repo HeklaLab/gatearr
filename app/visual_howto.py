@@ -17,7 +17,9 @@ def decode(data):
     return value
 
 def howto_editor(request,key):
-    require_admin(request);db=request.state.db;service=access.service_or_404(db,key)
+    require_admin(request)
+    if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
+    db=request.state.db;service=access.service_or_404(db,key)
     rows=list(db.scalars(select(Guide).where(Guide.service_key==key)))
     return render(request,'visual_howto.html',howto_data={'type':'choices','key':key,'name':service.name,'version':service.access_version,'nodes':access.load(service,True),'guides':[{'id':r.id,'title':json.loads(r.draft).get('title',''),'published':bool(r.published)} for r in rows],'server_url':service.server_url,'root':json.loads(config(db,'howto_root_draft_'+key,'{}')),'browser_url':service.browser_url},service=service)
 
@@ -28,7 +30,9 @@ def guide_editor(request,guide_id):
 
 @router.post('/admin/visual-howto/{key}/{action}')
 def choices(request:Request,key:str,action:str,data=Depends(form)):
-    require_admin(request);db=request.state.db;service=access.service_or_404(db,key);value=decode(data)
+    require_admin(request)
+    if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
+    db=request.state.db;service=access.service_or_404(db,key);value=decode(data)
     if action=='new-guide':
         title=str(value.get('title','New guide')).strip()[:200]
         if not title:raise ValueError('Guide title required')

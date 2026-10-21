@@ -49,9 +49,9 @@ def test_sections_are_separate_and_completed_setup_is_hidden(client):
     assert 'action="/admin/smtp"' in emails and 'action="/admin/settings"' not in emails
     assert 'action="/admin/menu"' in client.get('/admin/services').text
     users=client.get('/admin/users').text
-    assert 'Manage libraries' in users and 'action="/admin/settings"' not in users
+    assert 'username-link' in users and 'action="/admin/settings"' not in users
     for path in ('/admin/branding','/admin/emails','/admin/services','/admin/users','/admin/translations','/admin/integrations','/admin/portal','/admin/guides'):
-        assert 'admin-back' in client.get(path).text
+        assert 'Back to admin' in client.get(path).text and 'admin-back' not in client.get(path).text
 
 
 def test_hover_color_is_validated_and_follows_draft_publication(client):
@@ -78,9 +78,9 @@ def test_user_sync_indicators_only_include_configured_services(client):
 def test_translation_page_lists_all_sources_for_selected_language(client):
     setup(client)
     post(client,'/admin/translations/languages',{'code':'de','name':'Deutsch','enabled':'on'},'/admin/translations')
-    response=client.get('/admin/translations?edit_locale=de')
+    response=client.get('/admin/translations?edit_locale=de&scope=all')
     assert response.status_code==200
-    assert response.text.count('class="card translation-entry"')>=len(i18n.CATALOGS['en'])
+    assert response.text.count('class="card translation-entry"')>=len(i18n.INTERFACE_KEYS)
     assert 'branding:app_name' in response.text and 'mail:invite:subject' in response.text
     assert 'name="edit_locale" value="de"' in response.text and 'Next →' not in response.text
 

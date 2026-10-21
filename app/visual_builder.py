@@ -11,6 +11,7 @@ from .models import Config,AccessService,MenuItem
 from sqlalchemy import select
 from .mailer import config
 from . import portal,footer
+from .applications import catalog
 from .page_design import validate_style,asset_url
 router=APIRouter()
 PAGES=('home','login','footer')
@@ -46,7 +47,7 @@ def validate(db,page,value):
     value=deepcopy(value);value['page']=page;portal.validate(value)
     login_forms=sum(b['kind']=='login_form' for b in value['blocks'])
     if (page=='login' and login_forms!=1) or (page!='login' and login_forms):raise ValueError('The sign-in page must contain exactly one sign-in form')
-    if page=='login' and any(b['kind'] in ('services','account','guides','application') or b.get('visibility','everyone')!='everyone' for b in value['blocks']):raise ValueError('Use public blocks on the sign-in page')
+    if page=='login' and any(b['kind'] in ('services','account','guides','application','applications') or b.get('visibility','everyone')!='everyone' for b in value['blocks']):raise ValueError('Use public blocks on the sign-in page')
     for b in value['blocks']:
         if b['kind']=='application' and b.get('service_key','emby') not in ('radarr','sonarr','bazarr') and not db.get(AccessService,b.get('service_key','emby')):raise ValueError('Invalid service')
         if b['kind']=='image':asset_url(b['url'],db)
@@ -77,7 +78,7 @@ def save(db,page,value,expected,publish=False):
 def editor(request,page='home'):
     require_admin(request);db=request.state.db
     from .themes import load as themes
-    return render(request,'visual_builder.html',builder_data={'page':page,'layout':load(db,page,True),'version':version(db,page),'palette':themes(db)['dark'],'services':[{'key':s.key,'name':s.name} for s in db.scalars(select(AccessService))]+[{'key':k,'name':k.capitalize()} for k in ('radarr','sonarr','bazarr')],'menus':sorted({'main',*(m.menu_key for m in db.scalars(select(MenuItem)))})},builder_page=page)
+    return render(request,'visual_builder.html',builder_data={'page':page,'layout':load(db,page,True),'version':version(db,page),'palette':themes(db)['dark'],'services':catalog(db,editor=True),'menus':sorted({'main',*(m.menu_key for m in db.scalars(select(MenuItem)))})},builder_page=page)
 
 @router.get('/admin/design/{page}')
 def design(request:Request,page:str):return editor(request,page)
@@ -112,3 +113,28 @@ def application_order(request:Request,data=Depends(form)):
     for row in rows:row.position=(identifiers.index(row.id)+1)*10
     db.commit();request.state.audit_detail='Reordered applications: '+', '.join(next(r.label for r in rows if r.id==i) for i in identifiers)
     return {'version':expected+1}
+
+@router.get('/admin/design/home/howto/{key}')
+def howto(request:Request,key:str):
+    if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
+    from .visual_howto import howto_editor
+    return howto_editor(request,key)
+
+@router.get('/admin/design/home/guide/{guide_id}')
+def guide(request:Request,guide_id:int):
+    from .visual_howto import guide_editor
+    return guide_editor(request,guide_id)
+
+@router.post('/admin/design/home/enable-howto/{item_id}')
+def enable_howto(request:Request,item_id:int,data=Depends(form)):
+    require_admin(request);db=request.state.db;item=db.get(MenuItem,item_id)
+    if not item:raise HTTPException(404,'Application not found')
+    if item.label.strip().casefold() in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
+    key=item.access_service
+    if not key:
+        key='service-'+str(item.id)
+        service=db.get(AccessService,key)
+        if not service:
+            service=AccessService(key=key,name=item.label,browser_url=item.url,server_url=item.url,icon=item.icon,icon_url=item.icon_url,entry_mode='direct',access_version=0,access_draft='[]',access_published='[]');db.add(service)
+        item.access_service=key;db.commit()
+    return {'url':'/admin/design/home/howto/'+key}

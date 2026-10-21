@@ -167,11 +167,11 @@ def test_default_seerr_card_needs_public_url_and_respects_manual_menu(client):
     setup(client)
     with SessionLocal() as db:
         main.set_config(db,'seerr_enabled','true');db.commit()
-    assert 'data-default-seerr' not in client.get('/account').text
+    assert 'data-default-seerr' not in client.get('/home').text
     with SessionLocal() as db:
         main.set_config(db,'seerr_public_url','https://requests.test')
         db.add(MenuItem(label='Seerr',url='https://requests.test',position=99,menu_key='main',new_tab=True));db.commit()
-    page=client.get('/account')
+    page=client.get('/home')
     assert page.status_code==200
     # The manual entry takes precedence over the automatic service card.
     assert page.text.count('https://requests.test')==1

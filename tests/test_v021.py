@@ -15,8 +15,8 @@ def test_single_language_dark_theme_and_parent_navigation(client):
         db.get(Language,'fr').enabled=False;db.commit()
     page=client.get('/admin/guides').text
     assert 'class="language-switch"' not in page
-    assert 'href="/admin/services" aria-current="page"' in page
-    assert 'href="/admin/guides" aria-current="page"' in page
+    assert 'href="/admin/integrations"' in page
+    assert 'Portal builder' in page and 'Back to admin' in page
     assert 'Theme policy' not in client.get('/admin/branding/themes').text
     css=client.get('/theme.css').text
     assert 'color-scheme:dark' in css and 'linear-gradient' in css and '@media' not in css

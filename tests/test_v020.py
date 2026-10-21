@@ -164,9 +164,9 @@ def test_howto_service_and_tutorial_are_created_without_manual_identifiers(clien
     from app.models import MenuItem,AccessService,Guide
     setup(client)
     r=post(client,'/admin/menu',{'label':'My service','url':'https://service.test','icon':'book','position':1,'access_mode':'howto'},'/admin/services')
-    assert r.status_code==303 and r.headers['location'].startswith('/admin/access/service-')
+    assert r.status_code==303 and r.headers['location'].startswith('/admin/design/home/howto/service-')
     path=r.headers['location']
-    r=post(client,path,{'version':0,'kind':'guide','title':'Connect on Mac','position':1,'guide_id':0},path)
+    r=post(client,'/admin/access/'+path.rsplit('/',1)[-1],{'version':0,'kind':'guide','title':'Connect on Mac','position':1,'guide_id':0},path)
     assert r.status_code==303 and r.headers['location'].startswith('/admin/guides/')
     with SessionLocal() as db:
         item=db.scalar(select(MenuItem).where(MenuItem.label=='My service'));service=db.get(AccessService,item.access_service)

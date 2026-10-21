@@ -56,7 +56,7 @@ def fake(monkeypatch):
     instance = FakeEmby()
     monkeypatch.setattr(main, 'emby', instance)
     monkeypatch.setattr('app.onboarding.probe_media', lambda kind,base,key: {'id':'test-media-server','name':'Test media','count':len(instance.users())})
-    monkeypatch.setattr('app.connection_health.checks',lambda db,refresh=False:{service:{'state':'unconfigured','detail':'Connection not configured','checked_at':None} for service in ('emby','seerr','tracearr')})
+    monkeypatch.setattr('app.connection_health.checks',lambda db,refresh=False:{service:{'state':'unconfigured','detail':'Connection not configured','checked_at':None} for service in ('emby','seerr','radarr','sonarr','bazarr')})
     return instance
 
 @pytest.fixture

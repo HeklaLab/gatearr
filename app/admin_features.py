@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy import select
 from .main import form, require_admin, require_user, render, redirect, sync_users, set_config, limit
-from .models import User, IntegrationJob
+from .models import User, IntegrationJob, MenuItem
 from .security import password_ok, url_ok, encrypt, email_ok
 from .mailer import config
 from .emby import emby
@@ -106,7 +106,7 @@ def emby_admin(request: Request):
 def clone(request: Request, data=Depends(form)):
     require_admin(request)
     limit(request, 'provision', maximum=10)
-    password_ok(data['password'])
+    password_ok(data['password'],request.state.db)
     name = str(data['name']).strip()
     if not name or len(name) > 100 or any(ord(c) < 32 for c in name):
         raise ValueError('Invalid name')
@@ -185,7 +185,7 @@ def integrations(request: Request):
     jobs = list(db.scalars(select(IntegrationJob).order_by(IntegrationJob.updated_at.desc())))
     owners = {user.id: user for user in db.scalars(select(User))}
     from .connection_health import checks
-    return render(request,'integrations.html',jobs=jobs,owners=owners,emby_connection_url=config(db,'emby_url'),emby_key_saved=bool(config(db,'emby_api_key')),connection_checks=checks(db))
+    return render(request,'integrations.html',jobs=jobs,owners=owners,emby_connection_url=config(db,'emby_url'),emby_key_saved=bool(config(db,'emby_api_key')),connection_checks=checks(db),items=list(db.scalars(select(MenuItem).order_by(MenuItem.position))))
 
 @router.post('/admin/integrations')
 def integrations_save(request: Request, data=Depends(form)):
@@ -283,3 +283,20 @@ def user_role(request:Request,local_id:int,data=Depends(form)):
     db.commit()
     log.info('Portal role changed actor_id=%s user_id=%s admin=%s',actor_id,target.id,grant)
     return redirect('/login' if actor_id==target.id else '/admin/users/'+str(local_id)+'?saved=role')
+
+@router.get('/admin/security')
+def security_settings(request:Request):
+    require_admin(request)
+    return render(request,'security_settings.html')
+
+@router.post('/admin/security')
+def security_save(request:Request,data=Depends(form)):
+    require_admin(request)
+    import json
+    try:minimum=int(data.get('minimum','12'))
+    except ValueError:raise ValueError('Choose a minimum length between 1 and 128')
+    if not 1<=minimum<=128:raise ValueError('Choose a minimum length between 1 and 128')
+    policy={key:data.get(key)=='on' for key in ('enabled','uppercase','lowercase','digit','symbol')};policy['minimum']=minimum
+    set_config(request.state.db,'password_policy',json.dumps(policy));request.state.db.commit()
+    request.state.audit_detail='Password policy: '+json.dumps(policy,sort_keys=True)
+    return redirect('/admin/security')

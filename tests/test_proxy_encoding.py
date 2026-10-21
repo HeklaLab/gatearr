@@ -5,6 +5,8 @@ import httpx
 import pytest
 from app import main, tools_proxy
 from app.db import SessionLocal
+from app.models import User
+from sqlalchemy import select
 from app.security import encrypt
 from test_portal import setup
 
@@ -29,6 +31,7 @@ def test_native_response_preserves_wire_encoding(client, monkeypatch, encoding, 
     with SessionLocal() as db:
         for name, value in {'radarr_enabled': 'true', 'radarr_url': 'http://radarr.private:7878', 'radarr_api_key': encrypt('private-key')}.items():
             main.set_config(db, name, value)
+        db.scalar(select(User).where(User.admin.is_(True))).tool_access='["radarr"]'
         db.commit()
     plain = b'<html><body>Radarr UI</body></html>' if not asset else (b'window.loaded=true;' if asset.endswith('.js') else b'\x89PNG\r\n\x1a\n\x00\xff\x80')
     wire = gzip.compress(plain) if encoding == 'gzip' else zlib.compress(plain) if encoding == 'deflate' else zlib.compress(gzip.compress(plain)) if encoding == 'gzip, deflate' else plain
@@ -72,6 +75,7 @@ def test_native_precompressed_html_without_optional_decoders(client, monkeypatch
     with SessionLocal() as db:
         for name, value in {'radarr_enabled': 'true', 'radarr_url': 'http://radarr.private:7878', 'radarr_api_key': encrypt('private-key')}.items():
             main.set_config(db, name, value)
+        db.scalar(select(User).where(User.admin.is_(True))).tool_access='["radarr"]'
         db.commit()
     wire = bytes.fromhex(compressed_hex)
     stream = WireStream(wire)

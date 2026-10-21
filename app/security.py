@@ -18,9 +18,22 @@ def verify(encoded, password):
     except (VerificationError, InvalidHashError):
         return False
 
-def password_ok(value):
-    if not 12 <= len(value) <= 256:
-        raise ValueError('The password must contain between 12 and 256 characters.')
+def password_policy(db=None):
+    import json
+    default={'enabled':True,'minimum':12,'uppercase':False,'lowercase':False,'digit':False,'symbol':False}
+    if db is None:return default
+    from .mailer import config
+    raw=config(db,'password_policy')
+    return {**default,**json.loads(raw)} if raw else default
+
+def password_ok(value,db=None):
+    policy=password_policy(db)
+    if not isinstance(value,str) or not 1<=len(value)<=256:raise ValueError('The password must contain between 1 and 256 characters.')
+    if not policy['enabled']:return
+    if len(value)<policy['minimum']:raise ValueError('Password does not meet the minimum length requirement.')
+    for key,valid in [('uppercase',any(c.isupper() for c in value)),('lowercase',any(c.islower() for c in value)),('digit',any(c.isdigit() for c in value)),('symbol',any(not c.isalnum() and not c.isspace() for c in value))]:
+        if policy[key] and not valid:raise ValueError('Password does not meet the required character rules.')
+
 
 def url_ok(value, optional=False):
     if not value and optional:
