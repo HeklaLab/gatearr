@@ -1,5 +1,5 @@
-name: Report an issue
-description: Report a Gatearr problem
+name: Report a bug in the public beta
+description: Help improve Gatearr with a reproducible bug report
 labels: [bug]
 body:
   - type: input
@@ -13,5 +13,12 @@ body:
     attributes:
       label: What happened?
       description: Describe the problem, expected behavior and steps to reproduce. Remove API keys, passwords, tokens and private domains from logs or screenshots.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Deployment and connected applications
+      description: OS, Docker, reverse proxy and versions of affected applications. Use example addresses.
     validations:
       required: true

@@ -1,4 +1,9 @@
-# Gatearr 0.3.2
+# Gatearr 0.3.2 — first public beta
+
+Welcome to Gatearr’s first public beta: media-account self-service, email password recovery, user groups, permissions, Access guides and a customizable portal, with optional Seerr and native admin tools.
+
+Please [report bugs](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) and [request features](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml) on GitHub. Include versions, reproduction steps and sanitized diagnostics. Back up persistent data and test permission changes with a limited account first.
+
 
 - Sign in with a username or the account email, verifying the same native media identity.
 

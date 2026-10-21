@@ -1,41 +1,65 @@
-# Gatearr
+# Gatearr — public beta
 
-## Gatearr is your media portal’s front door
+**A self-hosted front door for your media server: account self-service, user groups, permissions, Access guides and a portal you can make your own.**
 
-Give users the Gatearr address as their homepage: they sign in with their Emby or Jellyfin account, manage their account, then open the applications they are allowed to use. Gatearr complements the media server and Seerr; each can retain its own address behind your existing reverse proxy.
+**v0.3.2 is Gatearr’s first public beta.** Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
 
-For example:
+[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.3.2) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
+
+If something is broken, confusing or missing, please open an issue. Include versions, deployment details and reproduction steps; remove secrets and personal information from logs/screenshots. This is an early beta: back up persistent data and test permission changes with a limited account before applying them broadly.
+
+## Why Gatearr?
+
+Sharing a media server with family or friends can turn its owner into the help desk: reset another password, repeat permissions for several users, explain how to connect a TV and send the correct URL again. Gatearr was built to address these needs in one place.
+
+| Need | What Gatearr provides |
+| --- | --- |
+| Forgotten passwords | Email-based self-service password recovery, verification and invitations for accounts on the connected media server. SMTP and an account email are required. |
+| Repeated account configuration | User groups managing libraries, Emby permissions, Seerr permissions/quotas and Gatearr/admin-tool access. Each user belongs to at most one group. |
+| Permission management | Edit supported media policy fields: streams, downloads, subtitles, remote access and more. Read-back indicators distinguish verified, pending, different and failed values. |
+| Helping users connect | Visual **Access guides** with nested device choices, illustrated steps and store/download links. Starter Emby guides cover browser, Windows, Mac, Linux, Android, iPhone and Smart TV. |
+| A portal that looks like your own | Drag-and-drop **Login screen**, **Portal** and **Footer** builders, live previews, application rows, rich text, uploaded logos/images, menus, colors, gradients, button/hover styles and an editable dark theme. |
+| Seerr integration | Optional request quotas per user/group, access and permissions, email/language/notification synchronization and optional card counters for administrators and members. |
+| Native administration tools | Individually granted Radarr, Sonarr and Bazarr interfaces inside Gatearr at `/tools/...`. Grants include their full native interface and administrative capabilities. |
+| Account support | Username/email/password administration, account-change emails, audited assistance sessions and readable activity logs. |
+| Localization | Default language chosen at setup, twenty additional pretranslated packs, and **Translations / Labels** for fixed interface text and custom content. |
+| Easy deployment and updates | One application container, a persistent volume, an installation wizard, connection health checks, changelog and Docker pulls. |
+
+Gatearr is a separate web application, not an official Emby/Jellyfin product or an Emby plugin. Groups live in Gatearr; supported settings are applied through connected applications’ APIs. It does not create native Emby groups.
+
+## One address to give your users
+
+Users start at Gatearr, sign in with their media username **or the email registered on their Gatearr account**, manage their account and open applications they are allowed to use. Passwords are checked against the connected media server.
+
+A typical setup behind your existing HTTPS reverse proxy:
 
 | Application | Example public address |
 | --- | --- |
-| Gatearr (main entry point) | `https://example.com` |
+| Gatearr — the homepage you share | `https://example.com` |
 | Emby or Jellyfin | `https://play.example.com` |
-| Seerr | `https://request.example.com` |
+| Seerr — optional requests application | `https://request.example.com` |
 
-These are reserved example domains. Configure your actual addresses in the setup wizard and **Applications & API**. No additional reverse proxy is bundled. Native admin tools use Gatearr paths such as `/tools/radarr`, with explicit per-user permission.
+These are reserved example domains. API addresses can remain private; browser/application URLs must be reachable by your users. No reverse proxy is bundled. Emby browser handoff and optional Seerr session handoff have specific prerequisites documented below; this is not universal SSO.
 
-In **Portal builder**, each **Applications** block fills one row. Select applications (including **My account**), choose the column count and drag them into order. Add another row for a different group. **How to** choices and guides are created from this builder; Radarr, Sonarr and Bazarr open their integrated interface directly.
+**Email recovery changes the password on the connected media server. It does not reset an Emby Connect/community account or recover a server that was never connected to Gatearr.**
 
-**Security → Password policy** controls minimum length and required character types for passwords set through Gatearr, including resets, administrator changes and new cloned accounts. Existing login credentials remain valid; the media server may impose additional rules.
+## Portal builder and Access guides
 
+Open **Administration → Branding → Portal builder**, then choose **Login screen**, **Portal**, **Access guide** or **Footer**. Drag blocks into the live preview and click to edit. Preview desktop, tablet or phone layouts. Configure login-form placement, menus, rich text, links, images, footer columns and colors. Drafts autosave; **Publish** makes them visible to users.
 
-A customizable, self-hosted account portal for Emby and Jellyfin. Sign in with your media account, manage your account and open the services published by your administrator.
+Each **Applications** block fills one row. Choose the **Number of applications** (up to six), select at most that many and drag them into order. Use one row for Emby/Seerr and another for Sonarr/Bazarr/**My account**, for example. Applications appear only to users who have access. Existing oversized grids are adapted into rows while retaining selection order.
 
-Python 3.12, FastAPI, SQLAlchemy/Alembic and SQLite/WAL. One application container and one persistent data volume. Choose the default language during setup; it is also the translation reference. Twenty additional pretranslated language packs are bundled. English may be disabled as long as another language remains active. Edit interface labels, content and emails in Translations / Labels. No reverse proxy is bundled.
+An application can open a direct link or its **Access guide**. Guide choices can be nested and reordered; tutorials have rich steps, images and download links. Use `{server_url}`, `{server_host}`, `{server_port}` and `{username}` in instructions. Emby starts with guides; Seerr defaults to a direct link and can have custom guides. Radarr/Sonarr/Bazarr open their integrated interfaces and do not use guides.
 
-## Portal builder
+Edit the dark palette and gradients in **Branding → Theme** with a live preview, or customize page/block colors in the builder. Official application PNG logos and the searchable Font Awesome Free collection are bundled. Validated PNG/SVG uploads persist in the database. Footer content supports columns, rich text, images and links.
 
-Open **Administration → Branding → Visual studio** and choose **Before sign-in**, **After sign-in** or **Footer**. Drag a block from the palette into the real page preview, or click to add it. Click a block to edit its text, width, alignment, visibility, image and colors. Columns accept nested blocks; choose one, two or three columns without entering layout numbers. The sign-in form can be moved and aligned left, center or right, but a sign-in page must retain exactly one visible form.
-
-Page colors and individual block colors include backgrounds, gradients, text, buttons and hover states. Desktop, tablet and phone previews share the same renderer as the published pages. Undo/redo covers this editing session; draft changes autosave. **Publish** makes them visible to users. Conflicting administrator edits stop with a reload message instead of silently overwriting another draft. Existing English content is edited once; its translations live in Translations. Uploaded images are bounded and sanitized PNG/SVG assets stored in the persistent database.
-
-Open **Services → Edit choices and guides** to set an application's behavior: open a link, present choices, or show a guide. Choice cards can be moved, reordered and nested via breadcrumbs. Each guide has a visual step list, rich instructions, image uploads and optional download buttons. Insert `{server_url}`, `{server_host}`, `{server_port}` or `{username}` to reuse the configured public connection details. Publish guides before publishing choices that refer to them. Previous guide links and published snapshots are retained.
-
-The bundled default logos are served locally. Custom uploads and explicitly chosen Font Awesome icons remain in use. My account follows the applications rather than appearing before newly enabled tools. API connections has a service-status overview and separate, equal-width media/Seerr forms; it contains no translation controls.
+**Updates → Reset customized content** restores starter pages, guides, labels, theme and application display while retaining API/SMTP connections, users, groups, permissions and active languages. Confirmation is required.
 
 ### Included languages
 
-The English source plus twenty language packs are included. Only the language selected during setup is enabled on a fresh installation; existing choices are preserved on upgrade. Initial translations cover the interface, default emails and starter-guide text, and are editable. Packs were initially machine-translated with automated placeholder checks; a professional review of every language is not claimed. No content is sent to a translation service at runtime. Arabic and Hebrew pages use right-to-left direction. Administrator-authored custom content still needs its own translations.
+Twenty-one language catalogs are bundled. Only the setup language is enabled initially; English can be disabled when another language is active, and the last active language cannot be disabled. **Translations / Labels** separates fixed labels from custom content. One user language applies to the interface, emails and supported Seerr settings.
+
+Packs were initially machine-translated with automated placeholder checks; comprehensive human review is not claimed. Corrections are welcome. Custom content needs its own translations. Arabic/Hebrew support right-to-left layout. No translation service is contacted at runtime.
 
 ## Installation prerequisites
 
@@ -84,7 +108,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.1` for a controlled version. Public container pulls require no GitHub credentials. Repository/release downloads require your GitHub login while the source repository remains private; GitHub release checks inside Gatearr also require a public repository and report an access failure while it is private.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.2` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 
@@ -137,17 +161,18 @@ Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTE
 
 ## Administration
 
-- **Branding**: identity and sign-in text, Portal builder, Themes and Footer tabs.
-- **Users**: account details, email verification/invitations, direct email/password changes, reset links, groups, libraries, all media policy fields and assistance.
-- **Services**: choose **Direct link** or **How to** when creating a service. The service identifier is generated automatically. How to lets you add a submenu, browser/link or tutorial; create a tutorial directly from a choice, edit its steps and publish it. Draft guides and choices remain separate from published content.
-- **Emails**: SMTP and visual invitation/recovery/verification/account-change templates, localized through Translations.
-- **API connections**: media server, Seerr and optional admin tools. Health indicators describe authenticated checks, separately from per-user synchronization.
-- **Translations**: create a language and translate interface, content and email strings on one page. One user language applies to the interface, emails and supported Seerr settings.
-- **Activity log**: time, actor, affected user, action and result. It shows readable actions, account names and selected change details (including before/after library, permission and email changes). Changes are shown by default; Show all activity also includes page visits. Passwords, API keys, session cookies and query strings are excluded. Only explicitly selected fields are recorded, never complete request bodies. Retention is 90 days, capped at 100,000 events; logs also go to the container's output.
+- **Branding**: identity, Portal builder (including Access guides and Footer), and Theme with live preview.
+- **Users**: accounts, group membership, libraries/media policies, Seerr permissions/quotas, admin-tool access and assistance.
+- **Applications & API**: application links, private/public addresses, connections and health checks in one place.
+- **Emails**: SMTP and localized invitation/recovery/verification/account-change templates.
+- **Security**: configurable password complexity for passwords created or changed through Gatearr. Native rules also apply.
+- **Translations / Labels**: active languages, fixed labels and custom content translations.
+- **Activity log**: readable changes with actor, affected user, result and selected before/after values. Secrets are excluded; retention is bounded.
+- **Updates and changelog**: release checks, installed version, changelog, feedback links and customization reset.
 
 ### Account management and assistance
 
-Administrators can send verification/reset links or directly change an email/password. Direct changes queue a localized notification; email changes notify the old and new addresses. Passwords are never emailed. Existing Gatearr sessions and recovery tokens are invalidated after direct credential changes. SMTP failures are retried by the encrypted mail outbox and recorded in container logs.
+Administrators can send verification/reset links, edit usernames or directly change an email/password. Renaming updates the native media login and the matched Seerr display name; failed Seerr updates are shown and retried. Users sign in again after a rename. Direct changes queue a localized notification; email changes notify the old and new addresses. Passwords are never emailed. Existing Gatearr sessions and recovery tokens are invalidated after direct credential changes. SMTP failures are retried by the encrypted mail outbox and recorded in container logs.
 
 **Open portal as this user** starts an audited, 30-minute assistance session with a visible banner and return button. Gatearr account/settings writes are blocked during assistance. The user's own tools/permissions control what is displayed. Automatic Emby/Seerr links need a still-valid session created when that member previously signed in to Gatearr. If unavailable, the interface asks the member to sign in again. No user password is retained. Service links open genuine remote user sessions: actions performed there have that user's normal effects. Returning to the administrator's portal does not close already-open external browser tabs.
 
@@ -157,13 +182,17 @@ Emby browser login verifies the captured user token before handoff. Jellyfin web
 
 Review/edit the fields actually returned by the media server: streams, downloads, subtitles, remote access and other policy settings. Authentication providers and server-maintained counters remain read-only. Sensitive administrator/disabled changes require explicit confirmation; the last active Gatearr admin is protected.
 
-Group libraries combine. Restrictive permission flags win, and the smallest positive stream/bitrate limit wins (zero is unlimited). Conflicting structured settings require an individual override. Individual overrides take priority. Removing a membership restores original values for fields formerly managed by the group. Writes are read back; indicators distinguish confirmation, pending/drift and failures. Reading remote drift never automatically overwrites it.
+Each user belongs to at most one group. Group membership locks individual library, permission and application-access editing; edit the owning group instead. Removing membership restores captured original values for settings previously managed by the group. Existing multi-group configurations are migrated as described in [UPGRADING.md](UPGRADING.md).
+
+Seerr permissions and movie/season quotas can be managed per user or group. Unrelated settings are preserved and writes are read back. Seerr’s native rules still apply: users with **Manage Users** are exempt from request quotas, and protected owner/admin settings cannot always be changed through its API. Card counters can be enabled independently for administrators and members.
+
+Indicators distinguish verified values, pending/drift and failures. Observing remote changes does not silently overwrite them. Deactivation blocks Gatearr, rotates configured remote passwords and blocks Gatearr recovery; reactivation permits a new reset. Native sessions and recovery paths remain governed by their applications; see the upgrade notes.
 
 Emby libraries use virtual-folder GUIDs, not numeric navigation IDs. Jellyfin uses its own adapter. Cloning copies the selected policy/configuration/home preferences through native media APIs; validate a restricted account on your actual server before granting access broadly.
 
 ### Themes, footer and icons
 
-Only the dark theme is available in 0.2.1. Edit its palette and subtle gradient in Branding → Themes. Save a draft and publish it. Existing custom dark colors are retained; the shipped blue preset is made darker.
+The current beta offers one customizable dark theme. Edit its palette and subtle gradient in Branding → Theme. Save a draft and publish it. Existing custom dark colors are retained; the shipped blue preset is made darker.
 
 The footer is centered and supports one, two or three rich-text columns, links and uploaded images. Save a draft, preview it, then publish. Only the selected number of column editors is shown. Each has rich text and direct PNG/SVG image upload. Legacy content is prefilled into one editable column. Hidden columns are kept in the draft and restored when you increase the count.
 
@@ -192,7 +221,7 @@ Seerr email/language/notification synchronization preserves unrelated settings. 
 
 ## Radarr / Sonarr / Bazarr admin tools
 
-Each tool has its own optional connection and its own user checkbox under **Admin tools**: **Admin Gatearr**, **Access Radarr**, **Access Sonarr**, **Access Bazarr**. Tool access does not require the Gatearr admin role. A tool checkbox appears after that tool is configured and enabled.
+Each tool has its own optional connection and its own user checkbox under **Admin tools**: **Admin Gatearr**, **Access Radarr**, **Access Sonarr**, **Access Bazarr**. Tool access does not require the Gatearr admin role. Access checkboxes can be set before connecting a tool; its interface remains unavailable until the connection is configured and enabled.
 
 **These grants provide the complete native tool interface and its administrative actions.** They are not per-library or read-only native application roles. Gatearr checks the grant on every HTTP request and periodically during WebSocket connections; logout/revocation invalidates access.
 
@@ -202,7 +231,7 @@ For each tool:
 2. In Gatearr, enter the private server root URL (for example `http://radarr:7878`) or the full prefixed private URL, plus the API key. Gatearr verifies the API under the required prefix. No public tool URL is requested.
 3. Your existing main Gatearr proxy already handles the tools. No extra public hostname or Caddy site is needed. `/tools/radarr`, `/tools/sonarr` and `/tools/bazarr` show the native application inside the Gatearr interface.
 4. For automatic UI login, use the native [Radarr/Sonarr external authentication setting](https://wiki.servarr.com/radarr/settings) and Bazarr proxy-only access. Keep native ports restricted to the private Docker/LAN network. Gatearr does not weaken or alter native authentication automatically. Forms authentication can otherwise show an additional login screen.
-5. Gatearr administrators automatically receive every enabled tool and see it as a home-page application. For other users, grant each tool independently on the user's Gatearr page. The wrapper and every proxied HTTP/WebSocket request check the live Gatearr session and grant. Revoking the grant or signing out removes access.
+5. Grant each tool explicitly through the user’s **Groups and admin tools** tab or their owning group, including for Gatearr administrators. Select the tool in an Applications block to place it on the portal; visibility follows the grant and enabled connection. The wrapper and every proxied HTTP/WebSocket request check the live Gatearr session and grant. Revoking the grant or signing out removes access.
 
 The iframe shares Gatearr's browser origin. Only connect trusted native applications: this path-based arrangement is not an origin-isolation boundary, and native scripts have the same origin as the portal. Grants provide the full native interface, including administrative capabilities and configuration normally visible there. Browser cookies/Authorization/API-key headers are stripped before upstream forwarding; configured API credentials are added server-side. Arbitrary targets and redirects outside the tool prefix are refused. HTTP bodies are capped at 32 MB, WebSocket messages at 4 MB.
 
@@ -238,6 +267,8 @@ The demo uses simulated media/Seerr services and Mailpit. At setup use `http://m
 
 Build from source with `docker compose -f compose.yaml -f compose.build.yaml up -d --build --wait`. See [VALIDATION.md](VALIDATION.md), [CHANGELOG.md](CHANGELOG.md) and [PUBLISHING.md](PUBLISHING.md). Live Emby/Jellyfin/Seerr/tool versions and your actual proxy need validation in your environment; simulator tests do not establish compatibility with every native version.
 
-## Development and release review
+## Contributing and feedback
 
-Changes follow three stages: agree on the scope, implement and test locally, then publish after visual review and explicit approval. A successful local test run is not permission to publish. Review the local browser preview before creating a release or moving container tags.
+Help improve this first public beta: [report bugs](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml), [request features](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml), or contribute documentation, translations and pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Gatearr is independently developed and is not affiliated with or endorsed by Emby, Jellyfin, Seerr or the other integrated applications. Their names/logos belong to their respective owners.

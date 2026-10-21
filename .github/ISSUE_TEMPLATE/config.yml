@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Installation and upgrade guide
+    url: https://github.com/HeklaLab/gatearr#installation-prerequisites
+    about: Check prerequisites and upgrade notes before reporting an installation issue.
