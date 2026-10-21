@@ -60,6 +60,24 @@
         "position": 20,
         "icon_url": "",
         "guide_key": "apple"
+      },
+      {
+        "id": "default_linux",
+        "parent": "default_computer",
+        "kind": "guide",
+        "title": "Linux",
+        "position": 30,
+        "icon_url": "",
+        "guide_key": "linux"
+      },
+      {
+        "id": "default_tv",
+        "parent": "",
+        "kind": "guide",
+        "title": "Smart TV",
+        "position": 30,
+        "icon_url": "",
+        "guide_key": "tv"
       }
     ],
     "guides": [
@@ -206,6 +224,78 @@
             "image_url": ""
           }
         ]
+      },
+      {
+        "key": "linux",
+        "title": "Emby on Linux",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "desktop",
+        "position": 10,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Emby using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Open official website",
+            "link_url": "https://emby.media/emby-theater-linux.html",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "tv",
+        "title": "Emby on Smart TV",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "tv",
+        "position": 60,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the TV app",
+            "body": "Open the app store on your TV or streaming device and install the app. Use the official device list below to find the version for your TV.",
+            "link_label": "Find the app for your TV",
+            "link_url": "https://emby.media/download.html#apps",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
       }
     ]
   },
@@ -270,6 +360,24 @@
         "position": 20,
         "icon_url": "",
         "guide_key": "apple"
+      },
+      {
+        "id": "default_linux",
+        "parent": "default_computer",
+        "kind": "guide",
+        "title": "Linux",
+        "position": 30,
+        "icon_url": "",
+        "guide_key": "linux"
+      },
+      {
+        "id": "default_tv",
+        "parent": "",
+        "kind": "guide",
+        "title": "Smart TV",
+        "position": 30,
+        "icon_url": "",
+        "guide_key": "tv"
       }
     ],
     "guides": [
@@ -395,6 +503,78 @@
             "body": "Install Jellyfin using the link below, then open the app. Availability and playback requirements depend on the app and device.",
             "link_label": "Open App Store",
             "link_url": "https://apps.apple.com/app/jellyfin-mobile/id1480192618",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "linux",
+        "title": "Jellyfin on Linux",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "desktop",
+        "position": 10,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the app",
+            "body": "Install Jellyfin using the link below, then open the app. Availability and playback requirements depend on the app and device.",
+            "link_label": "Download the desktop app",
+            "link_url": "https://jellyfin.org/downloads/clients/",
+            "image_url": ""
+          },
+          {
+            "id": "server",
+            "position": 20,
+            "title": "Connect to your server",
+            "body": "Choose the option to add a server or connect manually.\nServer address: {server_url}\nHost: {server_host}\nPort: {server_port}\nUse the full address, including HTTPS and any port shown. If the address is missing, ask your administrator for the public connection address.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          },
+          {
+            "id": "login",
+            "position": 30,
+            "title": "Sign in",
+            "body": "Use the same account as this portal.\nUsername: {username}\nEnter your usual password. Your available libraries will appear after signing in.",
+            "link_label": "",
+            "link_url": "",
+            "image_url": ""
+          }
+        ]
+      },
+      {
+        "key": "tv",
+        "title": "Jellyfin on Smart TV",
+        "summary": "Install the app and connect with your existing account.",
+        "device": "tv",
+        "position": 60,
+        "steps": [
+          {
+            "id": "install",
+            "position": 10,
+            "title": "Install the TV app",
+            "body": "Open the app store on your TV or streaming device and install the app. Use the official device list below to find the version for your TV.",
+            "link_label": "Find the app for your TV",
+            "link_url": "https://jellyfin.org/downloads/clients/",
             "image_url": ""
           },
           {

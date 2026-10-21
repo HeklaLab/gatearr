@@ -28,30 +28,38 @@ def activity(request:Request):
     if request.query_params.get('all')!='1':query=query.where(~AuditEvent.action.like('GET %'),~AuditEvent.action.like('HEAD %'))
     events=list(request.state.db.scalars(query))
     names={u.id:u.name for u in request.state.db.scalars(select(User))}
+    from . import i18n
+    overrides=i18n.overrides(request.state.db,request.state.locale)
+    tr=lambda text:i18n.translate(text,request.state.locale,overrides=overrides)
     entries=[]
     for event in events:
         try:detail=json.loads(event.detail)
         except (ValueError,TypeError):detail={'changes':event.detail}
-        entries.append({'id':event.id,'at':event.at,'actor':detail.get('actor') or names.get(event.actor_id,'Guest'),'user':detail.get('user') or names.get(event.subject_id,'—'),'action':action_label(event.action),'changes':detail.get('changes',''),'outcome':event.outcome})
+        entries.append({'id':event.id,'at':event.at,'actor':detail.get('actor') or names.get(event.actor_id,'Guest'),'user':detail.get('user') or names.get(event.subject_id,'—'),'action':' · '.join(tr(part) for part in action_label(event.action).split(' · ')),'changes':friendly_changes(detail.get('changes',''),tr),'outcome':event.outcome})
     return render(request,'activity.html',events=entries)
 
 
 def action_label(action):
-    direct={'auth.login':'Signed in','assistance.start':'Started user assistance','assistance.stop':'Ended user assistance','account.email':'Updated account email','account.password':'Changed account password','account.invite':'Sent verification invitation','account.reset':'Sent password reset link'}
+    direct={'account.username':'Username updated','account.deactivate':'Account deactivated and passwords rotated','account.reactivate':'Account reactivated; recovery allowed','permissions.seerr':'Seerr permissions updated','seerr.quotas':'Request quotas updated','content.reset':'Customized content reset','auth.login':'Signed in','assistance.start':'Started user assistance','assistance.stop':'Ended user assistance','account.email':'Updated account email','account.password':'Changed account password','account.invite':'Sent verification invitation','account.reset':'Sent password reset link'}
     if action in direct:return direct[action]
     if action.startswith('tool.'):return 'Tool request · '+action[5:].replace('.',' · ')
     method,_,path=action.partition(' ')
     labels={'/admin/assets':'Uploaded portal image','/reset':'Password reset','/verify-email':'Email verified','/account/preferences':'Notification preferences updated','/admin/groups':'User group created','/admin/import':'Media users imported','/admin/user-email':'User email updated','/admin/mail-editor':'Email template updated','/admin/mail-templates':'Email templates updated','/admin/updates/settings':'Update notification settings changed','/admin/updates/check':'Checked for updates','/admin/settings':'Portal identity updated','/admin/smtp':'SMTP settings updated','/admin/tools':'Tool connections updated','/admin/integrations':'API connection updated','/admin/menu':'Service saved','/admin/menu/delete':'Service deleted','/admin/footer':'Footer updated','/admin/branding/themes':'Theme updated','/admin/emby/libraries':'Library access updated','/admin/emby/clone':'Media account created/cloned','/admin/emby/copy':'User settings copied','/account/email':'Email confirmation requested','/account/password':'Password changed','/account/language':'Language updated','/logout':'Signed out','/forgot':'Account recovery requested'}
     if method=='POST':
+        if path.startswith('/admin/design/'):
+            page={'login':'Login screen','home':'Portal','footer':'Footer'}.get(path.split('/')[3],'Portal')
+            verb={'save':'Draft saved','publish':'Page published','restore':'Published page restored'}.get(path.split('/')[-1],'Settings updated')
+            return page+' · '+verb
+        if path.startswith('/admin/visual-howto/') or path.startswith('/admin/visual-guide/'):return 'Access guide updated'
         if path in labels:return labels[path]
         if path.endswith('/permission'):return 'User permission updated'
         if path.endswith('/role'):return 'User admin/tool permissions updated'
         if path.startswith('/admin/groups/'):return 'User group updated'
-        if path.startswith('/admin/access/'):return 'How to choices updated'
-        if path.startswith('/admin/guides/'):return 'How to tutorial updated'
+        if path.startswith('/admin/access/'):return 'Access guide choices updated'
+        if path.startswith('/admin/guides/'):return 'Access guide tutorial updated'
         if path.startswith('/admin/portal/'):return 'Portal layout updated'
         if path.startswith('/admin/translations'):return 'Translations updated'
-    return action
+    return 'Viewed a page' if method in ('GET','HEAD') else 'Settings updated'
 
 def describe_form(request,data):
     """Explicit safe metadata only; never copy arbitrary request fields or secrets."""
@@ -89,3 +97,12 @@ def describe_form(request,data):
             previous=db.get(User,int(uid)).email if uid and str(uid).isdigit() and db.get(User,int(uid)) else None
             details.append('email: '+(previous or '—')+' → '+str(data[key])[:254])
     request.state.audit_detail='\n'.join(details)
+
+
+def friendly_changes(value,translate=lambda text:text):
+    import re
+    match=re.fullmatch(r'(Saved draft|Published): (login|home|footer) page, (\d+) blocks',value)
+    if match:return ' · '.join((translate({'login':'Login screen','home':'Portal','footer':'Footer'}[match[2]]),translate('Draft saved' if match[1]=='Saved draft' else 'Page published'),match[3]+' '+translate('blocks')))
+    for page in ('Login screen','Portal','Footer'):
+        if value.startswith(page+' · '):return translate(page)+' · '+value.split(' · ',1)[1]
+    return value

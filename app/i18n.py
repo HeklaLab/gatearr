@@ -15,16 +15,22 @@ def source_hash(value):return hashlib.sha256(value.encode()).hexdigest()
 
 def languages(db,all=False):
     rows=db.scalars(select(Language).order_by(Language.code))
-    return {row.code:row.name for row in rows if row.enabled or all or row.code==BASE_LANGUAGE}
+    return {row.code:row.name for row in rows if row.enabled or all}
 
-def translate(message,locale=BASE_LANGUAGE,*,overrides=None,base_overrides=None,**values):
+def default_language(db):
+    from .mailer import config
+    available=languages(db)
+    chosen=config(db,'default_locale','en')
+    return chosen if chosen in available else next(iter(available),'en')
+
+def translate(message,locale=BASE_LANGUAGE,*,overrides=None,base_overrides=None,source_locale=BASE_LANGUAGE,**values):
     key=canonical(message)
-    translated=(overrides or {}).get(key) or CATALOGS.get(locale,{}).get(key) or (base_overrides or {}).get(key) or CATALOGS[BASE_LANGUAGE].get(key,key)
+    translated=(overrides or {}).get(key) or CATALOGS.get(locale,{}).get(key) or (base_overrides or {}).get(key) or CATALOGS.get(source_locale,{}).get(key) or CATALOGS[BASE_LANGUAGE].get(key,key)
     return translated.format(**values) if values else translated
 
 def resolve(request,user=None):
     available=languages(request.state.db)
-    if user:return user.locale if user.locale in available else BASE_LANGUAGE
+    if user:return user.locale if user.locale in available else default_language(request.state.db)
     selected=request.cookies.get('gatearr_language')
     if selected in available:return selected
     candidates=[]
@@ -35,7 +41,7 @@ def resolve(request,user=None):
         except ValueError:continue
         if code in available and 0<quality<=1:candidates.append((quality,code))
     if candidates:return sorted(candidates,key=lambda item:item[0],reverse=True)[0][1]
-    return BASE_LANGUAGE
+    return default_language(request.state.db)
 
 ACCOUNT_LABEL_KEYS={'requests':'Receive notifications about my requests'}
 ACCOUNT_LABEL_DEFAULTS={'en':ACCOUNT_LABEL_KEYS}
@@ -47,9 +53,17 @@ def overrides(db,locale):
     return {names[row.key]:row.value for row in db.scalars(select(Config).where(Config.key.like('ui_translation_'+locale+'_%'))) if row.key in names and row.value}
 
 def content(db,resource,source,locale):
-    if not source or locale==BASE_LANGUAGE:return source
+    if not source:return source
     row=db.get(ContentTranslation,(locale,resource,source_hash(source)))
-    return row.value if row and row.value else CATALOGS.get(locale,{}).get(source,source)
+    if row and row.value:return row.value
+    translated=CATALOGS.get(locale,{}).get(source)
+    if translated:return translated
+    base=default_language(db)
+    if base!=locale:
+        fallback=db.get(ContentTranslation,(base,resource,source_hash(source)))
+        if fallback and fallback.value:return fallback.value
+        return CATALOGS.get(base,{}).get(source,source)
+    return source
 
 def store_content(db,resource,source,locale,value):
     key=(locale,resource,source_hash(source));row=db.get(ContentTranslation,key)

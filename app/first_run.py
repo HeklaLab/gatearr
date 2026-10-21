@@ -3,7 +3,7 @@ import secrets
 from urllib.parse import urlsplit
 from fastapi import HTTPException
 from sqlalchemy import select,text,delete,update
-from .models import Config,Session,User,Token
+from .models import Config,Session,User,Token,Language
 from .settings import settings
 from .security import digest,url_ok
 from .mailer import config
@@ -30,6 +30,8 @@ def connect(request,data):
     parsed=urlsplit(public)
     if parsed.path or parsed.query or parsed.fragment:raise ValueError('The public URL must be at the domain root')
     if settings.secure_cookie and parsed.scheme!='https':raise ValueError('The public URL must use HTTPS')
+    locale=str(data.get("default_locale",i18n.default_language(db)))
+    if locale not in i18n.languages(db,all=True) or locale not in i18n.CATALOGS:raise ValueError("Choose a supported language")
     connect_media(db,data)
     db.rollback()
     db.execute(text('BEGIN IMMEDIATE'))
@@ -41,6 +43,9 @@ def connect(request,data):
     db.add(Session(digest=fingerprint,csrf=secrets.token_urlsafe(32),expires=now()+1800,setup_expires=now()+1800,version=0))
     set_config(db,'onboarding_media_verified','true')
     set_config(db,'setup_owner_digest',fingerprint)
+    if 'default_locale' in data:
+        for language in db.scalars(select(Language)):language.enabled=language.code==locale
+    set_config(db,'default_locale',locale)
     set_config(db,'app_name',name)
     set_config(db,'public_url',public)
     db.commit()
@@ -87,7 +92,6 @@ def claim(request,data):
     db.execute(update(Token).where(Token.user_id==user.id).values(used=True))
     user.admin=True
     user.password_hash=None
-    user.locale=request.state.locale
     user.locale=request.state.locale
     set_config(db,'setup_complete','true')
     set_config(db,'onboarding_required','true')

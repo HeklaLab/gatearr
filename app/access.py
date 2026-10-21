@@ -81,7 +81,9 @@ def visible_nodes(db,service,nodes):
     return visible
 
 def public_access(request,key,node_id=''):
-    require_user(request)
+    user=require_user(request)
+    from .group_access import seerr_allowed
+    if key=='seerr' and not seerr_allowed(request.state.db,user):raise HTTPException(403,'Seerr access is not granted')
     db=request.state.db;service=service_or_404(db,key)
     if service.entry_mode=='direct':
         url=service_url(db,service)

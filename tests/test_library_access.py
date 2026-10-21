@@ -22,7 +22,7 @@ def test_user_library_page_current_access_edit_remove_and_permissions(client,mon
         state['Policy'].update(EnableAllFolders=all_folders,EnabledFolders=sorted(selected))
     monkeypatch.setattr(admin_features,'emby',SimpleNamespace(user=lambda remote_id:deepcopy(state),libraries=lambda:[{'Id':'movies','Name':'Movies'},{'Id':'films','Name':'Films'}],users=lambda:[],copy_options=lambda:[],assign_libraries=assign))
     path='/admin/users/'+str(uid)
-    page=client.get(path).text
+    page=client.get(path+"?tab=emby").text
     assert 'name="access_mode" value="all" checked' in page
     assert 'name="libraries" value="movies" checked' in page
     assert 'name="libraries" value="films" checked' in page
@@ -36,11 +36,11 @@ def test_user_library_page_current_access_edit_remove_and_permissions(client,mon
     assert state['Policy']['BlockedTags']==['restricted'] and state['Policy']['EnableContentDeletion'] is False
     assert post(client,'/admin/emby/libraries',{'id':uid,'action':'remove_all'},path).status_code==303
     assert writes[-1]==([],False)
-    assert 'No libraries allowed' in client.get(path).text
+    assert 'No libraries allowed' in client.get(path+"?tab=emby").text
     assert post(client,'/admin/emby/libraries',{'id':uid,'access_mode':'invalid'},path).status_code==400
     assert client.post('/admin/emby/libraries',data={'csrf':'bad','id':uid}).status_code==403
     logout(client);login_user(client)
-    assert client.get(path).status_code==403
+    assert client.get(path+"?tab=emby").status_code==403
     assert post(client,'/admin/emby/libraries',{'id':uid,'action':'remove_all'},'/account').status_code==403
     assert writes[-1]==([],False)
 

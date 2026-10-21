@@ -56,7 +56,7 @@ def test_release_cache_backoff_failure_retention_and_opt_out(client,monkeypatch)
     assert 'GitHub could not be reached' not in client.get('/admin/updates').text
 
 
-@pytest.mark.parametrize('tag,available',[('0.0.9',False),('0.1.0',False),('0.2.1',False),('0.2.2',False),('0.2.3',False),('0.2.4',False),('0.3.0',False),('0.3.2',True),('0.10.0',True)])
+@pytest.mark.parametrize('tag,available',[('0.0.9',False),('0.1.0',False),('0.2.1',False),('0.2.2',False),('0.2.3',False),('0.2.4',False),('0.3.0',False),('0.3.2',False),('0.3.3',True),('0.10.0',True)])
 def test_semantic_version_comparison(client,monkeypatch,tag,available):
     setup(client);remote(monkeypatch,version=tag)
     monkeypatch.setattr(versioning,'BUILD_REVISION','')
@@ -125,15 +125,15 @@ def test_default_device_journeys_and_public_address_placeholders(client):
     with SessionLocal() as db:
         service=db.get(AccessService,'emby');tree=access.load(service)
         assert service.entry_mode=='structured'
-        assert {n['title'] for n in tree if n['kind']=='guide'}=={'Windows','Mac','Android','iPhone'}
-        guides=list(db.scalars(select(Guide)));assert len(guides)==4 and all(g.published for g in guides)
+        assert {n['title'] for n in tree if n['kind']=='guide'}=={'Windows','Mac','Linux','Android','iPhone','Smart TV'}
+        guides=list(db.scalars(select(Guide)));assert len(guides)==6 and all(g.published for g in guides)
         service.server_url='https://media.example.com:8920';db.commit()
         android=next(g for g in guides if 'Android' in json.loads(g.draft)['title'])
     page=client.get('/access/emby/guide/'+str(android.id)).text
     assert 'play.google.com' in page and 'media.example.com' in page and '8920' in page and 'Owner' in page
     assert 'emby.test' not in page and 'test-api-key' not in page
     assert post(client,'/admin/guides/defaults',{},'/admin/guides').status_code==400
-    with SessionLocal() as db:assert len(list(db.scalars(select(Guide))))==4
+    with SessionLocal() as db:assert len(list(db.scalars(select(Guide))))==6
 
 
 def test_jellyfin_presets_and_existing_content_are_preserved(client):

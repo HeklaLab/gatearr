@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.3.2",
+    "date": "2026-10-21",
+    "changes": [
+      "Access guides and safe editing of saved portal blocks without opening application links.",
+      "One Applications & API card per application, refreshed administration navigation and live theme previews.",
+      "Compact user tabs, single-group permission ownership, Seerr permissions and request summaries.",
+      "Account deactivation rotates remote passwords, blocks Gatearr recovery and preserves the disabled state during imports. Reactivation allows password recovery.",
+      "Choose the default language during setup. English can be disabled; at least one language must remain active.",
+      "Request quotas per user or group, optional Seerr request counters and clear permission ownership.",
+      "Simplified builder navigation, application-count limits, pixel spacing and contrasting save confirmations.",
+      "Content reset preserves server connections and restores bundled logos and starter Emby access guides.",
+      "Edit usernames across the media server and Seerr display settings; sign in with username or account email."
+    ]
+  },
+  {
     "version": "0.3.1",
     "date": "2026-10-21",
     "changes": [

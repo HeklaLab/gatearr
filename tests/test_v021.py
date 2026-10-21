@@ -52,7 +52,7 @@ def test_audit_names_change_details_and_secret_redaction(client):
     assert 'Owner' in page and 'Portal identity updated' in page and 'Gatearr → My Gate' in page
     assert 'api key: [hidden]' in page and 'demo-key' not in page
     assert 'GET /admin/branding' not in page
-    assert 'GET /admin/branding' in client.get('/admin/activity?all=1').text
+    assert 'Viewed a page' in client.get('/admin/activity?all=1').text
 
 
 def test_subpath_proxy_assets_redirects_origin_and_revocation(client,monkeypatch):

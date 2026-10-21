@@ -2,13 +2,16 @@
 import re
 from string import Formatter
 from urllib.parse import urlencode
-from sqlalchemy import delete,select
+from sqlalchemy import delete,select,text,update
 from fastapi import APIRouter,Depends,HTTPException,Request
 from . import i18n,rich_mail
 from .main import form,require_admin,render,redirect,set_config
-from .models import Config,Language,ContentTranslation
+from .models import Config,Language,ContentTranslation,User
 from .content_catalog import sources
 router=APIRouter()
+def config_default(db):
+    from .mailer import config
+    return config(db,"default_locale","en")
 LANGUAGE_CHOICES={'en': 'English', 'fr': 'Français', 'es': 'Español', 'de': 'Deutsch', 'it': 'Italiano', 'pt-br': 'Português (Brasil)', 'nl': 'Nederlands', 'pl': 'Polski', 'ru': 'Русский', 'uk': 'Українська', 'cs': 'Čeština', 'sv': 'Svenska', 'da': 'Dansk', 'nb': 'Norsk bokmål', 'fi': 'Suomi', 'tr': 'Türkçe', 'ar': 'العربية', 'he': 'עברית', 'ja': '日本語', 'ko': '한국어', 'zh-cn': '简体中文', 'pt': 'Português (Portugal)', 'el': 'Ελληνικά', 'ro': 'Română', 'hu': 'Magyar', 'bg': 'Български', 'sk': 'Slovenčina', 'hr': 'Hrvatski', 'id': 'Bahasa Indonesia', 'vi': 'Tiếng Việt', 'th': 'ไทย', 'hi': 'हिन्दी', 'is': 'Íslenska'}
 
 def validated_value(key,locale,value,source=None):
@@ -38,15 +41,16 @@ def source_link(key):
 def translations(request:Request):
     require_admin(request);db=request.state.db
     available=i18n.languages(db,all=True)
-    locale=request.query_params.get('edit_locale','en')
+    source_locale=i18n.default_language(db)
+    locale=request.query_params.get('edit_locale',source_locale)
     if locale not in available:raise HTTPException(400,'Invalid language')
     scope=request.query_params.get('scope','interface')
     if scope not in ('all','interface','content','email'):raise HTTPException(400,'Invalid translation section')
     query=request.query_params.get('q','')[:200];page=max(1,int(request.query_params.get('page','1')))
-    custom=i18n.overrides(db,locale);rows=[]
+    custom=i18n.overrides(db,locale);reference_overrides=i18n.overrides(db,source_locale);rows=[]
     if scope in ('all','interface'):
         for key in sorted(i18n.INTERFACE_KEYS):
-            source=i18n.CATALOGS['en'][key]
+            source=i18n.translate(key,source_locale,overrides=reference_overrides)
             default=i18n.CATALOGS.get(locale,{}).get(key,'')
             value=custom.get(key,default)
             rows.append({'key':key,'source':source,'default':default,'value':value,'custom':key in custom,'translated':bool(value),'context':'Interface','hash':'','kind':'text','maximum':5000,'scope':'interface'})
@@ -55,13 +59,13 @@ def translations(request:Request):
         for entry in sources(db):
             if scope!='all' and (entry['key'].startswith('mail:'))!=(scope=='email'):continue
             key=entry['key'];stamp=i18n.source_hash(entry['source']);value=stored.get((key,stamp),i18n.CATALOGS.get(locale,{}).get(entry['source'],''))
-            rows.append({**entry,'hash':stamp,'value':value,'default':'','custom':bool(value),'translated':bool(value) or locale=='en','edit_href':source_link(key),'scope':'email' if key.startswith('mail:') else 'content','stale':any(resource==key and old_hash!=stamp for resource,old_hash in stored) and not value})
+            rows.append({**entry,'reference':i18n.content(db,key,entry['source'],source_locale),'hash':stamp,'value':value,'default':'','custom':bool(value),'translated':bool(value) or locale==source_locale,'edit_href':source_link(key),'scope':'email' if key.startswith('mail:') else 'content','stale':any(resource==key and old_hash!=stamp for resource,old_hash in stored) and not value})
     for row in rows:row['anchor']=i18n.source_hash(row['key']+'\0'+row['source'])[:16]
     total_sources=len(rows);translated=sum(row['translated'] for row in rows)
     rows=[row for row in rows if query.casefold() in '\n'.join((row['key'],row['source'],row['value'],row['context'])).casefold()]
     rows.sort(key=lambda row:(row['context'],row['source'].casefold()));pages=1;page=1
     def href(number):return '/admin/translations?'+urlencode({'edit_locale':locale,'scope':scope,'q':query,'page':number})
-    return render(request,'translations.html',entries=rows,edit_locale=locale,scope=scope,query=query,page=page,pages=pages,total=len(rows),translated=translated,total_sources=total_sources,managed_languages=list(db.scalars(select(Language).order_by(Language.code))),all_languages={code:name for code,name in available.items() if code in i18n.languages(db) or code==locale},language_choices={code:name for code,name in LANGUAGE_CHOICES.items() if code not in i18n.languages(db)},previous=href(page-1) if page>1 else '',next_page=href(page+1) if page<pages else '')
+    return render(request,'translations.html',entries=rows,edit_locale=locale,scope=scope,query=query,page=page,pages=pages,total=len(rows),translated=translated,total_sources=total_sources,managed_languages=list(db.scalars(select(Language).order_by(Language.code))),source_language_name=available.get(source_locale,source_locale),all_languages={code:name for code,name in available.items() if code in i18n.languages(db) or code==locale},language_choices={code:name for code,name in LANGUAGE_CHOICES.items() if code not in i18n.languages(db)},previous=href(page-1) if page>1 else '',next_page=href(page+1) if page<pages else '')
 
 @router.post('/admin/translations/languages')
 def create_language(request:Request,data=Depends(form)):
@@ -84,8 +88,20 @@ def update_language(request:Request,code:str,data=Depends(form)):
     if not row:raise HTTPException(404,'Language not found')
     name=str(data.get('name',row.name)).strip()
     if not name or len(name)>80:raise ValueError('Invalid language name')
-    if code=='en' and data.get('enabled')!='on':raise ValueError('English is the source language and must remain enabled')
-    row.name=name;row.enabled=data.get('enabled')=='on';db.commit()
+    # Serialize language changes so two requests cannot disable the last two languages.
+    db.rollback();db.execute(text('BEGIN IMMEDIATE'));row=db.get(Language,code)
+    enabled=data.get('enabled')=='on'
+    remaining={r.code for r in db.scalars(select(Language).where(Language.enabled.is_(True),Language.code!=code))}
+    if not enabled and not remaining:raise ValueError('At least one language must remain active')
+    default=data.get('default')=='on'
+    if default and not enabled:raise ValueError('The default language must be active')
+    row.name=name;row.enabled=enabled
+    if default:set_config(db,'default_locale',code)
+    elif not enabled and config_default(db)==code:set_config(db,'default_locale',sorted(remaining)[0])
+    if not enabled:
+        fallback=i18n.default_language(db)
+        db.execute(update(User).where(User.locale==code).values(locale=fallback,preferences_version=User.preferences_version+1))
+    db.commit()
     return redirect('/admin/translations?edit_locale='+code)
 
 @router.post('/admin/translations')
@@ -103,7 +119,7 @@ def save(request:Request,data=Depends(form)):
         if value and value!=i18n.CATALOGS.get(locale,{}).get(key):set_config(db,storage_key,value)
         else:db.execute(delete(Config).where(Config.key==storage_key))
     elif scope in ('content','email'):
-        if locale=='en':raise ValueError('Edit English source content in its original editor')
+        if locale==i18n.default_language(db):raise ValueError('Edit source content in its original editor')
         entry=next((item for item in sources(db) if item['key']==key and i18n.source_hash(item['source'])==data.get('source_hash')),None)
         if not entry or (key.startswith('mail:'))!=(scope=='email'):raise HTTPException(409,'The source text has changed. Reload the translation page.')
         if len(raw)>entry['maximum']:raise ValueError('Translation is too long')

@@ -34,14 +34,14 @@ def test_group_merge_is_deterministic_and_restricts_streams():
 
 def test_individual_permission_write_readback_drift_and_access_control(client,policy_api):
     uid,store,writes,api=policy_api;path=f'/admin/users/{uid}'
-    page=client.get(path).text;assert 'Maximum simultaneous streams' in page
+    page=client.get(path+"?tab=emby").text;assert 'Maximum simultaneous streams' in page
     with SessionLocal() as db:version=db.get(PolicyState,uid).version
     data={'field':'SimultaneousStreamLimit','value':'2','hash':p.fingerprint(0),'version':version}
     assert post(client,path+'/permission',data,path).status_code==303
     assert store['user-1']['SimultaneousStreamLimit']==2
-    assert 'sync-green' in client.get(path).text
+    assert 'sync-green' in client.get(path+"?tab=emby").text
     count=len(writes);store['user-1']['SimultaneousStreamLimit']=4
-    assert 'Different from saved permissions' in client.get(path).text and len(writes)==count
+    assert 'Different from saved permissions' in client.get(path+"?tab=emby").text and len(writes)==count
     assert post(client,path+'/permission',data,path).status_code==409
     assert client.post(path+'/permission',data={**data,'csrf':'bad'}).status_code==403
     logout(client);login_user(client)
@@ -50,9 +50,9 @@ def test_individual_permission_write_readback_drift_and_access_control(client,po
 
 def test_failed_policy_readback_is_red_not_success(client,policy_api,monkeypatch):
     uid,store,writes,api=policy_api;path=f'/admin/users/{uid}'
-    client.get(path);monkeypatch.setattr(api,'policy',lambda *args:None)
+    client.get(path+"?tab=emby");monkeypatch.setattr(api,'policy',lambda *args:None)
     assert post(client,path+'/permission',{'field':'EnableSubtitleDownloading','value':'false','hash':p.fingerprint(True),'version':0},path).status_code==303
-    page=client.get(path).text
+    page=client.get(path+"?tab=emby").text
     assert 'sync-red' in page and 'Remote verification failed' in page
     assert store['user-1']['EnableSubtitleDownloading'] is True
 
@@ -76,9 +76,9 @@ def test_group_membership_applies_and_removal_restores_baseline(client,policy_ap
 def test_last_admin_cannot_be_disabled_and_security_change_requires_confirmation(client,policy_api):
     uid,store,writes,api=policy_api
     with SessionLocal() as db:owner=db.scalar(select(User).where(User.admin.is_(True)));owner_id=owner.id
-    path=f'/admin/users/{owner_id}';client.get(path)
+    path=f'/admin/users/{owner_id}';client.get(path+"?tab=emby")
     assert post(client,path+'/permission',{'field':'IsDisabled','value':'true','hash':p.fingerprint(False),'version':0,'confirm_sensitive':'on'},path).status_code==400
-    path=f'/admin/users/{uid}';client.get(path)
+    path=f'/admin/users/{uid}';client.get(path+"?tab=emby")
     assert post(client,path+'/permission',{'field':'IsAdministrator','value':'true','hash':p.fingerprint(False),'version':0},path).status_code==400
 
 
@@ -140,13 +140,13 @@ def test_seerr_ticket_expires_and_cannot_outlive_portal_session(client,monkeypat
 
 def test_editing_one_permission_does_not_overwrite_unrelated_remote_drift(client,policy_api):
     uid,store,writes,api=policy_api;path=f'/admin/users/{uid}'
-    client.get(path)
+    client.get(path+"?tab=emby")
     assert post(client,path+'/permission',{'field':'EnableSubtitleDownloading','value':'false','hash':p.fingerprint(True),'version':0},path).status_code==303
     store['user-1']['EnableSubtitleDownloading']=True
     assert post(client,path+'/permission',{'field':'SimultaneousStreamLimit','value':'3','hash':p.fingerprint(0),'version':1},path).status_code==303
     assert store['user-1']['EnableSubtitleDownloading'] is True
     assert store['user-1']['SimultaneousStreamLimit']==3
-    assert 'Different from saved permissions' in client.get(path).text
+    assert 'Different from saved permissions' in client.get(path+"?tab=emby").text
 
 
 def test_default_palette_matches_logo_and_has_no_white_logo_background():

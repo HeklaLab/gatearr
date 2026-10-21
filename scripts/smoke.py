@@ -62,7 +62,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         admin_page=client.get('/admin/users').text
         cloned_id=re.search(r'href="/admin/users/(\d+)">cloned-demo',admin_page)[1]
         submit(client, '/admin/emby/libraries', {'id':cloned_id,'libraries':['22222222222222222222222222222222']}, '/admin/users/'+cloned_id)
-        assert 'Films' in client.get('/admin/users/'+cloned_id).text
+        assert 'Films' in client.get('/admin/users/'+cloned_id+'?tab=emby').text
         submit(client, '/admin/emby/copy', {'id':cloned_id,'source_id':'demo-user-1','copy_options':['Configuration','DisplayPreferences'],'acknowledge':'on'}, '/admin/users/'+cloned_id)
         submit(client, '/admin/integrations', {'service':'seerr','enabled':'on','url':services_base+'/seerr','api_key':'demo-seerr-key','notification_mode':'optional'}, '/admin/integrations')
         def layout_version():
@@ -90,8 +90,8 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         submit(client,group_path,{'version':0,'members':demo_id,'permission':['SimultaneousStreamLimit','EnableSubtitleDownloading'],'value_SimultaneousStreamLimit':'2','value_EnableSubtitleDownloading':'false','library_mode':'selected','libraries':['11111111111111111111111111111111']},group_path)
         deadline=time.monotonic()+45
         while time.monotonic()<deadline:
-            detail=client.get('/admin/users/'+demo_id).text
-            if 'sync-green' in detail and 'name="value" min="0" max="2147483647" value="2"' in detail:break
+            detail=client.get('/admin/users/'+demo_id+'?tab=emby').text
+            if 'sync-green' in detail and '<code>2</code>' in detail:break
             time.sleep(1)
         else:raise AssertionError('Group permission readback did not complete')
         guide_ids={}

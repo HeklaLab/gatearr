@@ -2,7 +2,7 @@
 import json,re,time
 from copy import deepcopy
 from fastapi import APIRouter,Request,Depends,HTTPException
-from sqlalchemy import select,update,delete
+from sqlalchemy import select,update,delete,func
 from .models import User,PermissionGroup,GroupMember,PolicyState
 from .db import SessionLocal
 from .emby import emby,EmbyError
@@ -70,7 +70,8 @@ def merge(groups):
     return result
 
 def recompute(db,user,row):
-    overrides=json.loads(row.overrides)
+    from .group_access import group_for
+    overrides={} if group_for(db,user) else json.loads(row.overrides)
     policies=[{k:v for k,v in json.loads(group.policy).items() if k not in overrides} for group in db.scalars(select(PermissionGroup).join(GroupMember).where(GroupMember.user_id==user.id).order_by(PermissionGroup.id))]
     desired=merge(policies);desired.update(overrides)
     previous=json.loads(row.desired);baseline=json.loads(row.baseline)
@@ -99,7 +100,7 @@ def apply(db,user,row,api=None,write_keys=None):
         success=all(k in confirmed and normalize(k,confirmed[k])==normalize(k,v) for k,v in desired.items())
         db.execute(update(PolicyState).where(PolicyState.user_id==user.id,PolicyState.version==generation).values(observed=encoded(confirmed),confirmed=encoded(desired) if success else row.confirmed,pending=False,error='' if success else 'Remote verification failed',checked_at=int(time.time())))
         if success and 'IsDisabled' in desired and user.active==bool(desired['IsDisabled']):
-            user.active=not desired['IsDisabled'];user.version+=1
+            user.active=not desired['IsDisabled'] and not user.portal_disabled;user.version+=1
         db.commit();return success
     except (EmbyError,ValueError):
         db.execute(update(PolicyState).where(PolicyState.user_id==user.id,PolicyState.version==generation).values(pending=False,error='Permission synchronization failed',checked_at=int(time.time())))
@@ -109,7 +110,7 @@ def run_pending():
     with SessionLocal() as db:
         for row in db.scalars(select(PolicyState).where(PolicyState.pending.is_(True)).limit(10)):
             user=db.get(User,row.user_id)
-            if user and user.emby_id and not user.emby_missing:apply(db,user,row)
+            if user and user.emby_id and not user.emby_missing and not user.portal_disabled:apply(db,user,row)
 
 def observe(db,user,remote):
     row=state(db,user,remote);row.observed=encoded(remote);row.checked_at=int(time.time())
@@ -132,6 +133,8 @@ def fields(remote,row):
 def save_permission(request:Request,uid:int,data=Depends(form)):
     actor=require_admin(request);db=request.state.db;user=db.get(User,uid)
     if not user or not user.emby_id:raise HTTPException(404,'User not found')
+    from .group_access import unlocked
+    unlocked(db,user)
     remote=emby.user(user.emby_id).get('Policy',{});key=str(data.get('field',''))
     if key not in remote:raise ValueError('This permission is not supported by the connected server')
     row=state(db,user,remote)
@@ -146,19 +149,21 @@ def save_permission(request:Request,uid:int,data=Depends(form)):
     request.state.audit_subject=uid
     request.state.audit_detail=label(key)+': '+encoded(remote[key])+' → '+('Inherited from groups' if data.get('action')=='inherit' else encoded(value))
     row.overrides=encoded(overrides);recompute(db,user,row);guard(db,user,json.loads(row.desired));db.commit();apply(db,user,row,write_keys={key})
-    return redirect('/admin/users/'+str(uid)+'#permissions')
+    return redirect('/admin/users/'+str(uid)+'?tab=emby#permissions')
 
 @router.post('/admin/users/{uid}/permissions/retry')
 def retry(request:Request,uid:int,data=Depends(form)):
     require_admin(request);db=request.state.db;user=db.get(User,uid);row=db.get(PolicyState,uid)
     if not user or not row:raise HTTPException(404,'User not found')
     row.version+=1;row.pending=True;db.commit();apply(db,user,row)
-    return redirect('/admin/users/'+str(uid)+'#permissions')
+    return redirect('/admin/users/'+str(uid)+'?tab=emby#permissions')
 
 @router.get('/admin/groups')
 def groups(request:Request):
     require_admin(request)
-    return render(request,'groups.html',groups=list(request.state.db.scalars(select(PermissionGroup).order_by(PermissionGroup.name))))
+    db = request.state.db
+    member_counts = dict(db.execute(select(GroupMember.group_id, func.count(GroupMember.user_id)).group_by(GroupMember.group_id)).all())
+    return render(request,'groups.html',groups=list(db.scalars(select(PermissionGroup).order_by(PermissionGroup.name))),member_counts=member_counts)
 
 @router.post('/admin/groups')
 def create_group(request:Request,data=Depends(form)):
@@ -176,7 +181,10 @@ def group_page(request:Request,gid:int):
     template=next((u for u in users if u.active),None)
     reference=emby.user(template.emby_id).get('Policy',{}) if template else {}
     policy=json.loads(group.policy)
-    return render(request,'group_editor.html',group=group,policy=policy,permission_keys=[k for k in sorted(reference) if k not in GROUP_EXCLUDED|LIBRARY_KEYS],reference_values=reference,reference_labels={k:label(k) for k in reference},members=set(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id==gid))),group_users=users,libraries=emby.libraries())
+    from .seerr_permissions import FLAGS
+    from .group_access import group_for
+    ownership={u.id:group_for(db,u) for u in users}
+    return render(request,'group_editor.html',group=group,policy=policy,group_access=json.loads(group.access_policy),seerr_permissions=FLAGS,ownership=ownership,permission_keys=[k for k in sorted(reference) if k not in GROUP_EXCLUDED|LIBRARY_KEYS],reference_values=reference,reference_labels={k:label(k) for k in reference},members=set(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id==gid))),group_users=users,libraries=emby.libraries())
 
 @router.post('/admin/groups/{gid}')
 def save_group(request:Request,gid:int,data=Depends(form)):
@@ -186,6 +194,8 @@ def save_group(request:Request,gid:int,data=Depends(form)):
     users=list(db.scalars(select(User).where(User.emby_id.is_not(None))));indexed={u.id:u for u in users}
     members={int(v) for v in data.getlist('members')}
     if not members<=set(indexed):raise ValueError('Unknown group member')
+    occupied=set(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id!=gid,GroupMember.user_id.in_(members))))
+    if occupied:raise HTTPException(409,'A user can belong to only one group. Remove the existing assignment first.')
     old_members=set(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id==gid)))
     affected=members|old_members
     remotes={uid:emby.user(indexed[uid].emby_id).get('Policy',{}) for uid in sorted(affected)}
@@ -205,14 +215,45 @@ def save_group(request:Request,gid:int,data=Depends(form)):
         if not set(selected)<=available:raise ValueError('Unknown library. Reload the page.')
         policy.update(EnableAllFolders=mode=='all',EnabledFolders=selected)
         if remotes and all('ExcludedSubFolders' in p for p in remotes.values()):policy['ExcludedSubFolders']=[]
-    request.state.audit_detail='Group: '+group.name+'\nMembers: '+', '.join(indexed[uid].name for uid in sorted(members))+'\nPermissions: '+encoded(policy)
+    from .seerr_permissions import selected_permissions
+    settings={}
+    if data.get('manage_admin')=='on':settings['gatearr_admin']=data.get('gatearr_admin')=='on'
+    if data.get('manage_tools')=='on':
+        tools=sorted(set(data.getlist('tools')))
+        if any(k not in ('radarr','sonarr','bazarr') for k in tools):raise ValueError('Invalid tool access')
+        settings['tools']=tools
+    if data.get('manage_seerr_access')=='on':settings['seerr_access']=data.get('seerr_access')=='on'
+    from .seerr_quotas import selected as quota_values
+    quotas=quota_values(data)
+    if quotas:settings['seerr_quotas']=quotas
+    if data.get('manage_seerr_permissions')=='on':settings['seerr_permissions']=selected_permissions(data)
+    request.state.audit_detail='Group: '+group.name+'\nMembers: '+', '.join(indexed[uid].name for uid in sorted(members))+'\nPermissions: '+', '.join(label(key)+' = '+('Yes' if value is True else 'No' if value is False else str(value) if type(value) is int else 'Custom selection') for key,value in policy.items())
     affected=members|old_members
     states={}
     for uid in sorted(affected):states[uid]=state(db,indexed[uid],remotes[uid])
-    result=db.execute(update(PermissionGroup).where(PermissionGroup.id==gid,PermissionGroup.version==int(data.get('version','-1'))).values(policy=encoded(policy),version=group.version+1))
+    result=db.execute(update(PermissionGroup).where(PermissionGroup.id==gid,PermissionGroup.version==int(data.get('version','-1'))).values(policy=encoded(policy),access_policy=encoded(settings),version=group.version+1))
     if result.rowcount!=1:db.rollback();raise HTTPException(409,'Group changed. Reload this page.')
     db.execute(delete(GroupMember).where(GroupMember.group_id==gid))
     db.add_all([GroupMember(group_id=gid,user_id=uid) for uid in members]);db.flush()
-    for uid in affected:recompute(db,indexed[uid],states[uid]);guard(db,indexed[uid],json.loads(states[uid].desired))
+    from .group_access import apply_access,group_for
+    # Grants first, then revocations, so moving the last administrator is checked atomically.
+    order=sorted(affected,key=lambda uid:not settings.get('gatearr_admin',False) if uid in members else True)
+    for uid in order:
+        recompute(db,indexed[uid],states[uid]);guard(db,indexed[uid],json.loads(states[uid].desired));apply_access(db,indexed[uid],group_for(db,indexed[uid]))
     db.commit()
     return redirect('/admin/groups/'+str(gid)+'?saved=1')
+
+@router.post('/admin/users/{uid}/group')
+def assign_group(request:Request,uid:int,data=Depends(form)):
+    require_admin(request);db=request.state.db;user=db.get(User,uid)
+    if not user or not user.emby_id:raise HTTPException(404,'User not found')
+    gid=int(data.get('group_id') or '0');group=db.get(PermissionGroup,gid) if gid else None
+    if gid and not group:raise HTTPException(404,'Group not found')
+    remote=emby.user(user.emby_id).get('Policy',{});row=state(db,user,remote)
+    db.execute(delete(GroupMember).where(GroupMember.user_id==uid))
+    if group:db.add(GroupMember(user_id=uid,group_id=gid))
+    db.flush();recompute(db,user,row);guard(db,user,json.loads(row.desired))
+    from .group_access import apply_access
+    apply_access(db,user,group);db.commit()
+    request.state.audit_subject=uid;request.state.audit_detail='Owning group: '+(group.name if group else 'None')
+    return redirect('/admin/users/'+str(uid)+'?tab=access')

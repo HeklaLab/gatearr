@@ -44,9 +44,11 @@ def validate(layout):
                 raise ValueError('Block text too long')
         from .page_design import asset_url,link_url,validate_style
         validate_style(block.get('style',{}))
+        if block['kind']=='spacer' and (type(block.get('size',32)) is not int or not 0<=block.get('size',32)<=2000):raise ValueError('Invalid spacing size')
         if block['kind']=='applications':
             selected=block.get('applications',[])
             if not isinstance(selected,list) or len(selected)>100 or any(not isinstance(k,str) or not re.fullmatch(r'(?:access:[a-z0-9_-]{1,80}|menu:[0-9]+|account|radarr|sonarr|bazarr)',k) for k in selected) or len(set(selected))!=len(selected):raise ValueError('Invalid application selection')
+            if len(selected)>block.get('columns',3):raise ValueError('Select no more applications than the configured number')
             if block.get('columns',3) not in (1,2,3,4,5,6) or block['span']!=12 or block.get('parent') or block['region']!='main':raise ValueError('Applications use a full row in the main content')
         if block['kind']=='image':asset_url(block.get('url',''))
         if block['kind']=='button':link_url(block.get('url',''),layout.get('page')=='login')
@@ -82,7 +84,7 @@ def localized(block,name,locale,db=None):
     if block['id']=='login-intro' and name=='body' and translated==source:translated=i18n.content(db,'branding:login_text',source,locale)
     return translated
 
-def for_display(layout,locale,user=None,db=None):
+def for_display(layout,locale,user=None,db=None,editor=False):
     layout=deepcopy(layout);regions={key:[] for key in REGIONS};indexed={}
     for block in sorted(layout['blocks'],key=lambda block:(block['order'],block['id'])):
         if block['id']=='account' and block['kind']=='account' and block.get('title')=='My account' and block.get('body')=='Manage your details and password.' and any(b['kind']=='services' for b in layout['blocks']):continue
@@ -100,9 +102,15 @@ def for_display(layout,locale,user=None,db=None):
         block['slots']=[[] for _ in range(block.get('columns',2))] if block['kind']=='columns' else []
         indexed[block['id']]=block
     from .applications import catalog
-    available={a['key']:a for a in catalog(db,user,locale=locale)} if db is not None else {}
+    available={a['key']:a for a in catalog(db,user,editor=editor,locale=locale)} if db is not None else {}
     for b in indexed.values():
         if b['kind']=='applications':b['cards']=[available[key] for key in b.get('applications',[]) if key in available]
+    if db is not None and user and not editor and not getattr(user,'_preview',False) and any(any(a['key']=='access:seerr' for a in b.get('cards',[])) for b in indexed.values()):
+        from .seerr_permissions import summary
+        statistics=summary(db,user)
+        for b in indexed.values():
+            for a in b.get('cards',[]):
+                if a['key']=='access:seerr':a['statistics']=statistics
     for block in indexed.values():
         if block.get('parent'):
             parent=indexed.get(block['parent'])

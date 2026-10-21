@@ -12,6 +12,8 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(320), unique=True)
     admin: Mapped[bool] = mapped_column(Boolean, default=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    portal_disabled: Mapped[bool] = mapped_column(Boolean,default=False,server_default="0")
+    disable_status: Mapped[str] = mapped_column(Text,default="{}",server_default="{}")
     theme_preference: Mapped[str] = mapped_column(String(10), default="auto", server_default="auto")
     tool_access: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
     password_hash: Mapped[str | None] = mapped_column(Text)
@@ -140,10 +142,12 @@ class PermissionGroup(Base):
     policy: Mapped[str] = mapped_column(Text,default='{}')
     version: Mapped[int] = mapped_column(Integer,default=0)
 
+    access_policy: Mapped[str] = mapped_column(Text,default='{}',server_default='{}')
+
 class GroupMember(Base):
     __tablename__='group_members'
     group_id: Mapped[int] = mapped_column(ForeignKey('permission_groups.id',ondelete='CASCADE'),primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True,unique=True)
 
 class PolicyState(Base):
     __tablename__='policy_states'
@@ -205,3 +209,42 @@ class ToolGrant(Base):
     tool: Mapped[str] = mapped_column(String(20))
     expires: Mapped[int] = mapped_column(Integer)
     redeemed: Mapped[bool] = mapped_column(Boolean,default=False)
+
+class GroupBaseline(Base):
+    __tablename__='group_baselines'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    values: Mapped[str] = mapped_column(Text)
+
+class SeerrPolicyState(Base):
+    __tablename__='seerr_policy_states'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    baseline: Mapped[int | None] = mapped_column(Integer)
+    individual: Mapped[int | None] = mapped_column(Integer)
+    desired: Mapped[int | None] = mapped_column(Integer)
+    observed: Mapped[int | None] = mapped_column(Integer)
+    version: Mapped[int] = mapped_column(Integer,default=0)
+    pending: Mapped[bool] = mapped_column(Boolean,default=False)
+    error: Mapped[str] = mapped_column(String(120),default='')
+    checked_at: Mapped[int | None] = mapped_column(Integer)
+    connection: Mapped[str] = mapped_column(String(64),default='')
+
+class SeerrSummary(Base):
+    __tablename__='seerr_summaries'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    role: Mapped[str] = mapped_column(String(10),primary_key=True)
+    data: Mapped[str] = mapped_column(Text,default='{}')
+    checked_at: Mapped[int] = mapped_column(Integer)
+    connection: Mapped[str] = mapped_column(String(64))
+
+class SeerrQuotaState(Base):
+    __tablename__='seerr_quota_states'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    baseline: Mapped[str] = mapped_column(Text,default='{}')
+    individual: Mapped[str] = mapped_column(Text,default='{}')
+    desired: Mapped[str] = mapped_column(Text,default='{}')
+    observed: Mapped[str] = mapped_column(Text,default='{}')
+    version: Mapped[int] = mapped_column(Integer,default=0)
+    pending: Mapped[bool] = mapped_column(Boolean,default=False)
+    error: Mapped[str] = mapped_column(String(120),default='')
+    checked_at: Mapped[int | None] = mapped_column(Integer)
+    connection: Mapped[str] = mapped_column(String(64),default='')

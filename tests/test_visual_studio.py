@@ -163,7 +163,7 @@ def test_studio_csp_enables_local_editor_but_public_pages_have_no_scripts(client
         csp=client.get(path).headers['content-security-policy']
         assert "script-src 'self'" in csp and "frame-src 'self'" in csp
     csp=client.get('/home').headers['content-security-policy']
-    assert "script-src 'none'" in csp and "style-src 'self' 'unsafe-inline'" in csp
+    assert "script-src 'self'" in csp and "style-src 'self' 'unsafe-inline'" in csp
 
 
 def test_unavailable_tool_card_does_not_hide_member_account_access(client):

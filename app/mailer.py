@@ -19,7 +19,8 @@ def config(db, key, default=""):
     return row.value if row else default
 
 def compose(db, recipient, purpose, values):
-    locale = values.get("_locale", "en")
+    from .i18n import default_language
+    locale = values.get("_locale", default_language(db))
     def template(key):
         purpose,part=key.rsplit('_',1)
         return mail_template(db,purpose,part,locale,values.get("_allow_disabled",False))
@@ -63,7 +64,7 @@ def html_source(db,purpose):
 
 def mail_template(db,purpose,part,locale,allow_disabled=False):
     from . import i18n
-    if locale not in i18n.languages(db,all=allow_disabled):locale='en'
+    if locale not in i18n.languages(db,all=allow_disabled):locale=i18n.default_language(db)
     if part=='html':
         source=html_source(db,purpose)
         value=i18n.content(db,'mail:'+purpose+':html',source,locale)

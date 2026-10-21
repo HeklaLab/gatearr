@@ -12,7 +12,7 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, delete, update, text, case
+from sqlalchemy import select, delete, update, text, case, func
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
@@ -61,12 +61,12 @@ def sync_users(db):
         ids.add(item["Id"])
         row = db.scalar(select(User).where(User.emby_id == item["Id"]))
         if not row:
-            row = User(emby_id=item["Id"], name=item["Name"], admin=False, active=True, version=0)
+            row = User(emby_id=item["Id"], name=item["Name"], admin=False, active=True, version=0,locale=i18n.default_language(db))
             db.add(row)
         row.emby_missing = False
         row.emby_seen_at = sync_time
         row.name = item["Name"]
-        active = not item.get("Policy", {}).get("IsDisabled", False)
+        active = not row.portal_disabled and not item.get("Policy", {}).get("IsDisabled", False)
         if row.active and not active:
             row.version += 1
         row.active = active
@@ -139,6 +139,12 @@ async def scheduled():
         await run_in_threadpool(run_jobs)
         from .permissions import run_pending
         await run_in_threadpool(run_pending)
+        from .seerr_permissions import run_pending as seerr_pending
+        await run_in_threadpool(seerr_pending)
+        from .seerr_quotas import run_pending as quota_pending
+        await run_in_threadpool(quota_pending)
+        from .usernames import run_pending as username_pending
+        await run_in_threadpool(username_pending)
         from .versioning import refresh_due
         await run_in_threadpool(refresh_due)
         if now() >= next_sync:
@@ -228,6 +234,8 @@ async def context(request: Request, call_next):
         if request.state.cookie_secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
         response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        if getattr(request.state,'button_feedback',False):
+            response.headers['Content-Security-Policy']=response.headers['Content-Security-Policy'].replace("script-src 'none'","script-src 'self'")
         if request.url.path=="/services/emby/open":response.headers["Referrer-Policy"]="no-referrer"
         if request.url.path.startswith('/tools/'):
             response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'none'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
@@ -236,7 +244,7 @@ async def context(request: Request, call_next):
             target=public_url(db)
             if target:
                 response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("form-action 'self'","form-action 'self' "+target)
-        if request.url.path in ("/admin/mail-editor","/admin/footer","/admin/integrations","/admin/services","/admin/guides","/admin/portal") or request.url.path.startswith(("/admin/access/","/admin/design/","/admin/guides/","/admin/visual-howto/","/admin/visual-guide/","/tools/")):
+        if request.url.path in ("/admin/branding/themes","/admin/mail-editor","/admin/footer","/admin/integrations","/admin/services","/admin/guides","/admin/portal") or request.url.path.startswith(("/admin/access/","/admin/design/","/admin/guides/","/admin/visual-howto/","/admin/visual-guide/","/tools/")):
             response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'")
         if request.url.path in ('/admin/portal','/admin/footer') or request.url.path.startswith(('/admin/design/','/admin/access/','/admin/guides/')):
             response.headers['Content-Security-Policy']+="; frame-src 'self'"
@@ -336,11 +344,15 @@ def require_admin(request):
         raise HTTPException(403, 'Administrator access required')
     return user
 
+templates.env.filters['bitand']=lambda value,bit:int(value)&int(bit)
+
 def render(request, template, **kwargs):
     db = request.state.db
+    request.state.button_feedback=not kwargs.get("visual_preview",False)
     locale = request.state.locale
     custom_translations = i18n.overrides(db,locale)
-    base_translations = i18n.overrides(db,"en")
+    source_locale=i18n.default_language(db)
+    base_translations = i18n.overrides(db,source_locale)
     from .connections import media_kind
     media_name="Jellyfin" if media_kind(db)=="jellyfin" else "Emby"
     values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and not row.key.endswith("_api_key") and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","login_draft","login_published","login_version","footer_","release_","ui_translation_","_i18n_","themes_"))}
@@ -367,7 +379,7 @@ def render(request, template, **kwargs):
         values[key] = mail_template(db,*key.rsplit("_",1),mail_locale)
     from .guides import access_href
     def translator(message,**params):
-        result=i18n.translate(message,locale,overrides=custom_translations,base_overrides=base_translations,**params)
+        result=i18n.translate(message,locale,overrides=custom_translations,base_overrides=base_translations,source_locale=source_locale,**params)
         if media_name=='Jellyfin' and message not in custom_translations:
             result=result.replace('Emby','Jellyfin')
             if message=='EMBY':result='JELLYFIN'
@@ -382,7 +394,7 @@ def render(request, template, **kwargs):
     from .themes import load as load_themes
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
-        "password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
+        "default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
         "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"tool_names":("radarr","sonarr","bazarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
@@ -393,7 +405,7 @@ def render(request, template, **kwargs):
         "seerr_access":access_href(db,"seerr") if seerr_public else "",
         "seerr_in_menu":any(item.access_service=="seerr" or item.label.casefold()=="seerr" or (seerr_public and item.url.rstrip("/")==seerr_public.rstrip("/")) for entries in menus.values() for item in entries),
         "ui_catalog":{key:translator(key) for key in i18n.CATALOGS["en"]},"default_service_icon":lambda key:__import__("app.service_assets",fromlist=["default_icon"]).default_icon(key,media_name.lower()),"font_icon_class":__import__("app.icons",fromlist=["icon_class"]).icon_class, "service_font":lambda key:(db.get(AccessService,key).icon if db.get(AccessService,key) else "link"), "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: __import__("app.service_assets",fromlist=["service_icon"]).service_icon(db,key,media_name.lower()), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
-        "footer_regions":portal.for_display(global_footer_design,locale,request.state.user,db) if (global_footer_design:=footer_layout.get("design")) else None,"layout": layout, "regions": portal.for_display(layout, locale, None if kwargs.get("anonymous_preview") else request.state.user,db), "menus": menus, "mail_locale": mail_locale,
+        "footer_regions":portal.for_display(global_footer_design,locale,request.state.user,db) if (global_footer_design:=footer_layout.get("design")) else None,"layout": layout, "regions": portal.for_display(layout, locale, None if kwargs.get("anonymous_preview") else request.state.user,db,editor=bool(kwargs.get("visual_preview"))), "menus": menus, "mail_locale": mail_locale,
         "content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
 
 def setup_error(request,message,status):
@@ -521,11 +533,20 @@ def login(request: Request, data=Depends(form)):
     db = request.state.db
     if not db.get(Config,"setup_complete"):
         raise HTTPException(403, 'Complete the initial setup first')
+    email_user = db.scalar(select(User).where(func.lower(User.email) == name.lower())) if '@' in name else None
     try:
-        result = emby.authenticate(name, password)
+        login_name = name
+        if email_user:
+            if email_user.portal_disabled or not email_user.emby_id:
+                raise HTTPException(401, 'Invalid credentials')
+            # Resolve the current native name by stable ID, including external renames.
+            login_name = emby.user(email_user.emby_id)['Name']
+        result = emby.authenticate(login_name, password)
     except EmbyError:
         raise HTTPException(401, 'Invalid credentials or Emby unavailable')
     remote = result["User"]
+    if email_user and remote['Id'] != email_user.emby_id:
+        raise HTTPException(401, 'Invalid credentials')
     if remote.get("Policy", {}).get("IsDisabled"):
         raise HTTPException(401, 'Invalid credentials')
     user = db.scalar(select(User).where(User.emby_id == remote["Id"]))
@@ -534,6 +555,7 @@ def login(request: Request, data=Depends(form)):
     if not user:
         user = User(emby_id=remote["Id"], name=remote["Name"], admin=False, active=True, locale=request.state.locale)
         db.add(user)
+    if user.portal_disabled:raise HTTPException(401, "Invalid credentials")
     user.name, user.active, user.emby_missing = remote["Name"], True, False
     db.commit()
     if request.cookies.get("gatearr_language") in i18n.languages(db):
@@ -585,6 +607,7 @@ def change_password(request: Request, data=Depends(form)):
     return redirect("/login")
 
 def issue_token(db, user, purpose, email=None):
+    if user.portal_disabled or not user.active:raise HTTPException(403,"Account disabled")
     db.execute(update(Token).where(Token.user_id == user.id, Token.purpose == purpose).values(used=True))
     raw = secrets.token_urlsafe(32)
     db.add(Token(digest=digest(raw), user_id=user.id, purpose=purpose, email=email, expires=now()+1800, used=False, version=user.version))
@@ -594,7 +617,7 @@ def issue_token(db, user, purpose, email=None):
 def mail_token(db, user, purpose, raw, recipient):
     base = config(db, "public_url", settings.public_url)
     link = base + ("/reset?" if purpose == "reset" else "/verify-email?") + urlencode({"token": raw})
-    mail_language=user.locale if user.locale in i18n.languages(db) else "en"
+    mail_language=user.locale if user.locale in i18n.languages(db) else i18n.default_language(db)
     send(db, recipient, purpose, {"app_name": i18n.content(db,"branding:app_name",config(db,"app_name",settings.app_name),mail_language), "username": user.name, "link": link, "minutes": "30", "_locale": mail_language})
 
 @app.post("/account/email")
@@ -735,7 +758,7 @@ def admin_settings(request: Request, data=Depends(form)):
         raise ValueError('The public URL must be at the domain root')
     if settings.secure_cookie and not public.startswith("https://"):
         raise ValueError('The public URL must use HTTPS')
-    values = {"login_text": str(data["login_text"])[:2000], "default_locale":"en", "app_name":str(data["app_name"]).strip()[:80], "logo_url":url_ok(data["logo_url"],optional=True), "emby_link":url_ok(data["emby_link"],optional=True), "public_url":public}
+    values = {"login_text": str(data["login_text"])[:2000], "default_locale":i18n.default_language(request.state.db), "app_name":str(data["app_name"]).strip()[:80], "logo_url":url_ok(data["logo_url"],optional=True), "emby_link":url_ok(data["emby_link"],optional=True), "public_url":public}
 
     for key, value in values.items():
         set_config(db, key, value)
@@ -779,7 +802,7 @@ def mail_templates(request: Request, data=Depends(form)):
             raise ValueError('Allowed variables: ${app_name}, ${username}, ${link}, ${minutes}')
         if key.endswith("body") and "${link}" not in value:
             raise ValueError('The message body must contain ${link}')
-        if mail_locale=='en':
+        if mail_locale=='en' and i18n.default_language(request.state.db)=='en':
             set_config(request.state.db,key,value)
             if key.endswith('_body'):set_config(request.state.db,key.removesuffix('_body')+'_html','')
         else:
@@ -952,3 +975,12 @@ app.include_router(visual_builder_router)
 
 from .visual_howto import router as visual_howto_router
 app.include_router(visual_howto_router)
+
+from .seerr_permissions import router as seerr_permissions_router
+app.include_router(seerr_permissions_router)
+
+from .seerr_quotas import router as seerr_quotas_router
+app.include_router(seerr_quotas_router)
+
+from .personalization import router as personalization_router
+app.include_router(personalization_router)

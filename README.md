@@ -21,9 +21,9 @@ In **Portal builder**, each **Applications** block fills one row. Select applica
 
 A customizable, self-hosted account portal for Emby and Jellyfin. Sign in with your media account, manage your account and open the services published by your administrator.
 
-Python 3.12, FastAPI, SQLAlchemy/Alembic and SQLite/WAL. One application container and one persistent data volume. English is the source language. Twenty additional pretranslated language packs are bundled but disabled by default; activate them and edit interface, content and email text in Translations. No reverse proxy is bundled.
+Python 3.12, FastAPI, SQLAlchemy/Alembic and SQLite/WAL. One application container and one persistent data volume. Choose the default language during setup; it is also the translation reference. Twenty additional pretranslated language packs are bundled. English may be disabled as long as another language remains active. Edit interface labels, content and emails in Translations / Labels. No reverse proxy is bundled.
 
-## Visual studio (0.3.1)
+## Portal builder
 
 Open **Administration → Branding → Visual studio** and choose **Before sign-in**, **After sign-in** or **Footer**. Drag a block from the palette into the real page preview, or click to add it. Click a block to edit its text, width, alignment, visibility, image and colors. Columns accept nested blocks; choose one, two or three columns without entering layout numbers. The sign-in form can be moved and aligned left, center or right, but a sign-in page must retain exactly one visible form.
 
@@ -35,7 +35,7 @@ The bundled default logos are served locally. Custom uploads and explicitly chos
 
 ### Included languages
 
-The English source plus twenty language packs are included. Only English is enabled on a fresh installation; existing choices are preserved on upgrade. Initial translations cover the interface, default emails and starter-guide text, and are editable. Packs were initially machine-translated with automated placeholder checks; a professional review of every language is not claimed. No content is sent to a translation service at runtime. Arabic and Hebrew pages use right-to-left direction. Administrator-authored custom content still needs its own translations.
+The English source plus twenty language packs are included. Only the language selected during setup is enabled on a fresh installation; existing choices are preserved on upgrade. Initial translations cover the interface, default emails and starter-guide text, and are editable. Packs were initially machine-translated with automated placeholder checks; a professional review of every language is not claimed. No content is sent to a translation service at runtime. Arabic and Hebrew pages use right-to-left direction. Administrator-authored custom content still needs its own translations.
 
 ## Installation prerequisites
 
@@ -237,3 +237,7 @@ python scripts/smoke.py
 The demo uses simulated media/Seerr services and Mailpit. At setup use `http://mock-emby:8096/emby`, key `demo-emby-key`, and first administrator `portal-admin` / `AdminPassword123!`. The ordinary account is `demo` / `DemoPassword123!`; the smoke test changes it to `ResetPassword123!`. These credentials are for the isolated demo only.
 
 Build from source with `docker compose -f compose.yaml -f compose.build.yaml up -d --build --wait`. See [VALIDATION.md](VALIDATION.md), [CHANGELOG.md](CHANGELOG.md) and [PUBLISHING.md](PUBLISHING.md). Live Emby/Jellyfin/Seerr/tool versions and your actual proxy need validation in your environment; simulator tests do not establish compatibility with every native version.
+
+## Development and release review
+
+Changes follow three stages: agree on the scope, implement and test locally, then publish after visual review and explicit approval. A successful local test run is not permission to publish. Review the local browser preview before creating a release or moving container tags.

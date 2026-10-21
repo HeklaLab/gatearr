@@ -71,7 +71,7 @@ def display(db,value,locale,app_name):
     for item in value['items']:
         source=item['text'];text=i18n.content(db,'footer:'+item['id']+':text',source,locale)
         if item['id']=='signature' and source==DEFAULT['items'][0]['text'] and (text==source or text==i18n.CATALOGS.get(locale,{}).get(source)):
-            text=i18n.translate(source,locale,overrides=i18n.overrides(db,locale),base_overrides=i18n.overrides(db,'en'),app_name=app_name)
+            text=i18n.translate(source,locale,overrides=i18n.overrides(db,locale),base_overrides=i18n.overrides(db,i18n.default_language(db)),source_locale=i18n.default_language(db),app_name=app_name)
         item['text']=text.replace('{app_name}',app_name)
     if 'columns' in value:value['columns']=[clean_html(i18n.content(db,'footer:column:'+str(index),column,locale).replace('{app_name}',html.escape(app_name))) for index,column in enumerate(value['columns'])]
     value['items'].sort(key=lambda item:(item['position'],item['id']))

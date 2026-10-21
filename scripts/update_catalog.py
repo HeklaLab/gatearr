@@ -32,6 +32,13 @@ def authored(value):
     elif isinstance(value,list):
         for v in value:authored(v)
 authored(json.loads((root/'app/journey_defaults.json').read_text()))
+# Named permission flags and statistic labels are displayed dynamically.
+for file in [root/'app/seerr_permissions.py']:
+    for node in ast.walk(ast.parse(file.read_text())):
+        if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='FLAGS' for t in node.targets):
+            for v in node.value.values:
+                if isinstance(v,ast.Constant):add(v.value)
+for value in ('Processing','Awaiting approval','Movies left','Seasons left','Approved','Available','changed','not configured','not imported','failed — retry required','pending'):add(value)
 path.write_text(json.dumps(catalog,indent=2,ensure_ascii=False)+'\n');print('English sources:',len(catalog))
 
 # Only actual UI literals belong in the fixed-interface editor. Preserve the full
@@ -53,3 +60,10 @@ for file in (root/'app').glob('*.py'):
                 if isinstance(arg,ast.Constant):ui(arg.value)
 (root/'app/interface_keys.json').write_text(json.dumps(sorted(interface),indent=2,ensure_ascii=False)+'\n')
 print('Fixed interface keys:',len(interface))
+
+interface.update(['Processing','Awaiting approval','Movies left','Seasons left','Approved','Available','changed','not configured','not imported','failed — retry required','pending'])
+for node in ast.walk(ast.parse((root/'app/seerr_permissions.py').read_text())):
+    if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='FLAGS' for t in node.targets):
+        interface.update(v.value for v in node.value.values if isinstance(v,ast.Constant))
+interface.difference_update(('ArrowUp','ArrowDown','Enter'))
+(root/'app/interface_keys.json').write_text(json.dumps(sorted(interface),indent=2,ensure_ascii=False)+'\n')

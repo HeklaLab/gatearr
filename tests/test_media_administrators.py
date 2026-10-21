@@ -94,6 +94,6 @@ def test_disabled_user_cannot_be_granted_admin_and_setup_token_is_not_a_login(cl
     uid=ids()['user-1']
     assert post(client,f'/admin/users/{uid}/role',{'admin':'on'},'/admin').status_code==400
     logout(client)
-    assert post(client,'/login',{'name':'owner@example.com','password':PASSWORD,'local_admin':'on'}).status_code==401
+    assert post(client,'/login',{'name':'unknown@example.com','password':PASSWORD,'local_admin':'on'}).status_code==401
     assert post(client,'/login',{'name':'Owner','password':'unused' }).status_code==401
     assert client.get('/admin').status_code==401

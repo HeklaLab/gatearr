@@ -125,20 +125,30 @@ def emby_user(request: Request, local_id: int):
     from .permissions import observe,fields
     from .models import PolicyState
     from .emby import EmbyError
-    try:
-        remote=emby.user(user.emby_id);available=emby.libraries()
-        remote_users=emby.users();options=emby.copy_options();policy_offline=False
-    except EmbyError:
-        cached=request.state.db.get(PolicyState,user.id)
-        if not cached:raise
-        remote={'Policy':__import__('json').loads(cached.observed)};available=[];remote_users=[];options=[];policy_offline=True
-        cached.error='Media server unreachable; showing the last observed permissions';request.state.db.commit()
-    normalize=lambda value:str(value).replace('-','').lower()
-    selected={normalize(value) for value in remote.get('Policy',{}).get('EnabledFolders',[]) or []}
-    if not policy_offline:remote.setdefault('Policy',{})['EnabledFolders']=[item['Id'] for item in available if normalize(item['Id']) in selected]
-    from .permissions import observe,fields
-    policy_state=cached if policy_offline else observe(request.state.db,user,remote.get('Policy',{}))
-    return render(request,'emby_user.html',policy_state=policy_state,permission_fields=fields(remote.get('Policy',{}),policy_state),member=user,remote=remote,libraries=available,remote_users=remote_users,options=options)
+    import json
+    tab=request.query_params.get('tab','account')
+    if tab not in ('account','emby','seerr','access'):tab='account'
+    cached=request.state.db.get(PolicyState,user.id)
+    remote={'Policy':json.loads(cached.observed) if cached else {}};available=[];remote_users=[];options=[]
+    policy_state=cached
+    if tab=='emby':
+        try:
+            remote=emby.user(user.emby_id);available=emby.libraries()
+            remote_users=emby.users();options=emby.copy_options()
+            normalize=lambda value:str(value).replace('-','').lower()
+            selected={normalize(value) for value in remote.get('Policy',{}).get('EnabledFolders',[]) or []}
+            remote.setdefault('Policy',{})['EnabledFolders']=[item['Id'] for item in available if normalize(item['Id']) in selected]
+            policy_state=observe(request.state.db,user,remote.get('Policy',{}))
+        except EmbyError:
+            if not cached:raise
+            cached.error='Media server unreachable; showing the last observed permissions';request.state.db.commit()
+    from .group_access import group_for
+    from .models import PermissionGroup,GroupMember
+    from .seerr_permissions import inspect_user
+    tab=request.query_params.get('tab','account')
+    if tab not in ('account','emby','seerr','access'):tab='account'
+    seerr_state=inspect_user(request.state.db,user) if tab=='seerr' else None
+    return render(request,'emby_user.html',user_tab=tab,owner_group=group_for(request.state.db,user),permission_groups=list(request.state.db.scalars(select(PermissionGroup).order_by(PermissionGroup.name))),seerr_quota=__import__('app.seerr_quotas',fromlist=['inspect']).inspect(request.state.db,user) if tab=='seerr' else None,seerr_policy=seerr_state,seerr_permissions=__import__('app.seerr_permissions',fromlist=['FLAGS']).FLAGS,member_seerr_access=__import__('app.group_access',fromlist=['seerr_allowed']).seerr_allowed(request.state.db,user),policy_state=policy_state,permission_fields=fields(remote.get('Policy',{}),policy_state) if policy_state else [],username_sync=__import__('app.usernames',fromlist=['status']).status(request.state.db,user.id),member=user,remote=remote,libraries=available,remote_users=remote_users,options=options)
 
 @router.post('/admin/emby/libraries')
 def libraries_save(request: Request, data=Depends(form)):
@@ -150,6 +160,8 @@ def libraries_save(request: Request, data=Depends(form)):
     if mode is not None and mode not in ('all','selected'):
         raise ValueError('Invalid access mode')
     all_folders=mode=='all' if mode is not None else data.get('all_folders')=='on'
+    from .group_access import unlocked
+    unlocked(request.state.db,user)
     selected=list(data.getlist('libraries'))
     if data.get('action')=='remove_all':
         selected=[]
@@ -164,7 +176,7 @@ def libraries_save(request: Request, data=Depends(form)):
     overrides=__import__('json').loads(row.overrides);overrides.update(EnableAllFolders=all_folders,EnabledFolders=sorted(set(selected)))
     row.overrides=encoded(overrides);recompute(request.state.db,user,row);row.pending=False
     observe(request.state.db,user,emby.user(user.emby_id).get('Policy',{}))
-    return redirect('/admin/users/'+str(user.id)+'?saved=libraries')
+    return redirect('/admin/users/'+str(user.id)+'?tab=emby&saved=libraries')
 
 @router.post('/admin/emby/copy')
 def copy_existing(request: Request, data=Depends(form)):
@@ -172,6 +184,8 @@ def copy_existing(request: Request, data=Depends(form)):
     user = request.state.db.get(User, int(data['id']))
     if not user or not user.emby_id:
         raise HTTPException(404, 'Emby account not found')
+    from .group_access import unlocked
+    unlocked(request.state.db,user)
     if data.get('acknowledge') != 'on':
         raise ValueError('Confirm replacement of the selected settings.')
     emby.copy_to_existing(data['source_id'], user.emby_id, list(data.getlist('copy_options')))
@@ -185,7 +199,10 @@ def integrations(request: Request):
     jobs = list(db.scalars(select(IntegrationJob).order_by(IntegrationJob.updated_at.desc())))
     owners = {user.id: user for user in db.scalars(select(User))}
     from .connection_health import checks
-    return render(request,'integrations.html',jobs=jobs,owners=owners,emby_connection_url=config(db,'emby_url'),emby_key_saved=bool(config(db,'emby_api_key')),connection_checks=checks(db),items=list(db.scalars(select(MenuItem).order_by(MenuItem.position))))
+    items = list(db.scalars(select(MenuItem).order_by(MenuItem.position)))
+    native = {'emby', 'jellyfin', 'seerr', 'radarr', 'sonarr', 'bazarr'}
+    custom_items = [item for item in items if (item.access_service or '').lower() not in native and item.label.lower() not in native]
+    return render(request,'integrations.html',jobs=jobs,owners=owners,emby_connection_url=config(db,'emby_url'),emby_key_saved=bool(config(db,'emby_api_key')),connection_checks=checks(db),items=items,custom_items=custom_items)
 
 @router.post('/admin/integrations')
 def integrations_save(request: Request, data=Depends(form)):
@@ -262,13 +279,15 @@ def user_role(request:Request,local_id:int,data=Depends(form)):
         raise HTTPException(403,'Administrator access required')
     target=db.get(User,local_id)
     if not target or not target.emby_id:raise HTTPException(404,'Media account required')
+    from .group_access import unlocked
+    unlocked(db,target)
     request.state.audit_subject=local_id
     request.state.audit_detail='Gatearr administrator: '+str(target.admin)+' → '+str(data.get('admin')=='on')+'\nTools: '+target.tool_access+' → '+str(data.getlist('tools'))
     grant=data.get('admin')=='on'
     if grant and (not target.active or target.emby_missing):raise HTTPException(400,'An active media account is required')
     import json
     tools=sorted(set(data.getlist('tools')))
-    if any(t not in ('radarr','sonarr','bazarr') or config(db,t+'_enabled')!='true' for t in tools):raise ValueError('Invalid tool access')
+    if any(t not in ('radarr','sonarr','bazarr') for t in tools):raise ValueError('Invalid tool access')
     changed_tools=json.loads(target.tool_access)!=tools
     if target.admin==grant and not changed_tools:return redirect('/admin/users/'+str(local_id))
     target.tool_access=json.dumps(tools)

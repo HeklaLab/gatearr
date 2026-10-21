@@ -92,11 +92,13 @@ def edit(request:Request,page:str,action:str,data=Depends(form)):
     value=validate(db,page,load(db,page) if action=='restore' else value)
     if action=='preview':
         if page=='footer':
-            f=footer.load(db);f['design']=value
+            f=footer.load(db);f['design']=value;f['enabled']=True
             return render(request,'footer_preview.html',layout=value,footer_layout=f,visual_preview=True)
         return render(request,'login.html' if page=='login' else 'home.html',layout=value,visual_preview=True,anonymous_preview=page=='login')
     save(db,page,value,int(data.get('version','-1')),action=='publish')
-    request.state.audit_detail=('Published' if action=='publish' else 'Saved draft')+': '+page+' page, '+str(len(value['blocks']))+' blocks'
+    request.state.audit_action='POST /admin/design/'+page+'/'+action
+    request.state.audit_detail={'login':'Login screen','home':'Portal','footer':'Footer'}[page]+' · '+str(len(value['blocks']))+' blocks'
+
     return {'version':version(db,page),'layout':value}
 
 @router.post('/admin/applications/order')
@@ -138,3 +140,19 @@ def enable_howto(request:Request,item_id:int,data=Depends(form)):
             service=AccessService(key=key,name=item.label,browser_url=item.url,server_url=item.url,icon=item.icon,icon_url=item.icon_url,entry_mode='direct',access_version=0,access_draft='[]',access_published='[]');db.add(service)
         item.access_service=key;db.commit()
     return {'url':'/admin/design/home/howto/'+key}
+
+@router.post('/admin/design/home/application/{key}/behavior')
+def application_behavior(request:Request,key:str,data=Depends(form)):
+    require_admin(request);db=request.state.db
+    if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'Access guides are unavailable for admin tools')
+    service=db.get(AccessService,key)
+    if not service:raise HTTPException(404,'Application not found')
+    mode=data.get('mode')
+    if mode not in ('direct','structured'):raise ValueError('Invalid application behavior')
+    service.entry_mode=mode;db.commit()
+    return {'mode':mode}
+
+@router.get('/admin/access-guides')
+def guide_index(request:Request):
+    require_admin(request)
+    return render(request,'access_guides_index.html',guide_apps=[a for a in catalog(request.state.db,editor=True) if a.get('howto')])

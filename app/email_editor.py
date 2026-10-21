@@ -35,14 +35,14 @@ def page(request:Request):
     require_admin(request)
     purpose=request.query_params.get('purpose','invite')
     if purpose not in PURPOSES:raise HTTPException(404,'Template not found')
-    return editor(request,purpose,language(request,request.query_params.get('mail_locale','en'),all=True))
+    return editor(request,purpose,language(request,request.query_params.get('mail_locale',i18n.default_language(request.state.db)),all=True))
 
 @router.post('/admin/mail-editor')
 def save(request:Request,data=Depends(form)):
     admin=require_admin(request)
     purpose=str(data.get('purpose','invite'))
     if purpose not in PURPOSES:raise ValueError('Template not found')
-    locale=language(request,data.get('mail_locale','en'),all=True)
+    locale=language(request,data.get('mail_locale',i18n.default_language(request.state.db)),all=True)
     stamp=i18n.source_hash(config(request.state.db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(request.state.db,purpose))
     if data.get('source_hash') and data['source_hash']!=stamp:raise HTTPException(409,'The source text has changed. Reload the translation page.')
     subject=validate(str(data.get('subject','')),subject=True)
@@ -55,7 +55,7 @@ def save(request:Request,data=Depends(form)):
         # Use a nested transaction so the regular SMTP path can send this unsaved draft.
         db=request.state.db
         with db.begin_nested() as transaction:
-            if locale=='en':
+            if locale=='en' and i18n.default_language(request.state.db)=='en':
                 set_config(db,purpose+'_subject',subject);set_config(db,purpose+'_html',html)
             else:
                 i18n.store_content(db,'mail:'+purpose+':subject',config(db,purpose+'_subject',DEFAULTS[purpose+'_subject']),locale,subject)
@@ -67,7 +67,7 @@ def save(request:Request,data=Depends(form)):
         return editor(request,purpose,locale,subject,html,'Test email sent. The draft has not been saved.')
     if action!='save':raise ValueError('Invalid action')
     db=request.state.db
-    if locale=='en':
+    if locale=='en' and i18n.default_language(request.state.db)=='en':
         for part,item in {'subject':subject,'html':html,'body':plain(html)}.items():set_config(db,purpose+'_'+part,item)
     else:
         for part,item in {'subject':subject,'html':html,'body':plain(html)}.items():
@@ -79,7 +79,7 @@ def save(request:Request,data=Depends(form)):
 @router.post('/account/language')
 def account_language(request:Request,data=Depends(form)):
     user=require_user(request)
-    user.locale=language(request,data.get('locale','en'))
+    user.locale=language(request,data.get('locale',i18n.default_language(request.state.db)))
     user.preferences_version+=1
     request.state.db.commit()
     from .integrations import queue_user
@@ -91,7 +91,7 @@ def member_language(request:Request,local_id:int,data=Depends(form)):
     require_admin(request)
     user=request.state.db.get(User,local_id)
     if not user or not user.emby_id:raise HTTPException(404,'Emby account not found')
-    user.locale=language(request,data.get('locale','en'))
+    user.locale=language(request,data.get('locale',i18n.default_language(request.state.db)))
     user.preferences_version+=1
     request.state.db.commit()
     from .integrations import queue_user

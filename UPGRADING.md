@@ -1,4 +1,20 @@
-# Upgrading to 0.3.1
+# Upgrading to 0.3.2
+
+The former untouched Seerr factory guide becomes a direct link. Customized guides are preserved. New installations and the explicit content reset use the updated Emby Computer (Windows/Mac/Linux), Phone (Android/iPhone) and Smart TV guide tree.
+
+Reset customized content in Updates requires typing RESET and confirming the scope. It clears pages, guides, labels, custom email templates, theme and application display, while keeping API/SMTP connections, users, groups, permissions and language activation. Stale editor forms are invalidated.
+
+Back up the persistent data volume before updating. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.3.2` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+Each user can now belong to only one group. Existing users with multiple memberships or individual overrides inside a group receive a generated “Migrated” group preserving their last effective permission snapshot. Review these groups after upgrading. If a multi-group user has no observed snapshot, the migration stops before changing the schema: open that user in 0.3.1 first, or remove the old memberships, then retry. No permissions are written remotely by the migration itself.
+
+Group permissions lock individual permission, library and admin-tool controls. Removing membership restores the captured original access and permissions. The account status action remains individual.
+
+Deactivation blocks Gatearr immediately and rotates the media-server and configured Seerr passwords to unrecoverable random values. The UI reports each remote result; failed rotations can be retried. Existing sessions in other applications, Emby Connect and native Seerr recovery need separate administration. Reactivation allows Gatearr recovery again and never restores the old password. A disabled account stays disabled through imports. Downgrading while accounts are disabled is blocked; use your backup for a rollback.
+
+Existing language choices are retained. Fresh setup offers a default language; only the selected language is enabled initially. English is an internal catalog identifier, not a mandatory active language. The last active language cannot be disabled. Disabling the default selects an active fallback and moves affected user preferences to it.
+
+## Previous upgrade: 0.3.1
 
 Back up the persistent data volume before updating. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.3.1` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
 

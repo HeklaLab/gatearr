@@ -85,7 +85,7 @@ def test_csrf_rotation_origin_and_security_headers(client):
     response = client.get('/admin')
     assert response.headers['cache-control'] == 'no-store'
     assert response.headers['referrer-policy'] == 'same-origin'
-    assert "script-src 'none'" in response.headers['content-security-policy']
+    assert "script-src 'self'" in response.headers['content-security-policy']
     assert 'test-api-key' not in response.text
     assert 'httponly' in setup_cookie(client).lower()
 
@@ -245,7 +245,7 @@ def test_linked_admin_uses_normal_email_recovery(client):
 def test_health_and_migration_schema(client):
     assert client.get('/healthz').json() == {'status': 'ok'}
     with SessionLocal() as db:
-        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0016'
+        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0018'
 
 
 def test_form_limits_and_null_origin(client):

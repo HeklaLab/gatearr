@@ -30,9 +30,9 @@ def test_english_is_default_and_dynamic_languages_can_be_prepared_and_enabled(cl
     assert '<html lang="es">' in page and 'Mi cuenta' in page and i18n.translate('New password','es') in page
     assert language(client,'ES').status_code==409
     assert language(client,'../../x').status_code==400
-    assert post(client,'/admin/translations/languages/en',{'name':'English'},'/admin/translations').status_code==400
+    assert post(client,'/admin/translations/languages/en',{'name':'English'},'/admin/translations').status_code==303
     assert post(client,'/admin/translations/languages/es',{'name':'Español'},'/admin/translations').status_code==303
-    assert '<html lang="en">' in client.get('/home').text
+    assert '<html lang="fr">' in client.get('/home').text
 
 
 def test_source_editors_have_one_field_per_element_and_mail_language_is_dynamic(client):

@@ -63,6 +63,13 @@ class EmbyClient:
             raise EmbyError("Réponse utilisateur invalide")
         return result
 
+    def rename(self, user_id, name):
+        current = deepcopy(self.user(user_id))
+        current['Name'] = name
+        self.request('POST', '/Users/' + quote(user_id, safe=''), token=_ADMIN, json=current)
+        if self.user(user_id).get('Name') != name:
+            raise EmbyError('Username change could not be verified')
+
     def password(self, user_id, password, token=None):
         self.request("POST", "/Users/" + quote(user_id, safe="") + "/Password", token=token or _ADMIN,
                      json={"Id": user_id, "NewPw": password, "ResetPassword": False})

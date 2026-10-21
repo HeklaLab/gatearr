@@ -23,9 +23,8 @@ def health():
 @app.get('/seerr/api/v1/user/jellyfin/{user_id}')
 def seerr_user(request: Request, user_id: str):
     public(request,'seerr')
-    if user_id != 'demo-user-1':
-        raise HTTPException(404)
-    return {'id':2,'jellyfinUserId':user_id}
+    if user_id not in ('demo-user-1','demo-admin-1'):raise HTTPException(404)
+    return {'id':2 if user_id=='demo-user-1' else 3,'jellyfinUserId':user_id}
 
 @app.get('/seerr/api/v1/user/2/settings/main')
 def seerr_settings(request: Request):
@@ -79,3 +78,37 @@ def seerr_session_me(request: Request):
 
 @app.post('/seerr/api/v1/auth/logout')
 def seerr_session_logout():return {'status':'ok'}
+
+# Minimal official permission/quota contracts for the isolated browser demo.
+DEMO_PERMISSIONS={2:32|262144|524288,3:2}
+@app.get('/seerr/api/v1/user/{uid}/settings/permissions')
+def get_permissions(request:Request,uid:int):
+    public(request,'seerr')
+    if uid not in DEMO_PERMISSIONS:raise HTTPException(404)
+    return {'permissions':DEMO_PERMISSIONS[uid]}
+
+@app.post('/seerr/api/v1/user/{uid}/settings/permissions')
+async def set_permissions(request:Request,uid:int):
+    public(request,'seerr')
+    if uid not in DEMO_PERMISSIONS:raise HTTPException(404)
+    DEMO_PERMISSIONS[uid]=(await request.json())['permissions']
+    return {'permissions':DEMO_PERMISSIONS[uid]}
+
+@app.post('/seerr/api/v1/user/{uid}/settings/password')
+async def rotate_demo_password(request:Request,uid:int):
+    public(request,'seerr')
+    if uid not in DEMO_PERMISSIONS:raise HTTPException(404)
+    if len((await request.json()).get('newPassword',''))<8:raise HTTPException(400)
+    return Response(status_code=204)
+
+@app.get('/seerr/api/v1/user/{uid}/quota')
+def quota(request:Request,uid:int):
+    public(request,'seerr')
+    if uid not in DEMO_PERMISSIONS:raise HTTPException(404)
+    return {'movie':{'limit':5,'used':2,'remaining':3,'restricted':False},'tv':{'limit':10,'used':3,'remaining':7,'restricted':False}}
+
+@app.get('/seerr/api/v1/request')
+def requests_summary(request:Request):
+    public(request,'seerr')
+    counts={'processing':4,'pending':2,'approved':3,'available':2}
+    return {'pageInfo':{'results':counts.get(request.query_params.get('filter'),0)},'results':[]}

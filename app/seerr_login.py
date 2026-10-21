@@ -32,7 +32,8 @@ def csrf_headers(c):
     return headers
 
 def capture(db,user,password,session_digest):
-    if not enabled(db):return
+    from .group_access import seerr_allowed
+    if not enabled(db) or not seerr_allowed(db,user):return
     try:
         with client(db) as c:
             remote=c.get('api/v1/user/jellyfin/'+user.emby_id,headers={'X-Api-Key':decrypt(config(db,'seerr_api_key'))});remote.raise_for_status();account=remote.json()
@@ -66,6 +67,8 @@ def revoke(db,session_digest):
 @router.get('/services/seerr/open')
 def launch(request:Request):
     user=require_user(request);db=request.state.db
+    from .group_access import seerr_allowed
+    if not seerr_allowed(db,user):raise HTTPException(403,'Seerr access is not granted')
     if not enabled(db):
         url=public_url(db)
         if not url:raise HTTPException(404,'Configure the public Seerr URL in API connections')
@@ -114,6 +117,8 @@ async def redeem(request:Request):
             if not actor.admin or not assistance or assistance.expires<=now or assistance.source_digest!=ticket.session_digest or not row or assistance.target_id!=row.user_id:return PlainTextResponse('Assistance expired',status_code=403)
         user=db.get(User,row.user_id) if row else None
         if not row or not session or not user or not user.active or user.emby_missing or session.version!=user.version or min(row.expires,session.expires)<=now:return PlainTextResponse('Session expired',status_code=403)
+        from .group_access import seerr_allowed
+        if not seerr_allowed(db,user):return PlainTextResponse('Seerr access revoked',status_code=403)
         payload=json.loads(decrypt(row.payload))
         if payload['origin']!=public or payload['api']!=config(db,'seerr_url'):return PlainTextResponse('Connection changed',status_code=403)
         db.delete(ticket);db.commit()
