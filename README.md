@@ -18,6 +18,12 @@ Emby, Seerr request counters and account self-service, arranged with Portal buil
 
 ![Gatearr v0.3.2 portal with Emby, Seerr and My account](screenshots/gatearr-home-v032.png)
 
+### Build your own portal
+
+Drag-and-drop blocks, a live Emby/Seerr preview and page colors/layout settings.
+
+![Gatearr v0.3.2 Portal builder with blocks, live preview and appearance settings](screenshots/gatearr-builder-v032.png)
+
 ### Access guides for your users
 
 An Emby Smart TV guide with the server address and step-by-step connection instructions.
