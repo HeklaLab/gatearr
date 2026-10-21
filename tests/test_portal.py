@@ -19,8 +19,8 @@ def csrf(client, path='/login'):
 def post(client, path, data, page='/login'):
     return client.post(path, data={'csrf': csrf(client, page), **data}, follow_redirects=False)
 
-def setup(client,empty_journeys=False):
-    client.cookies.set("gatearr_language","fr")
+def setup(client,empty_journeys=False,locale="en"):
+    client.cookies.set("gatearr_language",locale)
     response=post(client, '/setup', {'app_name':'Gatearr','public_url':'http://testserver','media_server':'emby','url':'http://emby.test/emby','api_key':'test-api-key'}, '/setup')
     if response.status_code==303:
         result=post(client,'/setup/admin',{'user_id':'admin-1','password':PASSWORD},'/setup/admin')
@@ -243,7 +243,7 @@ def test_linked_admin_uses_normal_email_recovery(client):
 def test_health_and_migration_schema(client):
     assert client.get('/healthz').json() == {'status': 'ok'}
     with SessionLocal() as db:
-        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0014'
+        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0015'
 
 
 def test_form_limits_and_null_origin(client):

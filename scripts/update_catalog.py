@@ -1,0 +1,35 @@
+"""Collect English UI sources. Language packs are build-time assets, never fetched at runtime."""
+import ast,json,re
+from pathlib import Path
+root=Path(__file__).resolve().parents[1];path=root/'app/locales/en.json';catalog=json.loads(path.read_text())
+def add(value):
+    if isinstance(value,str) and value.strip() and len(value)<5001:catalog.setdefault(value,value)
+for file in (root/'app/templates').glob('*.html'):
+    for m in re.finditer(r"(['\"])((?:\\.|(?!\1).)*?)\1",file.read_text()):
+        try:value=ast.literal_eval(m[0])
+        except (ValueError,SyntaxError):continue
+        if re.match(r'[A-Z][a-zA-Z ]',value) and '<' not in value and '=' not in value:add(value)
+for file in [root/'app/static/studio.js',root/'app/static/visual-howto.js',root/'app/static/applications.js']:
+    if not file.exists():continue
+    for m in re.finditer(r"'((?:\\.|[^'\\])*)'",file.read_text()):
+        try:value=ast.literal_eval(m[0])
+        except (ValueError,SyntaxError):continue
+        if re.match(r'[A-Z][a-zA-Z ]',value) and '<' not in value and '=' not in value:add(value)
+for file in (root/'app').glob('*.py'):
+    tree=ast.parse(file.read_text())
+    for n in ast.walk(tree):
+        if isinstance(n,ast.Raise) and isinstance(n.exc,ast.Call):
+            for a in n.exc.args:
+                if isinstance(a,ast.Constant) and isinstance(a.value,str):add(a.value)
+        if file.name=='mailer.py' and isinstance(n,ast.Dict):
+            for k,v in zip(n.keys,n.values):
+                if isinstance(k,ast.Constant) and isinstance(k.value,str) and re.fullmatch(r'(invite|reset|verify|email_changed|password_changed)_(subject|body)',k.value) and isinstance(v,ast.Constant):add(v.value)
+def authored(value):
+    if isinstance(value,dict):
+        for k,v in value.items():
+            if k in ('title','summary','body','link_label') and isinstance(v,str):add(v)
+            else:authored(v)
+    elif isinstance(value,list):
+        for v in value:authored(v)
+authored(json.loads((root/'app/journey_defaults.json').read_text()))
+path.write_text(json.dumps(catalog,indent=2,ensure_ascii=False)+'\n');print('English sources:',len(catalog))

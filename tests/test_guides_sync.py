@@ -1,7 +1,7 @@
 import json
 import time
 from sqlalchemy import select
-from app import main, integrations
+from app import main, integrations,i18n
 from app.db import SessionLocal
 from app.models import Guide, AccessService, User, IntegrationJob
 from app.sync_status import user_statuses
@@ -26,7 +26,7 @@ def edit(client,gid,data):
 
 
 def test_guide_publication_device_choices_localization_and_placeholders(client):
-    setup(client,empty_journeys=True)
+    setup(client,empty_journeys=True,locale='fr')
     assert post(client,'/admin/guides/service',{'key':'emby','name':'Emby','server_url':'https://media.example.com:8920','browser_url':'https://media.example.com/web'},'/admin/guides').status_code==303
     gid=create(client)
     assert edit(client,gid,guide_data()).status_code==303
@@ -45,7 +45,7 @@ def test_guide_publication_device_choices_localization_and_placeholders(client):
     home=client.get('/home').text
     assert 'href="/access/emby"' in home
     choices=client.get('/access/emby').text
-    assert 'Browser' in choices and 'Emby sur mobile' in choices
+    assert i18n.translate('Browser','fr') in choices and 'Emby sur mobile' in choices
     assert '/services/emby/open' in choices
     assert client.get('/help',follow_redirects=False).headers['location']=='/home'
     assert post(client,'/language',{'locale':'en','next':'/help'},'/help').status_code==303
@@ -66,7 +66,7 @@ def test_guide_publication_device_choices_localization_and_placeholders(client):
 
 
 def test_guide_validation_conflicts_unpublish_and_direct_fallback(client):
-    setup(client);gid=create(client)
+    setup(client,locale='fr');gid=create(client)
     assert edit(client,gid,guide_data('publish',0,step_count='0')).status_code==400
     assert edit(client,gid,guide_data('publish',0,step_1_link_url='javascript:alert(1)')).status_code==400
     assert edit(client,gid,guide_data('publish',0,step_1_image_url='https://user:secret@example.com/image')).status_code==400
@@ -96,8 +96,9 @@ def test_custom_service_guides_in_menus_and_30_step_editor(client):
         data.update({f'step_{index}_title_fr':f'Étape {index}',f'step_{index}_body_fr':'Instructions',f'step_{index}_position':str(index)})
     assert edit(client,gid,data).status_code==303
     page=client.get('/admin/guides/'+str(gid)).text
-    assert 'name="step_count" value="30"' in page
-    assert 'step_29_body' in page and 'step_30_body' not in page
+    assert 'visual-howto.js' in page
+    article=json.loads(__import__('re').search(r'<script id="howto-data" type="application/json">(.*?)</script>',page)[1])['article']
+    assert len(article['steps'])==30
     assert edit(client,gid,guide_data('publish',1,step_count='1',step_0_delete='on')).status_code==400
 
 
@@ -126,7 +127,7 @@ def test_sync_history_pending_success_stale_error_and_hover_details(client,monke
     monkeypatch.setattr(integrations,'sync_seerr',failed);integrations.run_jobs()
     with SessionLocal() as db:
         status=user_statuses(db,'fr')[uid][1]
-        assert status['color']=='orange' and 'Authentication rejected' in status['detail']
+        assert status['color']=='orange' and i18n.translate('Authentication rejected','fr') in status['detail']
         assert db.get(IntegrationJob,(uid,'seerr')).last_success_at==last
     logout(client)
     assert post(client,'/login',{'name':'Owner','password':PASSWORD}).status_code==303
@@ -146,7 +147,7 @@ def test_emby_missing_and_outage_retain_last_success(client,fake,monkeypatch):
         fake.deleted=True
         main.sync_users(db)
         status=user_statuses(db,'fr')[uid][0]
-        assert status['color']=='orange' and 'Account missing from the latest import' in status['detail']
+        assert status['color']=='orange' and i18n.translate('Account missing from the latest import','fr') in status['detail']
         assert db.get(User,uid).emby_seen_at==last
         fake.deleted=False
         main.sync_users(db)
@@ -156,7 +157,7 @@ def test_emby_missing_and_outage_retain_last_success(client,fake,monkeypatch):
         import pytest
         with pytest.raises(main.EmbyError):main.sync_users(db)
         status=user_statuses(db,'fr')[uid][0]
-        assert status['color']=='orange' and 'Service unavailable' in status['detail']
+        assert status['color']=='orange' and i18n.translate('Service unavailable','fr') in status['detail']
         assert 'secret remote error' not in status['detail']
 
 

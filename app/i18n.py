@@ -5,7 +5,7 @@ from sqlalchemy import select
 from .models import Config,Language,ContentTranslation
 
 ROOT=Path(__file__).parent
-CATALOGS={'en':json.loads((ROOT/'locales/en.json').read_text())}
+CATALOGS={p.stem:json.loads(p.read_text()) for p in (ROOT/'locales').glob('*.json') if p.stem!='languages'}
 LEGACY_KEYS=json.loads((ROOT/'legacy_i18n.json').read_text())
 BASE_LANGUAGE='en'
 
@@ -48,7 +48,7 @@ def overrides(db,locale):
 def content(db,resource,source,locale):
     if not source or locale==BASE_LANGUAGE:return source
     row=db.get(ContentTranslation,(locale,resource,source_hash(source)))
-    return row.value if row and row.value else source
+    return row.value if row and row.value else CATALOGS.get(locale,{}).get(source,source)
 
 def store_content(db,resource,source,locale,value):
     key=(locale,resource,source_hash(source));row=db.get(ContentTranslation,key)

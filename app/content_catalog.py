@@ -15,8 +15,13 @@ def sources(db):
     add('branding:login_text',config(db,'login_text','Access your services and manage your account with ease.'),'Sign-in page',maximum=2000)
     for draft in (False,True):
         for block in portal.load(db,draft)['blocks']:
-            for field in ('title','body','alt'):add('block:'+block['id']+':'+field,block.get(field,''),'Block '+block['id']+(' · draft' if draft else ' · published'))
+            for field in ('title','body','alt'):add('block:'+block['id']+':'+field,block.get(field,''),'Block '+block['id']+(' · draft' if draft else ' · published'),'footer_html' if block.get('rich') and field=='body' else 'text')
     from . import footer
+    from .visual_builder import load as load_design
+    for page in ('login','footer'):
+        for draft in (False,True):
+            for block in load_design(db,page,draft)['blocks']:
+                for field in ('title','body','alt'):add(page+'-block:'+block['id']+':'+field,block.get(field,''),page.capitalize()+' page','footer_html' if block.get('rich') and field=='body' else 'text',10000 if block.get('rich') else 5000)
     for draft in (False,True):
         for item in footer.load(db,draft)['items']:add('footer:'+item['id']+':text',item['text'],'Footer · '+('draft' if draft else 'published'),maximum=2000)
     for draft in (False,True):
@@ -32,7 +37,7 @@ def sources(db):
             article=json.loads(getattr(guide,column));prefix='guide:'+str(guide.id)
             for field in ('title','summary'):add(prefix+':'+field,article.get(field,''),'Guide '+str(guide.id)+' · '+column,maximum=200 if field=='title' else 2000)
             for step in article['steps']:
-                for field in ('title','body','link_label'):add(prefix+':'+step['id']+':'+field,step.get(field,''),'Guide '+str(guide.id)+' · '+step['id']+' · '+column)
+                for field in ('title','body','link_label'):add(prefix+':'+step['id']+':'+field,step.get(field,''),'Guide '+str(guide.id)+' · '+step['id']+' · '+column,'footer_html' if step.get('rich') and field=='body' else 'text')
     from .models import PolicyState
     from .permissions import label
     for policy in db.scalars(select(PolicyState)):

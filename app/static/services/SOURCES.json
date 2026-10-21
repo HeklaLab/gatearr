@@ -1,0 +1,26 @@
+{
+  "radarr": {
+    "source": "https://raw.githubusercontent.com/Radarr/Radarr/develop/Logo/256.png",
+    "sha256": "f6bb3b62621950e390a4d288894286142dd15994e9773558e692446bd228e0f6"
+  },
+  "sonarr": {
+    "source": "https://raw.githubusercontent.com/Sonarr/Sonarr/develop/Logo/256.png",
+    "sha256": "ed88d9e48c7a92a5a173f04c8ef55951ac6796291149ba22955277c3e78e36c5"
+  },
+  "bazarr": {
+    "source": "https://raw.githubusercontent.com/morpheus65535/bazarr/master/frontend/public/images/logo128.png",
+    "sha256": "85f8e0a4488714bdc43c128d0e889420e168b7866c8abe7d8d6fd3ee614c3352"
+  },
+  "emby": {
+    "source": "https://raw.githubusercontent.com/MediaBrowser/Emby.Resources/master/images/Logos/logoicon512.png",
+    "sha256": "99fb6468fe5c38a7b0c2b69eec7b8354c9503016ab8c5fb322ac93f82fa2f47b"
+  },
+  "seerr": {
+    "source": "https://raw.githubusercontent.com/seerr-team/seerr/develop/public/os_logo_filled.png",
+    "sha256": "7fa6fbb8c21df9d51b25347b43df456603bf33c9cbcc668e26ab01137601aed8"
+  },
+  "jellyfin": {
+    "source": "https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/android/mobile/fastlane/icon.png",
+    "sha256": "23a9d90597e72a55f4ae827b20c3d3c89b3fbe981939c53eb69d03a56bf823ec"
+  }
+}

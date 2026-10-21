@@ -28,8 +28,10 @@ def test_single_language_dark_theme_and_parent_navigation(client):
 def test_footer_columns_upload_and_draft_retention(client):
     setup(client)
     page=client.get('/admin/footer').text
-    assert 'Legacy footer items' not in page and 'rich-source' in page and 'footer-editor.js' in page
-    assert 'data-column="1" hidden' in page and 'data-column="2" hidden' in page
+    assert 'Legacy footer items' not in page.split('<script id="studio-data"')[0] and 'studio-inspector' in page and 'studio.js' in page
+    import re
+    design=json.loads(re.search(r'<script id="studio-data" type="application/json">(.*?)</script>',page)[1])['layout']
+    assert next(b for b in design['blocks'] if b['kind']=='columns')['columns']==1
     result=client.post('/admin/assets',data={'csrf':csrf(client,'/admin/footer')},files={'icon_file':('logo.png',png(),'image/png')},headers={'Accept':'application/json'},follow_redirects=False)
     assert result.status_code==200
     url=result.json()['url'];assert client.get(url).status_code==200

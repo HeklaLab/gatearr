@@ -17,15 +17,15 @@ def configured(db,service):
 
 def probe(service,values):
     base,key=values['url'],values['key']
-    headers={'X-Emby-Token':key} if service=='emby' else {'X-Api-Key':key} if service=='seerr' else {'Authorization':'Bearer '+key}
+    headers={'X-Emby-Token':key} if service=='emby' else {'X-Api-Key':key}
     if service=='emby' and values['kind']=='jellyfin':headers={'Authorization':'MediaBrowser Client="Gatearr", Device="Portal", DeviceId="gatearr-portal", Version="1.0", Token="'+key+'"'}
-    path='/System/Info' if service=='emby' else '/api/v1/user?take=1&skip=0' if service=='seerr' else '/api/v2/public/users?pageSize=1'
+    path='/System/Info' if service=='emby' else '/api/v1/user?take=1&skip=0' if service=='seerr' else '/tools/'+service+'/app'+('/api/system/status' if service=='bazarr' else '/api/v3/system/status')
     try:
         with httpx.Client(timeout=5,trust_env=False,follow_redirects=False) as client:response=client.get(base+path,headers=headers)
         if response.status_code in (401,403):return 'error','Authentication rejected'
         if response.status_code!=200:return 'error','Server returned HTTP '+str(response.status_code)
         body=response.json()
-        valid=isinstance(body,dict) and (bool(body.get('Id')) if service=='emby' else isinstance(body.get('results' if service=='seerr' else 'data'),list))
+        valid=isinstance(body,dict) and (bool(body.get('Id')) if service=='emby' else isinstance(body.get('results'),list) if service=='seerr' else bool(body))
         return ('connected','Authenticated API connection verified') if valid else ('error','Unexpected API response')
     except httpx.TimeoutException:return 'error','Connection timed out'
     except httpx.RequestError:return 'error','Server unreachable'
@@ -34,7 +34,7 @@ def probe(service,values):
 
 def checks(db,refresh=False):
     current=int(time.time());pending={};result={}
-    for service in ('emby','seerr'):
+    for service in ('emby','seerr','radarr','sonarr','bazarr'):
         row=db.get(ConnectionCheck,service)
         if not configured(db,service):
             result[service]={'state':'unconfigured','detail':'Connection not configured','checked_at':None};continue

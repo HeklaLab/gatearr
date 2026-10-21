@@ -25,6 +25,9 @@ def clean_html(value):
     return nh3.clean(value,tags=rich_mail.TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attr,url_schemes={'https','http'},url_relative=lambda value:value if re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(png|svg)',value) else None,filter_style_properties={'color','text-align','font-weight','font-style','text-decoration'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
 
 def validate(value):
+    if 'design' in value:
+        from .portal import validate as validate_design
+        validate_design(value['design'])
     if value.get('alignment') not in ('left','center','right') or type(value.get('enabled')) is not bool: raise ValueError('Invalid footer')
     if 'column_archive' in value:
         if not isinstance(value['column_archive'],list) or len(value['column_archive'])>3:raise ValueError('Invalid footer')
@@ -67,7 +70,7 @@ def display(db,value,locale,app_name):
     value=deepcopy(value)
     for item in value['items']:
         source=item['text'];text=i18n.content(db,'footer:'+item['id']+':text',source,locale)
-        if item['id']=='signature' and source==DEFAULT['items'][0]['text'] and text==source:
+        if item['id']=='signature' and source==DEFAULT['items'][0]['text'] and (text==source or text==i18n.CATALOGS.get(locale,{}).get(source)):
             text=i18n.translate(source,locale,overrides=i18n.overrides(db,locale),base_overrides=i18n.overrides(db,'en'),app_name=app_name)
         item['text']=text.replace('{app_name}',app_name)
     if 'columns' in value:value['columns']=[clean_html(i18n.content(db,'footer:column:'+str(index),column,locale).replace('{app_name}',html.escape(app_name))) for index,column in enumerate(value['columns'])]
@@ -77,7 +80,8 @@ def display(db,value,locale,app_name):
 @router.get('/admin/footer')
 def editor(request: Request):
     require_admin(request)
-    return render(request,'footer_editor.html',footer_draft=editor_value(request.state.db),footer_version=version(request.state.db))
+    from .visual_builder import editor as visual_editor
+    return visual_editor(request,'footer')
 
 @router.get('/admin/footer/preview')
 def preview(request: Request):
@@ -111,8 +115,8 @@ def edit(request: Request,data=Depends(form)):
     else:raise ValueError('Invalid action')
     return redirect('/admin/footer')
 
-def editor_value(db):
-    value=load(db,True)
+def editor_value(db,draft=True):
+    value=load(db,draft)
     if 'columns' not in value:
         parts=[]
         for item in value['items']:

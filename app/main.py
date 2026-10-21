@@ -227,17 +227,19 @@ async def context(request: Request, call_next):
         response.headers["X-Frame-Options"] = "DENY"
         if request.state.cookie_secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self'; img-src 'self' https: http:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         if request.url.path=="/services/emby/open":response.headers["Referrer-Policy"]="no-referrer"
         if request.url.path.startswith('/tools/'):
-            response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self'; img-src 'self'; script-src 'none'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+            response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'none'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         if request.url.path=="/services/seerr/open":
             from .seerr_login import public_url
             target=public_url(db)
             if target:
                 response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("form-action 'self'","form-action 'self' "+target)
-        if request.url.path in ("/admin/mail-editor","/admin/footer","/admin/services","/admin/guides") or request.url.path.startswith(("/admin/access/","/tools/")):
-            response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'").replace("style-src 'self'","style-src 'self' 'unsafe-inline'")
+        if request.url.path in ("/admin/mail-editor","/admin/footer","/admin/services","/admin/guides","/admin/portal") or request.url.path.startswith(("/admin/access/","/admin/design/","/admin/guides/","/admin/visual-howto/","/admin/visual-guide/","/tools/")):
+            response.headers["Content-Security-Policy"]=response.headers["Content-Security-Policy"].replace("script-src 'none'","script-src 'self'")
+        if request.url.path in ('/admin/portal','/admin/footer') or request.url.path.startswith(('/admin/design/','/admin/access/','/admin/guides/')):
+            response.headers['Content-Security-Policy']+="; frame-src 'self'"
         if not request.url.path.startswith('/static/'):
             from .audit import record
             actor=getattr(request.state,'audit_actor',None) or getattr(request.state,'actor',None) or user
@@ -252,7 +254,7 @@ async def form(request: Request):
     chunks, length = [], 0
     async for chunk in request.stream():
         length += len(chunk)
-        if length > (2*1024*1024+65536 if accepts_icon else 65536):
+        if length > (2*1024*1024+65536 if accepts_icon else 262144 if request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/')) else 65536):
             raise HTTPException(413, 'Form too large')
         chunks.append(chunk)
     # Preserve the bounded body for Starlette's form parser after streaming it once.
@@ -290,7 +292,7 @@ async def form(request: Request):
     if any(key not in data for key in required):
         raise HTTPException(400, 'Incomplete form')
     from starlette.datastructures import UploadFile
-    if any((key!='icon_file' or not accepts_icon) if isinstance(value,UploadFile) else (not isinstance(value,str) or len(value)>10000) for key,value in data.multi_items()):
+    if any((key!='icon_file' or not accepts_icon) if isinstance(value,UploadFile) else (not isinstance(value,str) or len(value)>(240000 if key=='payload' and request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/')) else 10000)) for key,value in data.multi_items()):
         raise HTTPException(400, 'Invalid or oversized field')
     if any(len(str(data.get(key, ""))) > 256 for key in ("current", "password", "confirm", "smtp_password")):
         raise HTTPException(400, 'Password too long')
@@ -341,7 +343,7 @@ def render(request, template, **kwargs):
     base_translations = i18n.overrides(db,"en")
     from .connections import media_kind
     media_name="Jellyfin" if media_kind(db)=="jellyfin" else "Emby"
-    values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and not row.key.endswith("_api_key") and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","footer_","release_","ui_translation_","_i18n_","themes_"))}
+    values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and not row.key.endswith("_api_key") and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","login_draft","login_published","login_version","footer_","release_","ui_translation_","_i18n_","themes_"))}
     setup_values=kwargs.get('setup_values',getattr(request.state,'form_values',{}))
     if request.url.path.startswith(('/setup','/admin/setup/')):
         values.update({key:('true' if key.endswith('_enabled') and value=='on' else value) for key,value in setup_values.items()})
@@ -349,7 +351,12 @@ def render(request, template, **kwargs):
         if 'browser_url' in setup_values:values['emby_link']=setup_values['browser_url']
     values["login_source"]=config(db,"login_text", "Access your services and manage your account with ease.")
     values["login_text"] = i18n.content(db,'branding:login_text',config(db,'login_text','Access your services and manage your account with ease.'),locale)
-    layout = kwargs.pop("layout", None) or portal.load(db)
+    layout = kwargs.pop("layout", None)
+    if layout is None:
+        if template=='login.html':
+            from .visual_builder import load as load_design
+            layout=load_design(db,'login')
+        else:layout=portal.load(db)
     menus = {}
     for item in db.scalars(select(MenuItem).order_by(MenuItem.position, MenuItem.id)):
         menus.setdefault(item.menu_key, []).append(item)
@@ -375,18 +382,18 @@ def render(request, template, **kwargs):
     from .themes import load as load_themes
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
-        "theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
+        "clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
         "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"tool_names":("radarr","sonarr","bazarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
-        "asset_version":str(max(Path("app/static/style.css").stat().st_mtime_ns,Path("app/static/mail-editor.js").stat().st_mtime_ns)), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
+        "asset_version":str(max(p.stat().st_mtime_ns for p in Path("app/static").rglob("*") if p.is_file() and p.suffix in (".css",".js",".json"))), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
         "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,
         "account_label_defaults": i18n.ACCOUNT_LABEL_DEFAULTS, "account_labels": {key: translator(i18n.ACCOUNT_LABEL_KEYS[key]) for key in i18n.ACCOUNT_LABEL_KEYS},
         "seerr_notification_mode": config(db, "seerr_notification_mode", "unmanaged"),
         "seerr_access":access_href(db,"seerr") if seerr_public else "",
         "seerr_in_menu":any(item.access_service=="seerr" or item.label.casefold()=="seerr" or (seerr_public and item.url.rstrip("/")==seerr_public.rstrip("/")) for entries in menus.values() for item in entries),
-        "font_icon_class":__import__("app.icons",fromlist=["icon_class"]).icon_class, "service_font":lambda key:(db.get(AccessService,key).icon if db.get(AccessService,key) else "link"), "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: (db.get(AccessService,key).icon_url if db.get(AccessService,key) else ""), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
-        "layout": layout, "regions": portal.for_display(layout, locale, request.state.user,db), "menus": menus, "mail_locale": mail_locale,
+        "ui_catalog":{key:translator(key) for key in i18n.CATALOGS["en"]},"default_service_icon":lambda key:__import__("app.service_assets",fromlist=["default_icon"]).default_icon(key,media_name.lower()),"font_icon_class":__import__("app.icons",fromlist=["icon_class"]).icon_class, "service_font":lambda key:(db.get(AccessService,key).icon if db.get(AccessService,key) else "link"), "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: __import__("app.service_assets",fromlist=["service_icon"]).service_icon(db,key,media_name.lower()), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
+        "footer_regions":portal.for_display(global_footer_design,locale,request.state.user,db) if (global_footer_design:=footer_layout.get("design")) else None,"layout": layout, "regions": portal.for_display(layout, locale, None if kwargs.get("anonymous_preview") else request.state.user,db), "menus": menus, "mail_locale": mail_locale,
         "content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
 
 def setup_error(request,message,status):
@@ -702,7 +709,7 @@ def admin_section(request:Request,section:str):
     require_admin(request)
     from .sync_status import user_statuses
     db=request.state.db
-    return render(request,'admin.html',section=section,section_title=ADMIN_SECTIONS[section],sync_statuses=user_statuses(db,request.state.locale),users=list(db.scalars(select(User).where(User.emby_id.is_not(None)).order_by(User.id))),items=list(db.scalars(select(MenuItem).order_by(MenuItem.position,MenuItem.id))),mail_defaults=DEFAULTS)
+    return render(request,'applications.html' if section=='services' else 'admin.html',section=section,section_title=ADMIN_SECTIONS[section],sync_statuses=user_statuses(db,request.state.locale),users=list(db.scalars(select(User).where(User.emby_id.is_not(None)).order_by(User.id))),items=list(db.scalars(select(MenuItem).order_by(MenuItem.position,MenuItem.id))),mail_defaults=DEFAULTS)
 
 
 def section_handler(section):
@@ -824,6 +831,7 @@ def menu_save(request: Request, data=Depends(form)):
         raise ValueError('Invalid menu ID')
     item.menu_key = menu_key
     db.add(item)
+    set_config(db,"menu_version",str(int(config(db,"menu_version","0"))+1))
     db.flush()
     if data.get("label_en") and data["label"]!=item.label:i18n.store_content(db,"menu:"+str(item.id)+":label",item.label,"fr",str(data["label"])[:100])
     db.commit()
@@ -834,6 +842,7 @@ def menu_delete(request: Request, data=Depends(form)):
     require_admin(request)
     db = request.state.db
     db.execute(delete(MenuItem).where(MenuItem.id == int(data["id"])))
+    set_config(db,"menu_version",str(int(config(db,"menu_version","0"))+1))
     db.commit()
     return redirect("/admin/services")
 
@@ -936,3 +945,9 @@ def upload_asset(request:Request,data=Depends(form)):
 async def proxy_websocket(socket:__import__('fastapi').WebSocket,path:str):
     from .tools_proxy import websocket_proxy
     await websocket_proxy(socket)
+
+from .visual_builder import router as visual_builder_router
+app.include_router(visual_builder_router)
+
+from .visual_howto import router as visual_howto_router
+app.include_router(visual_howto_router)

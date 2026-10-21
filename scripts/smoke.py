@@ -113,7 +113,9 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
             counter+=10
             version=re.search(r'name="version" value="(\d+)"',client.get('/admin/access/emby').text)[1]
             submit(client,'/admin/access/emby',{'action':'save','version':version,'kind':kind,'title':en,'parent':parent,'position':str(counter),**fields},'/admin/access/emby')
-            return re.findall(r'name="id" value="([^"]+)"',client.get('/admin/access/emby').text)[-1]
+            page=client.get('/admin/access/emby').text
+            state=json.loads(re.search(r'<script id="howto-data" type="application/json">(.*?)</script>',page)[1])
+            return next(n['id'] for n in state['nodes'] if n['title']==en and n.get('parent','')==parent)
         add_node('browser','Navigateur','Browser')
         desktop=add_node('group','Emby sur ordinateur','Emby on a computer')
         mobile=add_node('group','Emby sur mobile','Emby on mobile')
@@ -126,6 +128,24 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         assert 'Browser' in client.get('/access/emby').text
         submit(client, '/language', {'locale':'en','next':'/home'}, '/home')
         assert 'Welcome to Gatearr' in client.get('/home').text
+        # Exercise the new visual endpoints against the actual running container.
+        def design_state(page):
+            html=client.get('/admin/design/'+page).text
+            return json.loads(re.search(r'<script id="studio-data" type="application/json">(.*?)</script>',html)[1])
+        visual=design_state('home');layout=visual['layout']
+        layout['blocks'].append({'id':'smoke-visual','kind':'text','region':'main','span':12,'order':999,'title':'Visual studio smoke','body':'<p><b>Live preview</b></p>','rich':True})
+        payload={'payload':json.dumps(layout),'version':visual['version']}
+        assert 'Visual studio smoke' in submit(client,'/admin/design/home/preview',payload,'/admin/design/home').text
+        assert 'Visual studio smoke' not in client.get('/home').text
+        saved=submit(client,'/admin/design/home/save',payload,'/admin/design/home').json()
+        submit(client,'/admin/design/home/publish',{'payload':json.dumps(layout),'version':saved['version']},'/admin/design/home')
+        assert 'Visual studio smoke' in client.get('/home').text
+        login_design=design_state('login')
+        signin=next(b for b in login_design['layout']['blocks'] if b['kind']=='login_form')
+        signin.update(span=12,style={'align':'center','accent':'#159eff'})
+        assert 'name="password"' in submit(client,'/admin/design/login/preview',{'payload':json.dumps(login_design['layout'])},'/admin/design/login').text
+        for key in ('emby','jellyfin','seerr','radarr','sonarr','bazarr'):
+            logo=client.get('/static/services/'+key+'.png');assert logo.status_code==200 and logo.content.startswith(b'\x89PNG')
         submit(client, '/logout', {}, '/account')
         submit(client, '/login', {'name': 'demo', 'password': 'DemoPassword123!'}, '/login')
         assert 'Seerr' in client.get('/account').text
@@ -161,7 +181,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
             raise AssertionError('Email not propagated to Seerr')
         statuses=client.get('/admin/users').text
         assert statuses.count('sync-green') >= 3 and 'Last success:' in statuses
-    print('Smoke passed: setup, native clone, library access, settings copy, English block builder, draft/publish, nested application journeys, PNG icons and Seerr preferences, hover sync indicators, email proof, password change/reset and automatic Seerr propagation.')
+    print('Smoke passed: setup, native clone, library access, settings copy, visual home/login preview and publication, draft/publish, nested application journeys, PNG icons and Seerr preferences, hover sync indicators, email proof, password change/reset and automatic Seerr propagation.')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

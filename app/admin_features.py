@@ -31,7 +31,8 @@ def theme_css(request: Request):
 @router.get('/admin/portal')
 def builder(request: Request):
     require_admin(request)
-    return render(request, 'builder.html', layout=portal.load(request.state.db, True), portal_version=portal.version(request.state.db))
+    from .visual_builder import editor
+    return editor(request,'home')
 
 @router.get('/admin/portal/preview')
 def preview(request: Request):
@@ -239,7 +240,7 @@ def test_connection(request: Request, data=Depends(form)):
     require_admin(request)
     limit(request,'connection_test',maximum=10)
     service=data.get('service')
-    if service not in ('emby',*SERVICES):raise ValueError('Invalid service')
+    if service not in ('emby',*SERVICES,'radarr','sonarr','bazarr'):raise ValueError('Invalid service')
     from .connection_health import checks
     checks(request.state.db,refresh=True)
     return redirect('/admin/integrations')

@@ -27,7 +27,7 @@ def test_english_is_default_and_dynamic_languages_can_be_prepared_and_enabled(cl
     assert post(client,'/admin/translations/languages/es',{'name':'Español','enabled':'on'},'/admin/translations').status_code==303
     assert post(client,'/language',{'locale':'es','next':'/account'},'/account').status_code==303
     page=client.get('/account').text
-    assert '<html lang="es">' in page and 'Mi cuenta' in page and 'New password' in page
+    assert '<html lang="es">' in page and 'Mi cuenta' in page and i18n.translate('New password','es') in page
     assert language(client,'ES').status_code==409
     assert language(client,'../../x').status_code==400
     assert post(client,'/admin/translations/languages/en',{'name':'English'},'/admin/translations').status_code==400
@@ -65,10 +65,12 @@ def test_content_translations_preserve_placeholders_and_draft_boundaries(client)
     assert post(client,'/admin/portal/block',{'version':2,'block_id':ident,'kind':'text','region':'main','order':5,'span':12,'title':'Updated source','body':'Hello {username}'},'/admin/portal').status_code==303
     assert 'Bienvenido' in client.get('/home').text
     page=client.get('/admin/translations?scope=content&edit_locale=es&q=Updated').text
-    assert 'Translation needs review' in page
+    assert i18n.translate('Translation needs review','es') in page
     assert translate(client,key,'Old translation',stamp=i18n.source_hash('deleted source')).status_code==409
     assert post(client,'/admin/portal/publish',{'version':3},'/admin/portal').status_code==303
-    assert 'Updated source' in client.get('/home').text and 'Bienvenido' not in client.get('/home').text
+    assert 'Updated source' in client.get('/home').text
+    block_html=client.get('/home').text.split('data-block-id="'+ident+'"')[1].split('</section>')[0]
+    assert 'Bienvenido' not in block_html
 
 
 def test_guides_journeys_menus_and_branding_use_the_created_language(client):

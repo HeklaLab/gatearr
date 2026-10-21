@@ -60,6 +60,8 @@ def configure_tools(request,data):
         prepared[tool]={'base':base,'key':key,'active':active}
     for tool,v in prepared.items():
         for suffix,value in {'url':v['base'],'api_key':encrypt(v['key']) if v['key'] else '','enabled':'true' if v['active'] else 'false'}.items():set_config(db,tool+'_'+suffix,value)
+    from .connection_health import invalidate
+    for tool in TOOLS:invalidate(db,tool)
     db.execute(delete(ToolGrant));db.commit()
 
 @router.post('/admin/tools')

@@ -2,7 +2,21 @@
 
 A customizable, self-hosted account portal for Emby and Jellyfin. Sign in with your media account, manage your account and open the services published by your administrator.
 
-Python 3.12, FastAPI, SQLAlchemy/Alembic and SQLite/WAL. One application container and one persistent data volume. English is the source language; add languages and customize all interface, content and email text in Translations. No reverse proxy is bundled.
+Python 3.12, FastAPI, SQLAlchemy/Alembic and SQLite/WAL. One application container and one persistent data volume. English is the source language. Twenty additional pretranslated language packs are bundled but disabled by default; activate them and edit interface, content and email text in Translations. No reverse proxy is bundled.
+
+## Visual studio (0.3.0)
+
+Open **Administration → Branding → Visual studio** and choose **Before sign-in**, **After sign-in** or **Footer**. Drag a block from the palette into the real page preview, or click to add it. Click a block to edit its text, width, alignment, visibility, image and colors. Columns accept nested blocks; choose one, two or three columns without entering layout numbers. The sign-in form can be moved and aligned left, center or right, but a sign-in page must retain exactly one visible form.
+
+Page colors and individual block colors include backgrounds, gradients, text, buttons and hover states. Desktop, tablet and phone previews share the same renderer as the published pages. Undo/redo covers this editing session; draft changes autosave. **Publish** makes them visible to users. Conflicting administrator edits stop with a reload message instead of silently overwriting another draft. Existing English content is edited once; its translations live in Translations. Uploaded images are bounded and sanitized PNG/SVG assets stored in the persistent database.
+
+Open **Services → Edit choices and guides** to set an application's behavior: open a link, present choices, or show a guide. Choice cards can be moved, reordered and nested via breadcrumbs. Each guide has a visual step list, rich instructions, image uploads and optional download buttons. Insert `{server_url}`, `{server_host}`, `{server_port}` or `{username}` to reuse the configured public connection details. Publish guides before publishing choices that refer to them. Previous guide links and published snapshots are retained.
+
+The bundled default logos are served locally. Custom uploads and explicitly chosen Font Awesome icons remain in use. My account follows the applications rather than appearing before newly enabled tools. API connections has a service-status overview and separate, equal-width media/Seerr forms; it contains no translation controls.
+
+### Included languages
+
+The English source plus twenty language packs are included. Only English is enabled on a fresh installation; existing choices are preserved on upgrade. Initial translations cover the interface, default emails and starter-guide text, and are editable. Packs were initially machine-translated with automated placeholder checks; a professional review of every language is not claimed. No content is sent to a translation service at runtime. Arabic and Hebrew pages use right-to-left direction. Administrator-authored custom content still needs its own translations.
 
 ## Installation prerequisites
 
@@ -51,7 +65,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.2.3` for a controlled version. Public container pulls require no GitHub credentials. Repository/release downloads require your GitHub login while the source repository remains private; GitHub release checks inside Gatearr also require a public repository and report an access failure while it is private.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.0` for a controlled version. Public container pulls require no GitHub credentials. Repository/release downloads require your GitHub login while the source repository remains private; GitHub release checks inside Gatearr also require a public repository and report an access failure while it is private.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 

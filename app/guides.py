@@ -44,11 +44,12 @@ def display(raw, service, user, locale, db=None):
     address = service.server_url
     parsed = urlsplit(address)
     variables = {'server_url': address, 'server_host': parsed.hostname or '', 'server_port': str(parsed.port or (443 if parsed.scheme == 'https' else 80)) if address else '', 'username': user.name}
-    def text(source):
-        return re.sub(r'\{(server_url|server_host|server_port|username)\}', lambda match: variables[match[1]], source)
+    def text(source,rich=False):
+        import html
+        return re.sub(r'\{(server_url|server_host|server_port|username)\}', lambda match: html.escape(variables[match[1]]) if rich else variables[match[1]], source)
     value['title'] = text(local(value, 'title', locale,db))
     value['summary'] = text(local(value, 'summary', locale,db))
-    value['steps'] = [{**step, 'title': text(local(step,'title',locale,db)), 'body': text(local(step,'body',locale,db)), 'link_label': text(local(step,'link_label',locale,db))} for step in value['steps']]
+    value['steps'] = [{**step, 'title': text(local(step,'title',locale,db)), 'body': text(local(step,'body',locale,db),step.get('rich',False)), 'link_label': text(local(step,'link_label',locale,db))} for step in value['steps']]
     return value
 
 def guide_or_404(db, guide_id):
@@ -157,7 +158,7 @@ def save_service(request: Request, data=Depends(form)):
     row.server_url = address
     db.add(row)
     db.commit()
-    return redirect('/admin/guides')
+    return redirect('/admin/access/'+key if mode=='structured' else '/admin/services')
 
 @router.post('/admin/guides/create')
 def create_guide(request: Request, data=Depends(form)):
@@ -188,7 +189,8 @@ def add_defaults(request: Request, data=Depends(form)):
 def edit_guide(request: Request, guide_id: int):
     require_admin(request)
     row = guide_or_404(request.state.db,guide_id)
-    return render(request,'guide_editor.html',guide=row,content=json.loads(row.draft),devices=DEVICES)
+    from .visual_howto import guide_editor
+    return guide_editor(request,guide_id)
 
 @router.post('/admin/guides/{guide_id}')
 def update_guide(request: Request, guide_id: int, data=Depends(form)):

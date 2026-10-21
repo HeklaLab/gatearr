@@ -31,7 +31,7 @@ def source_link(key):
     if parts[0]=='mail':return '/admin/mail-editor?purpose='+parts[1]
     if parts[0]=='guide':return '/admin/guides/'+parts[1]
     if parts[0]=='journey':return '/admin/access/'+parts[1]
-    return {'policy-label':'/admin/users','footer':'/admin/footer','branding':'/admin/branding','menu':'/admin/services','block':'/admin/portal','service':'/admin/guides'}.get(parts[0],'/admin')
+    return {'policy-label':'/admin/users','footer':'/admin/footer','branding':'/admin/branding','menu':'/admin/services','block':'/admin/portal','login-block':'/admin/design/login','footer-block':'/admin/design/footer','service':'/admin/guides'}.get(parts[0],'/admin')
 
 @router.get('/admin/translations')
 def translations(request:Request):
@@ -52,7 +52,7 @@ def translations(request:Request):
         stored={(row.resource,row.source_hash):row.value for row in db.scalars(select(ContentTranslation).where(ContentTranslation.locale==locale))}
         for entry in sources(db):
             if scope!='all' and (entry['key'].startswith('mail:'))!=(scope=='email'):continue
-            key=entry['key'];stamp=i18n.source_hash(entry['source']);value=stored.get((key,stamp),'')
+            key=entry['key'];stamp=i18n.source_hash(entry['source']);value=stored.get((key,stamp),i18n.CATALOGS.get(locale,{}).get(entry['source'],''))
             rows.append({**entry,'hash':stamp,'value':value,'default':'','custom':bool(value),'translated':bool(value) or locale=='en','edit_href':source_link(key),'scope':'email' if key.startswith('mail:') else 'content','stale':any(resource==key and old_hash!=stamp for resource,old_hash in stored) and not value})
     for row in rows:row['anchor']=i18n.source_hash(row['key']+'\0'+row['source'])[:16]
     total_sources=len(rows);translated=sum(row['translated'] for row in rows)

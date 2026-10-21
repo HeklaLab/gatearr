@@ -48,13 +48,13 @@ def validate(db,service,nodes,publish=False):
         else:raise ValueError('A journey supports up to 8 levels')
     return nodes
 
-def save(db,service,nodes,expected,publish=False):
+def save(db,service,nodes,expected,publish=False,mode='choices'):
     for node in nodes:
         node["_i18n_key"]="journey:"+service.key+":"+node["id"]
         i18n.normalize_fields(db,node,node["_i18n_key"],("title",))
-    validate(db,service,nodes,publish)
+    validate(db,service,nodes,publish and mode=='choices')
     values={'access_draft':json.dumps(nodes,ensure_ascii=False),'access_version':expected+1}
-    if publish:values.update(access_published=values['access_draft'],entry_mode='structured')
+    if publish:values.update(access_published=values['access_draft'],entry_mode='direct' if mode=='link' else 'structured')
     result=db.execute(update(AccessService).where(AccessService.key==service.key,AccessService.access_version==expected).values(**values))
     if result.rowcount!=1:
         db.rollback();raise HTTPException(409,'The journey was changed. Reload this page.')
@@ -63,6 +63,11 @@ def save(db,service,nodes,expected,publish=False):
 def access_href(db,key):
     service=db.get(AccessService,key)
     if not service:return ''
+    from .mailer import config
+    root=json.loads(config(db,'howto_root_published_'+key,'{}'))
+    if service.entry_mode=='structured' and root.get('mode')=='guide':
+        guide=db.get(Guide,root.get('guide_id',0))
+        if guide and guide.service_key==key and guide.published:return '/access/'+key+'/guide/'+str(guide.id)
     return '/access/'+key if service.entry_mode=='structured' else service_url(db,service)
 
 def visible_nodes(db,service,nodes):
@@ -82,6 +87,7 @@ def public_access(request,key,node_id=''):
         url=service_url(db,service)
         if not url:raise HTTPException(404,'Service not found')
         return redirect(url)
+    if not node_id and '/guide/' in (href:=access_href(db,key)):return redirect(href)
     nodes=visible_nodes(db,service,load(service));indexed={node['id']:node for node in nodes}
     current=indexed.get(node_id) if node_id else None
     if node_id and (not current or current['kind']!='group'):raise HTTPException(404,'Submenu not found')
@@ -107,10 +113,8 @@ def submenu(request: Request,key: str,node_id: str):
 @router.get('/admin/access/{key}')
 def editor(request: Request,key: str):
     require_admin(request)
-    db=request.state.db;service=service_or_404(db,key)
-    rows=list(db.scalars(select(Guide).where(Guide.service_key==key).order_by(Guide.id)))
-    guides=[{'row':row,'title':local(json.loads(row.draft),'title',request.state.locale,db)} for row in rows]
-    return render(request,'access_editor.html',service=service,nodes=load(service,True),guides=guides)
+    from .visual_howto import howto_editor
+    return howto_editor(request,key)
 
 @router.post('/admin/access/{key}')
 def edit(request: Request,key: str,data=Depends(form)):

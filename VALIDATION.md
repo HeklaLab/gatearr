@@ -1,3 +1,14 @@
+# Validation — Gatearr 0.3.0 — 20 October 2026
+
+- **189 automated tests passed** locally on Python 3.12; one existing Starlette/httpx deprecation warning remains.
+- All 21 bundled catalogs (English plus twenty additional languages) cover the same 1,162 source entries. Automated checks verify nonempty values, no unresolved translation tokens and matching placeholder counts, including default email templates.
+- Visual-studio regressions cover separate home/login/footer drafts, transient previews, publication, revision conflicts, nested columns, uploaded images, sanitized rich content, sign-in-form invariants, unsafe styles/links, admin-only routes, CSRF, local-script CSP and member account-card access when an admin tool is unavailable.
+- How to regressions cover nested choice snapshots, cyclic-parent rejection, rich guide steps, preview-before-publication, direct-guide entry, retained IDs and publication conflicts. Upgrade tests preserve enabled languages, names, custom translations, existing portal snapshots and encrypted connections.
+- Full isolated HTTP/SMTP smoke passed against running Uvicorn instances and simulated media/services. It now exercises visual home preview/save/publish, movable login-form preview and all six PNG assets, in addition to existing setup, account recovery, clone, permissions, group, synchronization and mail flows.
+- Browser checks exercise pointer dragging from the palette into the real preview and nested columns, click-to-edit, automatic draft saving, choice navigation and responsive previews. The editor runs only local scripts; public pages keep scripts disabled. Preview frames disallow scripts/forms and do not publish edits.
+- No local Docker engine or user's live native service was used. GitHub Actions gates release on the full tests, actual Docker build/startup/health and HTTP/SMTP smoke, then publishes AMD64 and ARM64 images.
+- Translation packs are initial machine translations with automated structural validation and editable overrides. Professional linguistic review of every string is not claimed. Uploaded assets and custom icon choices are preserved; third-party logo source URLs and checksums are recorded locally.
+
 # Validation — Gatearr 0.2.3 — 20 October 2026
 
 - **170 automated tests passed** locally with Python 3.12; one existing Starlette/httpx deprecation warning remains.

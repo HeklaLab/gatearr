@@ -10,14 +10,14 @@ def change(client,key,value='',locale='fr',action='save'):
 
 
 def test_translations_customize_public_recovery_and_account_labels(client):
-    setup(client)
-    assert 'Translations' in client.get('/admin').text
+    setup(client,locale='fr')
+    assert i18n.translate('Translations','fr') in client.get('/admin').text
     for key,value in [('ACCOUNT RECOVERY','RETROUVER MON ACCÈS'),('A fresh start.','Un nouvel accès.'),("Enter the verified email address of your Emby account. You will receive a link valid for 30 minutes.",'Saisissez votre adresse pour recevoir le lien.'),('Receive notifications about my requests','Suivre mes demandes')]:
         assert change(client,key,value).status_code==303
     assert change(client,'A fresh start.','Recover your access','en').status_code==303
     assert 'Un nouvel accès.' in client.get('/forgot').text
     page=client.get('/admin/translations?edit_locale=fr&q=nouvel').text
-    assert 'Un nouvel accès.' in page and 'Customized' in page
+    assert 'Un nouvel accès.' in page and i18n.translate('Customized','fr') in page
     assert 'Un nouvel accès.' in page
     logout(client)
     page=client.get('/forgot').text
@@ -30,7 +30,7 @@ def test_translations_customize_public_recovery_and_account_labels(client):
 
 
 def test_translation_variables_escaping_reset_and_isolated_keys(client):
-    setup(client)
+    setup(client,locale='fr')
     assert change(client,'Hello, {name}.','<b>Bienvenue {name}</b>').status_code==303
     assert '&lt;b&gt;Bienvenue Owner&lt;/b&gt;' in client.get('/account').text
     for value in ('Bonjour','Bonjour {name.__class__}','Bonjour {name!r}','Bonjour {name:>20}','Bonjour {'):
@@ -38,10 +38,10 @@ def test_translation_variables_escaping_reset_and_isolated_keys(client):
     assert '&lt;b&gt;Bienvenue Owner&lt;/b&gt;' in client.get('/account').text
     assert change(client,'A fresh start.','Récupérer mon compte').status_code==303
     assert change(client,'A fresh start.',action='reset').status_code==303
-    assert 'A fresh start.' in client.get('/forgot').text
+    assert i18n.translate('A fresh start.','fr') in client.get('/forgot').text
     assert '&lt;b&gt;Bienvenue Owner&lt;/b&gt;' in client.get('/account').text
     assert change(client,'Hello, {name}.','').status_code==303
-    assert 'Hello, Owner.' in client.get('/account').text
+    assert i18n.translate('Hello, {name}.','fr',name='Owner') in client.get('/account').text
     with SessionLocal() as db:
         assert db.get(Config,i18n.translation_key('fr','Hello, {name}.')) is None
 
@@ -62,7 +62,7 @@ def test_translation_admin_only_validation_and_pagination(client):
 
 
 def test_footer_fully_customizable_and_recovery_hint_removed(client):
-    setup(client)
+    setup(client,locale='fr')
     key='{app_name} · Your services, one place.'
     assert change(client,key,'Mon portail · Bienvenue chez nous.').status_code==303
     page=client.get('/forgot').text
@@ -70,4 +70,4 @@ def test_footer_fully_customizable_and_recovery_hint_removed(client):
     assert 'Sans adresse vérifiée' not in page
     assert 'La récupération du compte administrateur local' not in page
     assert change(client,key,action='reset').status_code==303
-    assert 'Gatearr · Your services, one place.</span>' in client.get('/forgot').text
+    assert i18n.translate('{app_name} · Your services, one place.','fr',app_name='Gatearr')+'</span>' in client.get('/forgot').text

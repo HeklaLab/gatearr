@@ -1,3 +1,11 @@
+# Upgrading to 0.3.0
+
+Back up `/data`, including its encryption key. Pull `ghcr.io/heklalab/gatearr:0.3.0` and recreate the Gatearr container. Migration 0015 installs twenty disabled language entries, leaving existing enabled languages, names and translation overrides intact.
+
+The visual studio adapts your existing home, login content and footer into editable blocks. Published layouts are retained until you explicitly publish changes. Existing menus, guide IDs, published guides, images, accounts, permissions and encrypted connections remain. Drafts are independent for login, home, footer, each choice tree and each guide. Password complexity settings and the requested menu rename are reserved for a later release.
+
+The original PNG logos are defaults, so explicitly selected icons and uploaded images are preserved. Native tools retain the 0.2.3 compressed-response fix and the same URL Base/authentication prerequisites.
+
 # Upgrading to 0.2.3
 
 The embedded-tool proxy now preserves compressed responses correctly, fixing unreadable Radarr/Sonarr/Bazarr pages. Pull the new image and recreate the Gatearr container; no additional native application settings or migration are required when upgrading from 0.2.2.

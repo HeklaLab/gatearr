@@ -64,7 +64,7 @@ def version():
 
 
 def test_builder_draft_publish_preview_escape_and_menu_positions(client):
-    setup(client)
+    setup(client,locale='fr')
     assert client.get('/admin/portal').status_code==200
     response=builder_post(client,'/admin/portal/block',{'kind':'text','region':'main','order':'11','span':'6','title_fr':'Mon portail unique','title_en':'My unique portal','body_fr':'<script>alert(1)</script>','body_en':'Welcome to Gatearr'})
     assert response.status_code==303
@@ -182,7 +182,7 @@ def test_seerr_exact_mapping_and_preserved_preferences(client,monkeypatch):
         configured(db,'seerr');user=db.scalar(select(User).where(User.emby_id=='user-1'))
         integrations.sync_seerr(db,user)
     assert captured[0]['email']=='demo@example.com' and captured[0]['movieQuotaLimit']==5
-    assert captured[0]['locale']=='fr' and 'globalMovieQuotaLimit' not in captured[0]
+    assert captured[0]['locale']=='en' and 'globalMovieQuotaLimit' not in captured[0]
 
 
 
@@ -211,10 +211,10 @@ def test_queue_verified_only_failure_retry_and_secret_redaction(client,monkeypat
 
 def test_catalogs_match_and_builder_english(client):
     from app.i18n import CATALOGS
-    assert set(CATALOGS)=={'en'}
+    assert {'en','fr','es','de'}<=set(CATALOGS)
     setup(client)
     post(client,'/language',{'locale':'en','next':'/admin'},'/admin')
-    for path,expected in [('/admin/portal','Build your home page.'),('/admin/integrations','API connections and notifications')]:
+    for path,expected in [('/admin/portal','Make it yours.'),('/admin/integrations','API connections and notifications')]:
         page=client.get(path)
         assert page.status_code==200 and expected in page.text
 

@@ -19,10 +19,11 @@ def test_fresh_install_has_only_english_and_one_user_language(tmp_path):
     dbpath=tmp_path/'fresh.db';env={**os.environ,'DATABASE_URL':'sqlite:///'+str(dbpath)}
     subprocess.run([sys.executable,'-m','alembic','upgrade','head'],env=env,check=True,capture_output=True)
     with sqlite3.connect(dbpath) as db:
-        assert db.execute('SELECT code FROM languages').fetchall()==[('en',)]
+        assert db.execute('SELECT code FROM languages WHERE enabled=1').fetchall()==[('en',)]
+        assert db.execute('SELECT count(*) FROM languages').fetchone()[0]==21
         assert 'mail_locale' not in {row[1] for row in db.execute('PRAGMA table_info(users)')}
-    assert set(i18n.CATALOGS)=={'en'}
-    assert not (Path('app/locales')/'fr.json').exists()
+    assert {'en','fr','es','de'}<=set(i18n.CATALOGS)
+    assert (Path('app/locales')/'fr.json').exists()
 
 
 def test_setup_requires_explicit_api_key_and_has_breadcrumbs(client,monkeypatch):
@@ -156,7 +157,8 @@ def test_upgrade_retains_accounts_connections_and_user_languages_except_removed_
     with sqlite3.connect(path) as db:
         assert db.execute('SELECT emby_id,admin,locale FROM users').fetchone()==('remote-1',1,'en')
         assert db.execute("SELECT value FROM config WHERE key='emby_api_key'").fetchone()==('encrypted-original',)
-        assert db.execute('SELECT code FROM languages').fetchall()==[('en',)]
+        assert db.execute('SELECT code FROM languages WHERE enabled=1').fetchall()==[('en',)]
+        assert db.execute('SELECT count(*) FROM languages').fetchone()[0]==21
 
 
 def test_upgrade_bootstrap_finds_existing_database_and_keeps_original_secret(tmp_path):
