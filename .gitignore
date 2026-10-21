@@ -22,3 +22,5 @@ bootstrap.json
 
 screenshots/*
 !screenshots/*-refined.png
+
+!screenshots/*-v032.png

@@ -8,6 +8,28 @@
 
 If something is broken, confusing or missing, please open an issue. Include versions, deployment details and reproduction steps; remove secrets and personal information from logs/screenshots. This is an early beta: back up persistent data and test permission changes with a limited account before applying them broadly.
 
+## Interface preview — v0.3.2
+
+Current public-beta screenshots, captured from a configured demo with fictional accounts and example addresses.
+
+### Your applications in one place
+
+Emby, Seerr request counters and account self-service, arranged with Portal builder.
+
+![Gatearr v0.3.2 portal with Emby, Seerr and My account](screenshots/gatearr-home-v032.png)
+
+### Access guides for your users
+
+An Emby Smart TV guide with the server address and step-by-step connection instructions.
+
+![Gatearr v0.3.2 Emby Smart TV access guide](screenshots/gatearr-guide-v032.png)
+
+### Password recovery by email
+
+Users can request a recovery link from the sign-in screen without contacting the administrator.
+
+![Gatearr v0.3.2 email password recovery](screenshots/gatearr-password-reset-v032.png)
+
 ## Why Gatearr?
 
 Sharing a media server with family or friends can turn its owner into the help desk: reset another password, repeat permissions for several users, explain how to connect a TV and send the correct URL again. Gatearr was built to address these needs in one place.
