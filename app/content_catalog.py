@@ -11,11 +11,15 @@ def sources(db):
     rows={}
     def add(key,source,context,kind='text',maximum=5000):
         if source:rows[(key,i18n.source_hash(source))]={'key':key,'source':source,'context':context,'kind':kind,'maximum':maximum}
+    add('branding:browser_title',config(db,'browser_title',''),'Branding',maximum=200)
     add('branding:app_name',config(db,'app_name','Gatearr'),'Branding',maximum=80)
     add('branding:login_text',config(db,'login_text','Access your services and manage your account with ease.'),'Sign-in page',maximum=2000)
     for draft in (False,True):
         for block in portal.load(db,draft)['blocks']:
             for field in ('title','body','alt'):add('block:'+block['id']+':'+field,block.get(field,''),'Block '+block['id']+(' · draft' if draft else ' · published'),'footer_html' if block.get('rich') and field=='body' else 'text')
+            if block['kind']=='applications':
+                defaults={'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}
+                for key in block.get('applications',[]):add('block:'+block['id']+':application-subtitle:'+key,block.get('subtitles',{}).get(key,defaults.get(key,'Open application')),'Application subtitle · '+block['id'],maximum=300)
     from . import footer
     from .visual_builder import load as load_design
     for page in ('login','footer'):

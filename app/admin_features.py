@@ -122,7 +122,9 @@ def emby_user(request: Request, local_id: int):
     user = request.state.db.get(User, local_id)
     if not user or not user.emby_id:
         raise HTTPException(404, 'Emby account not found')
-    from .permissions import observe,fields
+    from .permissions import observe,fields,fingerprint
+    from .permission_ui import metadata,controls,DAYS
+    from .connections import media_kind
     from .models import PolicyState
     from .emby import EmbyError
     import json
@@ -131,13 +133,14 @@ def emby_user(request: Request, local_id: int):
     cached=request.state.db.get(PolicyState,user.id)
     remote={'Policy':json.loads(cached.observed) if cached else {}};available=[];remote_users=[];options=[]
     policy_state=cached
+    permission_meta={}
     if tab=='emby':
         try:
-            remote=emby.user(user.emby_id);available=emby.libraries()
+            remote=emby.user(user.emby_id)
+            if not isinstance(remote.get('Policy'),dict) or not remote['Policy']:raise EmbyError('Invalid policy response')
+            available=emby.libraries()
             remote_users=emby.users();options=emby.copy_options()
-            normalize=lambda value:str(value).replace('-','').lower()
-            selected={normalize(value) for value in remote.get('Policy',{}).get('EnabledFolders',[]) or []}
-            remote.setdefault('Policy',{})['EnabledFolders']=[item['Id'] for item in available if normalize(item['Id']) in selected]
+            permission_meta=metadata(emby,remote.get('Policy',{}),available)
             policy_state=observe(request.state.db,user,remote.get('Policy',{}))
         except EmbyError:
             if not cached:raise
@@ -148,7 +151,9 @@ def emby_user(request: Request, local_id: int):
     tab=request.query_params.get('tab','account')
     if tab not in ('account','emby','seerr','access'):tab='account'
     seerr_state=inspect_user(request.state.db,user) if tab=='seerr' else None
-    return render(request,'emby_user.html',user_tab=tab,owner_group=group_for(request.state.db,user),permission_groups=list(request.state.db.scalars(select(PermissionGroup).order_by(PermissionGroup.name))),seerr_quota=__import__('app.seerr_quotas',fromlist=['inspect']).inspect(request.state.db,user) if tab=='seerr' else None,seerr_policy=seerr_state,seerr_permissions=__import__('app.seerr_permissions',fromlist=['FLAGS']).FLAGS,member_seerr_access=__import__('app.group_access',fromlist=['seerr_allowed']).seerr_allowed(request.state.db,user),policy_state=policy_state,permission_fields=fields(remote.get('Policy',{}),policy_state) if policy_state else [],username_sync=__import__('app.usernames',fromlist=['status']).status(request.state.db,user.id),member=user,remote=remote,libraries=available,remote_users=remote_users,options=options)
+    quota_state=__import__('app.seerr_quotas',fromlist=['inspect']).inspect(request.state.db,user) if tab=='seerr' else None
+    snapshot=fingerprint([seerr_state.observed,quota_state.observed]) if seerr_state else fingerprint(remote.get('Policy',{}))
+    return render(request,'emby_user.html',user_tab=tab,owner_group=group_for(request.state.db,user),permission_groups=list(request.state.db.scalars(select(PermissionGroup).order_by(PermissionGroup.name))),permission_snapshot=snapshot,seerr_quota=quota_state,seerr_policy=seerr_state,seerr_categories=__import__('app.seerr_permissions',fromlist=['CATEGORIES']).CATEGORIES,seerr_permissions=__import__('app.seerr_permissions',fromlist=['FLAGS']).FLAGS,member_seerr_access=__import__('app.group_access',fromlist=['seerr_allowed']).seerr_allowed(request.state.db,user),policy_state=policy_state,media_name='Jellyfin' if media_kind()=='jellyfin' else 'Emby',permission_days=DAYS,permission_categories=controls(fields(remote.get('Policy',{}),policy_state),permission_meta) if policy_state else [],permission_fields=fields(remote.get('Policy',{}),policy_state) if policy_state else [],username_sync=__import__('app.usernames',fromlist=['status']).status(request.state.db,user.id),member=user,remote=remote,libraries=available,remote_users=remote_users,options=options)
 
 @router.post('/admin/emby/libraries')
 def libraries_save(request: Request, data=Depends(form)):
@@ -259,7 +264,7 @@ def test_connection(request: Request, data=Depends(form)):
     service=data.get('service')
     if service not in ('emby',*SERVICES,'radarr','sonarr','bazarr'):raise ValueError('Invalid service')
     from .connection_health import checks
-    checks(request.state.db,refresh=True)
+    checks(request.state.db,refresh=service)
     return redirect('/admin/integrations')
 
 

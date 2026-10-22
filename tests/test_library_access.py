@@ -23,20 +23,20 @@ def test_user_library_page_current_access_edit_remove_and_permissions(client,mon
     monkeypatch.setattr(admin_features,'emby',SimpleNamespace(user=lambda remote_id:deepcopy(state),libraries=lambda:[{'Id':'movies','Name':'Movies'},{'Id':'films','Name':'Films'}],users=lambda:[],copy_options=lambda:[],assign_libraries=assign))
     path='/admin/users/'+str(uid)
     page=client.get(path+"?tab=emby").text
-    assert 'name="access_mode" value="all" checked' in page
-    assert 'name="libraries" value="movies" checked' in page
-    assert 'name="libraries" value="films" checked' in page
+    assert 'id="policy-EnableAllFolders"' in page and 'Access all libraries, including future ones' in page
+    assert 'name="EnabledFolders" value="movies"' in page
+    assert 'name="EnabledFolders" value="films"' in page
     assert 'username-link' in client.get('/admin/users').text
     response=post(client,'/admin/emby/libraries',{'id':uid,'access_mode':'selected','libraries':['films']},path)
     assert response.status_code==303
     page=client.get(response.headers['location']).text
     assert 'Library access saved and verified in Emby.' in page
-    assert 'name="libraries" value="films" checked' in page
+    assert 'name="EnabledFolders" value="films"' in page
     assert 'name="libraries" value="movies" checked' not in page
     assert state['Policy']['BlockedTags']==['restricted'] and state['Policy']['EnableContentDeletion'] is False
     assert post(client,'/admin/emby/libraries',{'id':uid,'action':'remove_all'},path).status_code==303
     assert writes[-1]==([],False)
-    assert 'No libraries allowed' in client.get(path+"?tab=emby").text
+    assert 'name="EnabledFolders" value="films" checked' not in client.get(path+"?tab=emby").text
     assert post(client,'/admin/emby/libraries',{'id':uid,'access_mode':'invalid'},path).status_code==400
     assert client.post('/admin/emby/libraries',data={'csrf':'bad','id':uid}).status_code==403
     logout(client);login_user(client)

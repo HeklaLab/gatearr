@@ -62,14 +62,14 @@ def test_assistance_identity_readonly_actor_and_expiry(client):
     with SessionLocal() as db:uid=member(db).id;owner=db.scalar(select(User).where(User.admin.is_(True))).id
     assert post(client,f'/admin/users/{uid}/assist',{},'/admin/users').status_code==303
     home=client.get('/home').text
-    assert 'Assistance mode' in home and 'Welcome, demo.' in home
+    assert 'Logged as demo' in home and 'Welcome, demo.' in home
     assert client.get('/admin').status_code==403
     assert post(client,'/account/theme',{'theme':'dark'},'/account').status_code==403
     assert 'must sign in to Gatearr again' in client.get('/services/emby/open').text
     with SessionLocal() as db:
         event=db.scalar(select(AuditEvent).where(AuditEvent.action=='assistance.start'));assert event.actor_id==owner and event.subject_id==uid
         row=db.scalar(select(SupportSession));row.expires=int(time.time())-1;db.commit()
-    assert 'Assistance mode' not in client.get('/home').text
+    assert 'logged-as-banner' not in client.get('/home').text
     assert client.get('/admin').status_code==200
 
 
@@ -145,7 +145,8 @@ def test_assistance_can_use_only_live_matching_media_session(client,fake,monkeyp
         login_user(member_client)
         with SessionLocal() as db:
             uid=member(db).id
-            main.set_config(db,'emby_link','https://media.test')
+            from app.models import AccessService
+            db.get(AccessService,'emby').browser_url='https://media.test'
             row=db.scalar(select(MediaSession).where(MediaSession.user_id==uid));assert row and 'user-token' not in row.payload
             db.commit()
         # Verify the stored user token with the media adapter before generating the handoff.
@@ -153,7 +154,7 @@ def test_assistance_can_use_only_live_matching_media_session(client,fake,monkeyp
         monkeypatch.setattr('app.emby.emby',fake)
         assert post(client,f'/admin/users/{uid}/assist',{},'/admin/users').status_code==303
         response=client.get('/services/emby/open',follow_redirects=False)
-        assert response.status_code==303 and 'user-token' in response.headers['location'] and 'owner-token' not in response.headers['location']
+        assert response.status_code==303 and response.headers['location'].startswith('https://media.test/web/index.html?') and 'user-token' in response.headers['location'] and 'owner-token' not in response.headers['location']
         assert response.headers['referrer-policy']=='no-referrer'
         logout(member_client)
         page=client.get('/services/emby/open')

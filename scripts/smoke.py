@@ -48,13 +48,13 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
             time.sleep(1)
         assert client.get('/setup').status_code == 200, 'Smoke requires fresh demo volumes'
         assert '<html lang="en">' in client.get('/setup').text
-        submit(client, '/setup', {'app_name':'Gatearr','public_url':base,'media_server':'emby','url':media_base,'api_key':'demo-emby-key'}, '/setup')
+        submit(client, '/setup', {'app_name':'Gatearr','public_url':base,'media_server':'emby','url':media_base,'api_key':'demo-emby-key','browser_url':'https://emby.example.com'}, '/setup')
         submit(client,'/setup/admin',{'user_id':'demo-admin-1','password':'AdminPassword123!'},'/setup/admin')
         for step in ('seerr','tools','smtp'):
             submit(client,'/admin/setup/'+step,{'action':'skip'},'/admin/setup/'+step)
         submit(client,'/admin/setup/finish',{},'/admin/setup/finish')
         submit(client, '/admin/smtp', {'smtp_host': smtp_host, 'smtp_port': smtp_port, 'smtp_mode': 'plain', 'smtp_from': 'portal@example.com', 'smtp_username': '', 'smtp_password': ''}, '/admin')
-        submit(client, '/admin/settings', {'app_name': 'Gatearr', 'login_text': 'Your media world, all in one place.', 'logo_url': '', 'public_url': base, 'emby_link': 'https://emby.example.com'}, '/admin')
+        submit(client, '/admin/settings', {'app_name': 'Gatearr', 'login_text': 'Your media world, all in one place.', 'logo_url': '', 'public_url': base}, '/admin')
         submit(client, '/admin/menu', {'label': 'Seerr', 'url': 'https://requests.example.com', 'icon': 'link', 'position': '10', 'new_tab': 'on'}, '/admin')
         submit(client, '/admin/sync', {}, '/admin')
         assert 'disabled' in client.get('/admin/users').text
@@ -91,7 +91,9 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         deadline=time.monotonic()+45
         while time.monotonic()<deadline:
             detail=client.get('/admin/users/'+demo_id+'?tab=emby').text
-            if 'sync-green' in detail and '<code>2</code>' in detail:break
+            control=re.search(r'<input[^>]*name="SimultaneousStreamLimit"[^>]*value="2"',detail)
+            native=httpx.get(media_base+'/Users/demo-user-1',headers={'X-Emby-Token':'demo-emby-key'},trust_env=False).json().get('Policy',{})
+            if control and 'sync-green' in detail and native.get('SimultaneousStreamLimit')==2 and native.get('EnableSubtitleDownloading') is False:break
             time.sleep(1)
         else:raise AssertionError('Group permission readback did not complete')
         guide_ids={}

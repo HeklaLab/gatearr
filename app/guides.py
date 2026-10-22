@@ -20,7 +20,7 @@ def service_url(db, service):
         from .seerr_login import enabled,public_url
         if enabled(db):return '/services/seerr/open'
         return service.browser_url or public_url(db)
-    return service.browser_url or (config(db, 'emby_link') if service.key == 'emby' else '')
+    return service.browser_url or ''
 
 def access_href(db, key):
     from .access import access_href as href

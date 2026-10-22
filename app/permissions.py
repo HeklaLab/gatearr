@@ -17,12 +17,15 @@ GRANT_LISTS={'EnabledFolders','EnabledChannels','EnabledDevices','EnableContentD
 LIBRARY_KEYS={'EnableAllFolders','EnabledFolders','ExcludedSubFolders'}
 
 LABELS={'SimultaneousStreamLimit':'Maximum simultaneous streams (0 = unlimited)','EnableSubtitleDownloading':'Download subtitles','EnableSubtitleManagement':'Manage subtitles','EnableContentDownloading':'Download media','EnableMediaPlayback':'Play media','EnableRemoteAccess':'Allow remote access','EnableContentDeletion':'Delete media','RemoteClientBitrateLimit':'Remote bitrate limit (bits per second; 0 = unlimited)','IsAdministrator':'Media-server administrator','IsDisabled':'Account disabled','MaxParentalRating':'Maximum parental rating'}
+LABELS.update({'EnableAllFolders':'Access all libraries, including future ones','EnabledFolders':'Allowed libraries','ExcludedSubFolders':'Excluded subfolders','BlockedMediaFolders':'Blocked media folders','EnableAllDevices':'Allow all devices, including new ones','EnabledDevices':'Allowed devices','EnableAllChannels':'Access all channels','EnabledChannels':'Allowed channels','BlockedChannels':'Blocked channels','BlockUnratedItems':'Block unrated content','IncludeTags':'Only allow these tags','AllowedTags':'Only allow these tags','BlockedTags':'Blocked tags','EnableContentDeletionFromFolders':'Libraries allowing media deletion','AccessSchedules':'Allowed access times','EnableVideoPlaybackTranscoding':'Transcode video','EnableAudioPlaybackTranscoding':'Transcode audio','EnablePlaybackRemuxing':'Allow remuxing','MaxActiveSessions':'Maximum active sessions (0 = unlimited)','SyncPlayAccess':'Shared playback sessions','ForceRemoteSourceTranscoding':'Always transcode remote sources','IsHidden':'Hide from the sign-in screen','IsHiddenRemotely':'Hide from remote sign-in','IsHiddenFromUnusedDevices':'Hide on new devices','EnableLiveTvAccess':'Watch live TV','EnableLiveTvManagement':'Manage live TV recordings'})
 def label(key):return LABELS.get(key,re.sub(r'(?<=[a-z0-9])(?=[A-Z])',' ',key))
 
 def encoded(value):return json.dumps(value,sort_keys=True,separators=(',',':'))
 def fingerprint(value):return digest(encoded(value))
 def normalize(key,value):
-    if isinstance(value,list) and key!='AccessSchedules':
+    if key=='AccessSchedules' and isinstance(value,list):
+        return sorted([{k:v for k,v in slot.items() if k not in ('Id','UserId')} for slot in value],key=encoded)
+    if isinstance(value,list):
         return sorted([str(v).replace('-','').lower() for v in value]) if key in ('EnabledFolders','ExcludedSubFolders') else sorted(value,key=encoded)
     return value
 
@@ -45,6 +48,12 @@ def safe_field(key,value,reference):
     if old is None and value is not None and type(value) not in (int,str,list,dict,bool):raise ValueError('Invalid permission value')
     if type(value) is int and not 0<=value<=2147483647:raise ValueError('Use a number between 0 and 2147483647')
     if isinstance(value,str) and len(value)>2000 or isinstance(value,(list,dict)) and len(encoded(value))>10000:raise ValueError('Permission value too large')
+    if key=='AccessSchedules':
+        from .permission_ui import DAYS
+        if not isinstance(value,list) or len(value)>50:raise ValueError('Invalid schedule')
+        for slot in value:
+            if not isinstance(slot,dict) or slot.get('DayOfWeek') not in DAYS or any(type(slot.get(k)) not in (int,float) for k in ('StartHour','EndHour')) or not 0<=slot['StartHour']<slot['EndHour']<=24:raise ValueError('Invalid schedule')
+    if key in DENY_LISTS|GRANT_LISTS|{'IncludeTags','AllowedTags','BlockedChannels','BlockedMediaFolders'} and value is not None and (not isinstance(value,list) or any(not isinstance(v,str) for v in value)):raise ValueError('Invalid selection')
     if key=='MaxParentalRating' and value is not None and type(value) is not int:raise ValueError('Invalid parental rating')
     return value
 
@@ -84,12 +93,14 @@ def guard(db,user,desired):
         others=db.scalar(select(User.id).where(User.admin.is_(True),User.active.is_(True),User.id!=user.id).limit(1))
         if not others:raise ValueError('The last active portal administrator cannot be disabled')
 
-def apply(db,user,row,api=None,write_keys=None):
+def apply(db,user,row,api=None,write_keys=None,expected_current=None):
     api=api or emby;generation=row.version;desired=json.loads(row.desired)
     if write_keys is not None:desired={k:v for k,v in desired.items() if k in write_keys}
     try:
         guard(db,user,desired)
         current=api.user(user.emby_id).get('Policy',{})
+        if not isinstance(current,dict) or not current:raise EmbyError('Invalid policy response')
+        if expected_current is not None and any(k not in current or normalize(k,current[k])!=normalize(k,v) for k,v in expected_current.items()):raise ValueError('Permissions changed before writing')
         for k,v in desired.items():safe_field(k,v,current)
         target=deepcopy(current);target.update(desired)
         if 'EnabledFolders' in desired:
@@ -97,6 +108,7 @@ def apply(db,user,row,api=None,write_keys=None):
             if not set(desired['EnabledFolders'])<=available:raise ValueError('Unknown library. Reload the page.')
         api.policy(user.emby_id,target)
         confirmed=api.user(user.emby_id).get('Policy',{})
+        if not isinstance(confirmed,dict):raise EmbyError('Invalid policy response')
         success=all(k in confirmed and normalize(k,confirmed[k])==normalize(k,v) for k,v in desired.items())
         db.execute(update(PolicyState).where(PolicyState.user_id==user.id,PolicyState.version==generation).values(observed=encoded(confirmed),confirmed=encoded(desired) if success else row.confirmed,pending=False,error='' if success else 'Remote verification failed',checked_at=int(time.time())))
         if success and 'IsDisabled' in desired and user.active==bool(desired['IsDisabled']):
@@ -151,6 +163,58 @@ def save_permission(request:Request,uid:int,data=Depends(form)):
     row.overrides=encoded(overrides);recompute(db,user,row);guard(db,user,json.loads(row.desired));db.commit();apply(db,user,row,write_keys={key})
     return redirect('/admin/users/'+str(uid)+'?tab=emby#permissions')
 
+@router.get('/admin/users/{uid}/permissions/status')
+def permission_status(request:Request,uid:int):
+    require_admin(request);db=request.state.db;user=db.get(User,uid)
+    if not user or not user.emby_id:raise HTTPException(404,'User not found')
+    if request.query_params.get('service')=='seerr':
+        from .models import SeerrPolicyState,SeerrQuotaState
+        policy=db.get(SeerrPolicyState,uid);quota=db.get(SeerrQuotaState,uid)
+        return {'hash':fingerprint([policy.observed if policy else None,quota.observed if quota else None]),'checked_at':policy.checked_at if policy else None}
+    row=db.get(PolicyState,uid)
+    return {'hash':fingerprint(json.loads(row.observed)) if row else '', 'checked_at':row.checked_at if row else None, 'error':row.error if row else ''}
+
+@router.post('/admin/users/{uid}/permissions/category')
+def save_category(request:Request,uid:int,data=Depends(form)):
+    actor=require_admin(request);db=request.state.db;user=db.get(User,uid)
+    if not user or not user.emby_id:raise HTTPException(404,'User not found')
+    from .group_access import unlocked
+    from .permission_ui import metadata,controls,parse
+    unlocked(db,user)
+    remote=emby.user(user.emby_id).get('Policy',{});row=state(db,user,remote)
+    if row.version!=int(data.get('version','-1')):raise HTTPException(409,'Permissions changed. Reload this page.')
+    meta=metadata(emby,remote,emby.libraries())
+    groups=controls(fields(remote,row),meta)
+    group=next((g for g in groups if g['id']==data.get('category')),None)
+    if not group:raise ValueError('Unknown permission category')
+    indexed={f['key']:f for f in group['fields']};changes={};overrides=json.loads(row.overrides);inherit=data.get('action')=='inherit'
+    for key in data.getlist('fields'):
+        if key not in indexed:raise ValueError('Unknown permission')
+        if data.get('hash_'+key)!=fingerprint(remote[key]):raise HTTPException(409,'Permissions changed. Reload this page.')
+        field=indexed[key]
+        if inherit:
+            if key in overrides:
+                restored=json.loads(row.baseline).get(key)
+                if key in ('IsAdministrator','IsDisabled') and restored!=remote[key]:
+                    if data.get('confirm_sensitive')!='on':raise ValueError('Confirm the account security change')
+                    if key=='IsDisabled' and restored and actor.id==uid:raise ValueError('You cannot disable your own account')
+                changes[key]=remote[key]
+            continue
+        value=parse(field,data)
+        safe_field(key,value,remote)
+        if key in ('IsAdministrator','IsDisabled') and value!=remote[key]:
+            if data.get('confirm_sensitive')!='on':raise ValueError('Confirm the account security change')
+            if key=='IsDisabled' and value and actor.id==uid:raise ValueError('You cannot disable your own account')
+        if normalize(key,value)!=normalize(key,remote[key]):changes[key]=value
+    if not changes:return redirect('/admin/users/'+str(uid)+'?tab=emby#permissions')
+    if inherit:
+        for key in changes:overrides.pop(key,None)
+    else:overrides.update(changes)
+    row.overrides=encoded(overrides);recompute(db,user,row);guard(db,user,json.loads(row.desired));db.commit()
+    request.state.audit_subject=uid;request.state.audit_detail='Permissions: '+', '.join(label(k) for k in changes)
+    if not apply(db,user,row,write_keys=set(changes),expected_current={k:remote[k] for k in changes}):raise HTTPException(502,'Permission synchronization failed. No success was confirmed; refresh the server information.')
+    return redirect('/admin/users/'+str(uid)+'?tab=emby&saved=permissions#permissions')
+
 @router.post('/admin/users/{uid}/permissions/retry')
 def retry(request:Request,uid:int,data=Depends(form)):
     require_admin(request);db=request.state.db;user=db.get(User,uid);row=db.get(PolicyState,uid)
@@ -181,10 +245,16 @@ def group_page(request:Request,gid:int):
     template=next((u for u in users if u.active),None)
     reference=emby.user(template.emby_id).get('Policy',{}) if template else {}
     policy=json.loads(group.policy)
-    from .seerr_permissions import FLAGS
+    from .seerr_permissions import FLAGS,CATEGORIES
+    from .permission_ui import metadata,controls,DAYS
+    from types import SimpleNamespace
     from .group_access import group_for
     ownership={u.id:group_for(db,u) for u in users}
-    return render(request,'group_editor.html',group=group,policy=policy,group_access=json.loads(group.access_policy),seerr_permissions=FLAGS,ownership=ownership,permission_keys=[k for k in sorted(reference) if k not in GROUP_EXCLUDED|LIBRARY_KEYS],reference_values=reference,reference_labels={k:label(k) for k in reference},members=set(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id==gid))),group_users=users,libraries=emby.libraries())
+    libraries=emby.libraries()
+    group_values={**reference,**{k:v for k,v in policy.items() if k in reference}}
+    group_state=SimpleNamespace(desired=encoded(policy),confirmed=encoded(policy),pending=False,error='')
+    categories=controls([f for f in fields(group_values,group_state) if f['key'] not in GROUP_EXCLUDED],metadata(emby,group_values,libraries))
+    return render(request,'group_editor.html',group=group,permission_categories=categories,permission_days=DAYS,seerr_categories=CATEGORIES,policy=policy,group_access=json.loads(group.access_policy),seerr_permissions=FLAGS,ownership=ownership,permission_keys=[k for k in sorted(reference) if k not in GROUP_EXCLUDED|LIBRARY_KEYS],reference_values=reference,reference_labels={k:label(k) for k in reference},members=set(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id==gid))),group_users=users,libraries=libraries)
 
 @router.post('/admin/groups/{gid}')
 def save_group(request:Request,gid:int,data=Depends(form)):
@@ -201,10 +271,26 @@ def save_group(request:Request,gid:int,data=Depends(form)):
     remotes={uid:emby.user(indexed[uid].emby_id).get('Policy',{}) for uid in sorted(affected)}
     reference=next(iter(remotes.values()),{})
     if not reference and users:reference=emby.user(users[0].emby_id).get('Policy',{})
-    policy={}
+    human=data.get('editor_format')=='human'
+    controls_by_key={}
+    if human:
+        from .permission_ui import metadata,controls,parse
+        from types import SimpleNamespace
+        original=json.loads(group.policy)
+        values={**reference,**{k:v for k,v in original.items() if k in reference}}
+        group_state=SimpleNamespace(desired=encoded(original),confirmed=encoded(original),pending=False,error='')
+        categories=controls(fields(values,group_state),metadata(emby,values,emby.libraries()))
+        controls_by_key={field['key']:field for category in categories for field in category['fields']}
+        # Unavailable controls cannot silently remove an existing group policy.
+        policy={k:v for k,v in original.items() if k not in controls_by_key or not controls_by_key[k]['editable'] or controls_by_key[k]['unavailable']}
+    else:policy={}
     for key in data.getlist('permission'):
-        if key in GROUP_EXCLUDED|LIBRARY_KEYS:raise ValueError('Account security settings must be edited individually')
-        value=json.loads(str(data.get('value_'+key,'null')))
+        if key in GROUP_EXCLUDED or (not human and key in LIBRARY_KEYS):raise ValueError('Account security settings must be edited individually')
+        if human:
+            if key not in controls_by_key:raise ValueError('This permission is not supported by the connected server')
+            value=parse(controls_by_key[key],data,prefix='value_')
+        else:value=json.loads(str(data.get('value_'+key,'null')))
+        if key=='AccessSchedules':value=[{k:v for k,v in slot.items() if k not in ('Id','UserId')} for slot in value]
         safe_field(key,value,reference)
         for uid in members:safe_field(key,value,remotes[uid])
         policy[key]=value
@@ -226,7 +312,7 @@ def save_group(request:Request,gid:int,data=Depends(form)):
     from .seerr_quotas import selected as quota_values
     quotas=quota_values(data)
     if quotas:settings['seerr_quotas']=quotas
-    if data.get('manage_seerr_permissions')=='on':settings['seerr_permissions']=selected_permissions(data)
+    if data.get('manage_seerr_permissions')=='on':settings['seerr_permissions']=selected_permissions(data,json.loads(group.access_policy).get('seerr_permissions',0))
     request.state.audit_detail='Group: '+group.name+'\nMembers: '+', '.join(indexed[uid].name for uid in sorted(members))+'\nPermissions: '+', '.join(label(key)+' = '+('Yes' if value is True else 'No' if value is False else str(value) if type(value) is int else 'Custom selection') for key,value in policy.items())
     affected=members|old_members
     states={}
@@ -241,7 +327,9 @@ def save_group(request:Request,gid:int,data=Depends(form)):
     for uid in order:
         recompute(db,indexed[uid],states[uid]);guard(db,indexed[uid],json.loads(states[uid].desired));apply_access(db,indexed[uid],group_for(db,indexed[uid]))
     db.commit()
-    return redirect('/admin/groups/'+str(gid)+'?saved=1')
+    active_tab=str(data.get('active_tab','members'))
+    if active_tab not in ('members','emby','seerr','access'):active_tab='members'
+    return redirect('/admin/groups/'+str(gid)+'?saved=1&tab='+active_tab)
 
 @router.post('/admin/users/{uid}/group')
 def assign_group(request:Request,uid:int,data=Depends(form)):

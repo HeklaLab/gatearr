@@ -2,9 +2,9 @@
 
 **A self-hosted front door for your media server: account self-service, user groups, permissions, Access guides and a portal you can make your own.**
 
-**v0.3.2 is Gatearr’s first public beta.** Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
+**v0.3.3 is the current public beta.** Gatearr entered public beta with v0.3.2. Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
 
-[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.3.2) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
+[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.3.3) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
 
 If something is broken, confusing or missing, please open an issue. Include versions, deployment details and reproduction steps; remove secrets and personal information from logs/screenshots. This is an early beta: back up persistent data and test permission changes with a limited account before applying them broadly.
 
@@ -142,7 +142,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.2` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.3` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 
@@ -195,7 +195,7 @@ Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTE
 
 ## Administration
 
-- **Branding**: identity, Portal builder (including Access guides and Footer), and Theme with live preview.
+- **Branding**: configurable name, uploaded logo and browser-tab title, Portal builder (including Access guides and Footer), and Theme with live preview.
 - **Users**: accounts, group membership, libraries/media policies, Seerr permissions/quotas, admin-tool access and assistance.
 - **Applications & API**: application links, private/public addresses, connections and health checks in one place.
 - **Emails**: SMTP and localized invitation/recovery/verification/account-change templates.
@@ -208,11 +208,13 @@ Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTE
 
 Administrators can send verification/reset links, edit usernames or directly change an email/password. Renaming updates the native media login and the matched Seerr display name; failed Seerr updates are shown and retried. Users sign in again after a rename. Direct changes queue a localized notification; email changes notify the old and new addresses. Passwords are never emailed. Existing Gatearr sessions and recovery tokens are invalidated after direct credential changes. SMTP failures are retried by the encrypted mail outbox and recorded in container logs.
 
-**Open portal as this user** starts an audited, 30-minute assistance session with a visible banner and return button. Gatearr account/settings writes are blocked during assistance. The user's own tools/permissions control what is displayed. Automatic Emby/Seerr links need a still-valid session created when that member previously signed in to Gatearr. If unavailable, the interface asks the member to sign in again. No user password is retained. Service links open genuine remote user sessions: actions performed there have that user's normal effects. Returning to the administrator's portal does not close already-open external browser tabs.
+**View portal as [user name]** starts an audited, 30-minute assistance session with a sticky, full-width red **Logged as** banner and return button. Gatearr account/settings writes are blocked during assistance. The user's own tools/permissions control what is displayed. Automatic Emby/Seerr links need a still-valid session created when that member previously signed in to Gatearr. If unavailable, the interface asks the member to sign in again. No user password is retained. Service links open genuine remote user sessions: actions performed there have that user's normal effects. Returning to the administrator's portal does not close already-open external browser tabs.
 
 Emby browser login verifies the captured user token before handoff. Jellyfin web clients do not universally support this URI login scheme, so Gatearr reports the limitation instead of substituting an administrator API key.
 
 ### Media permissions and groups
+
+User and group editors separate media-server permissions, Seerr permissions and admin tools into tabs. Native controls replace JSON fields for supported schedules, devices, folders, ratings and tags. Gatearr refreshes observed media-server and Seerr permissions every five minutes and rejects stale saves. Public media browser addresses are configured only in **Applications & API**.
 
 Review/edit the fields actually returned by the media server: streams, downloads, subtitles, remote access and other policy settings. Authentication providers and server-maintained counters remain read-only. Sensitive administrator/disabled changes require explicit confirmation; the last active Gatearr admin is protected.
 

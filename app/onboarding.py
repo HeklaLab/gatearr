@@ -47,13 +47,13 @@ def connect_media(db,data):
     if old_id and old_id!=result['id'] and db.scalar(select(User.id).where(User.emby_id.is_not(None)).limit(1)):
         raise ValueError('This portal is already linked to another media server')
     browser=url_ok(str(data.get('browser_url','')),optional=True)
-    for name,value in {'media_server':kind,'emby_url':base,'emby_api_key':encrypt(key),'media_server_id':result['id'],'media_server_name':result['name'],'emby_link':browser}.items():set_config(db,name,value)
+    for name,value in {'media_server':kind,'emby_url':base,'emby_api_key':encrypt(key),'media_server_id':result['id'],'media_server_name':result['name']}.items():set_config(db,name,value)
     service=db.get(AccessService,'emby')
     if service and service.name in ('Emby','Jellyfin'):
         service.name='Jellyfin' if kind=='jellyfin' else 'Emby'
-    if service and browser:
+    if service:
         service.browser_url=browser
-        service.server_url=browser
+        if browser:service.server_url=browser
     from .default_journeys import seed,seed_seerr
     seed(db, activate=True)
     seed_seerr(db)

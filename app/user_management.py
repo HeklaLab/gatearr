@@ -49,6 +49,7 @@ def manage(request:Request,uid:int,data=Depends(form)):
         for recipient in set(filter(None,(old,email))):notification(db,user,recipient,'email_changed')
         user.email=email;user.preferences_version+=1
         db.commit();invalidate(db,user);queue_user(db,user,force=True)
+        if request.state.user.id==uid:return redirect('/login')
     elif action=='password':
         password_ok(data.get('password',''),db)
         if data.get('password')!=data.get('confirm'):raise ValueError('Passwords do not match')

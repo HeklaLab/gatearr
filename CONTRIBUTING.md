@@ -17,3 +17,7 @@ Use the [feature request form](https://github.com/HeklaLab/gatearr/issues/new?te
 Keep pull requests focused, explain the purpose and validation. For code changes run `python -m pytest -q` and the isolated Docker smoke described in the README. Include sanitized demo screenshots for UI changes. Translation changes must preserve placeholders such as `{username}` and `${link}`. Simulator tests do not guarantee compatibility with every production application version.
 
 When discussing Gatearr elsewhere, disclose your connection to the project, follow community rules and keep replies relevant. Gatearr is independent, not an official Emby/Jellyfin product.
+
+## Release notes
+
+Group changes under **Bug fixes**, **Interface adjustments** and **Improvements**. Add other categories when needed; omit empty categories. Keep the Markdown changelog, in-app release history and GitHub release notes consistent. Development and tests precede visual validation; publication follows owner approval.

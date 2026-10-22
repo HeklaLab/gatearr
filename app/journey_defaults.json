@@ -7,7 +7,8 @@
         "kind": "browser",
         "title": "Browser",
         "position": 0,
-        "icon_url": ""
+        "icon_url": "",
+        "icon": "globe"
       },
       {
         "id": "default_computer",
@@ -15,7 +16,8 @@
         "kind": "group",
         "title": "Computer",
         "position": 10,
-        "icon_url": ""
+        "icon_url": "",
+        "icon": "desktop"
       },
       {
         "id": "default_phone",
@@ -23,7 +25,8 @@
         "kind": "group",
         "title": "Phone",
         "position": 20,
-        "icon_url": ""
+        "icon_url": "",
+        "icon": "mobile-screen-button"
       },
       {
         "id": "default_windows",
@@ -32,7 +35,8 @@
         "title": "Windows",
         "position": 10,
         "icon_url": "",
-        "guide_key": "windows"
+        "guide_key": "windows",
+        "icon": "brands:windows"
       },
       {
         "id": "default_mac",
@@ -41,7 +45,8 @@
         "title": "Mac",
         "position": 20,
         "icon_url": "",
-        "guide_key": "mac"
+        "guide_key": "mac",
+        "icon": "brands:apple"
       },
       {
         "id": "default_android",
@@ -50,7 +55,8 @@
         "title": "Android",
         "position": 10,
         "icon_url": "",
-        "guide_key": "android"
+        "guide_key": "android",
+        "icon": "brands:android"
       },
       {
         "id": "default_apple",
@@ -59,7 +65,8 @@
         "title": "iPhone",
         "position": 20,
         "icon_url": "",
-        "guide_key": "apple"
+        "guide_key": "apple",
+        "icon": "brands:apple"
       },
       {
         "id": "default_linux",
@@ -68,7 +75,8 @@
         "title": "Linux",
         "position": 30,
         "icon_url": "",
-        "guide_key": "linux"
+        "guide_key": "linux",
+        "icon": "brands:linux"
       },
       {
         "id": "default_tv",
@@ -77,7 +85,8 @@
         "title": "Smart TV",
         "position": 30,
         "icon_url": "",
-        "guide_key": "tv"
+        "guide_key": "tv",
+        "icon": "tv"
       }
     ],
     "guides": [
@@ -307,7 +316,8 @@
         "kind": "browser",
         "title": "Browser",
         "position": 0,
-        "icon_url": ""
+        "icon_url": "",
+        "icon": "globe"
       },
       {
         "id": "default_computer",
@@ -315,7 +325,8 @@
         "kind": "group",
         "title": "Computer",
         "position": 10,
-        "icon_url": ""
+        "icon_url": "",
+        "icon": "desktop"
       },
       {
         "id": "default_phone",
@@ -323,7 +334,8 @@
         "kind": "group",
         "title": "Phone",
         "position": 20,
-        "icon_url": ""
+        "icon_url": "",
+        "icon": "mobile-screen-button"
       },
       {
         "id": "default_windows",
@@ -332,7 +344,8 @@
         "title": "Windows",
         "position": 10,
         "icon_url": "",
-        "guide_key": "windows"
+        "guide_key": "windows",
+        "icon": "brands:windows"
       },
       {
         "id": "default_mac",
@@ -341,7 +354,8 @@
         "title": "Mac",
         "position": 20,
         "icon_url": "",
-        "guide_key": "mac"
+        "guide_key": "mac",
+        "icon": "brands:apple"
       },
       {
         "id": "default_android",
@@ -350,7 +364,8 @@
         "title": "Android",
         "position": 10,
         "icon_url": "",
-        "guide_key": "android"
+        "guide_key": "android",
+        "icon": "brands:android"
       },
       {
         "id": "default_apple",
@@ -359,7 +374,8 @@
         "title": "iPhone",
         "position": 20,
         "icon_url": "",
-        "guide_key": "apple"
+        "guide_key": "apple",
+        "icon": "brands:apple"
       },
       {
         "id": "default_linux",
@@ -368,7 +384,8 @@
         "title": "Linux",
         "position": 30,
         "icon_url": "",
-        "guide_key": "linux"
+        "guide_key": "linux",
+        "icon": "brands:linux"
       },
       {
         "id": "default_tv",
@@ -377,7 +394,8 @@
         "title": "Smart TV",
         "position": 30,
         "icon_url": "",
-        "guide_key": "tv"
+        "guide_key": "tv",
+        "icon": "tv"
       }
     ],
     "guides": [

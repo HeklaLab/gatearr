@@ -105,7 +105,7 @@ def public_access(request,key,node_id=''):
         if kind=='browser':href=service_url(db,service)
         elif kind=='link':href=node['url']
         elif kind=='guide':href='/access/'+key+'/guide/'+str(node['guide_id'])
-        entries.append({**node,'title':local(node,'title',request.state.locale,db),'href':href,'external':kind in ('link','browser')})
+        entries.append({**node,'icon':category_icon(node),'title':local(node,'title',request.state.locale,db),'href':href,'external':kind in ('link','browser')})
     return render(request,'access.html',service=service,entries=entries,crumbs=crumbs,current_title=local(current,'title',request.state.locale,db) if current else i18n.content(db,"service:"+service.key+":name",service.name,request.state.locale))
 
 @router.get('/access/{key}/{node_id}')
@@ -144,3 +144,11 @@ def edit(request: Request,key: str,data=Depends(form)):
         save(db,service,[old for old in nodes if old['id']!=ident]+[node],expected)
     else:raise ValueError('Invalid action')
     return redirect('/admin/access/'+key)
+
+
+def category_icon(node):
+    if node.get('icon') not in (None,'','link'):return node['icon']
+    identity=(node.get('id','')+' '+node.get('title','')).lower()
+    for words,icon in [(('browser',),'globe'),(('windows',),'brands:windows'),(('mac','iphone','ios'),'brands:apple'),(('android',),'brands:android'),(('linux',),'brands:linux'),(('computer','desktop'),'desktop'),(('phone','mobile'),'mobile-screen-button'),(('tv','television'),'tv')]:
+        if any(word in identity for word in words):return icon
+    return 'link'

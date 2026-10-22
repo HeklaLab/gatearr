@@ -3,7 +3,7 @@ import json,secrets,time
 from urllib.parse import urlencode
 from fastapi import APIRouter,Request,Depends,HTTPException
 from sqlalchemy import select,delete
-from .models import User,Session,MediaSession,SupportSession,SeerrSession,ToolGrant
+from .models import User,Session,MediaSession,SupportSession,SeerrSession,ToolGrant,AccessService
 from .security import encrypt,decrypt
 from .main import require_admin,require_user,form,redirect,render,limit
 from .mailer import config
@@ -59,7 +59,8 @@ def open_media(request:Request):
     from .emby import emby
     verified=emby.request('GET','/Users/'+user.emby_id,token=value['token'])
     if verified.get('Id')!=user.emby_id or verified.get('Policy',{}).get('IsDisabled'):raise HTTPException(403,'Media session expired')
-    base=config(db,'emby_link')
+    service=db.get(AccessService,'emby')
+    base=service.browser_url if service else ''
     if not base:raise HTTPException(400,'Configure the public media URL')
     from .connections import media_kind
     if media_kind(db)=='jellyfin':

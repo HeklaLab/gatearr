@@ -11,6 +11,7 @@ from .security import decrypt,digest
 from .integrations import request,normalized_id,SyncError
 
 FLAGS={2:'Administrator',4:'Manage settings',8:'Manage users',16:'Manage requests',32:'Request',64:'Vote',128:'Auto approve',256:'Auto approve movies',512:'Auto approve series',1024:'Request 4K',2048:'Request 4K movies',4096:'Request 4K series',8192:'Advanced requests',16384:'View requests',32768:'Auto approve 4K',65536:'Auto approve 4K movies',131072:'Auto approve 4K series',262144:'Request movies',524288:'Request series',1048576:'Manage issues',2097152:'View issues',4194304:'Create issues',8388608:'Auto request',16777216:'Auto request movies',33554432:'Auto request series',67108864:'View recently added',134217728:'View watchlists',268435456:'Manage blocklist',1073741824:'View blocklist'}
+CATEGORIES={bit:('admin' if bit in (2,4,8) else 'approval' if bit in (16,128,256,512,32768,65536,131072) else 'visibility' if bit in (64,16384,1048576,2097152,4194304,67108864,134217728,268435456,1073741824) else 'requests') for bit in FLAGS}
 KNOWN=sum(FLAGS)
 router=APIRouter()
 
@@ -28,6 +29,11 @@ def mask(value):
     if type(value) is not int or not 0<=value<=2147483647:raise SyncError('invalid_permissions')
     return value
 
+def read_permissions(client,rid):
+    data=request(client,'GET',f'api/v1/user/{rid}/settings/permissions')
+    if not isinstance(data,dict):raise SyncError('invalid_permissions')
+    return mask(data.get('permissions'))
+
 def selected_permissions(data,unknown=0):
     result=unknown & ~KNOWN
     for value in data.getlist('seerr_permission'):
@@ -43,21 +49,25 @@ def state(db,user):
     return row
 
 def observe(db,user,row,client,rid):
-    current=mask(request(client,'GET',f'api/v1/user/{rid}/settings/permissions').get('permissions'))
+    current=read_permissions(client,rid)
     source=fingerprint(db)
     if row.connection and row.connection!=source:
         # Never apply an intention meant for a different Seerr installation.
         row.baseline=row.individual=row.desired=None;row.pending=False;row.version+=1
     row.connection=source
     if row.baseline is None:row.baseline=current
-    row.observed=current;row.checked_at=int(time.time());row.error=''
+    if row.observed is not None and row.observed!=current and not row.pending:row.version+=1
+    row.observed=current;row.checked_at=int(time.time())
+    if row.desired is None or current==row.desired or row.error in ('Seerr unavailable, account not imported, or API permission denied','Seerr is not configured'):row.error=''
     return current
 
 def inspect_user(db,user):
     row=state(db,user)
     if configured(db):
         try:
-            with connection(db,user) as (c,rid):observe(db,user,row,c,rid)
+            with connection(db,user) as (c,rid):
+                row.remote_owner=rid==1
+                observe(db,user,row,c,rid)
         except (SyncError,httpx.HTTPError):row.error='Seerr unavailable, account not imported, or API permission denied'
     else:row.error='Seerr is not configured'
     db.commit();return row
@@ -71,7 +81,7 @@ def group_changed(db,user,group):
     if desired is None and row.desired is not None:desired=row.baseline
     row.desired=desired;row.pending=desired is not None;row.version+=1;row.error=''
 
-def apply(db,user):
+def apply(db,user,expected_observed=None):
     row=state(db,user)
     if row.desired is None:return
     expected=mask(row.desired);generation=row.version;source=fingerprint(db)
@@ -79,16 +89,18 @@ def apply(db,user):
     try:
         if row.connection and row.connection!=source:raise SyncError('configuration')
         with connection(db,user) as (c,rid):
-            current=mask(request(c,'GET',f'api/v1/user/{rid}/settings/permissions').get('permissions'))
+            current=read_permissions(c,rid)
+            if expected_observed is not None and current!=expected_observed:raise SyncError('Permissions changed before writing')
+            expected=(expected & KNOWN)|(current & ~KNOWN)
             if rid==1:raise SyncError('Seerr owner permissions cannot be changed')
             values.update(baseline=row.baseline if row.baseline is not None else current,connection=source)
             if current!=expected:request(c,'POST',f'api/v1/user/{rid}/settings/permissions',json={'permissions':expected})
-            actual=mask(request(c,'GET',f'api/v1/user/{rid}/settings/permissions').get('permissions'))
+            actual=read_permissions(c,rid)
             values['observed']=actual
             if actual!=expected:raise SyncError('verification_failed')
-        values.update(pending=False,error='')
+        values.update(pending=False,error='',desired=expected)
     except (SyncError,httpx.HTTPError) as exc:
-        values.update(error=exc.code if isinstance(exc,SyncError) else 'unavailable',pending=True)
+        values.update(error=exc.code if isinstance(exc,SyncError) else 'unavailable',pending=not (isinstance(exc,SyncError) and exc.code=='Permissions changed before writing'))
     # A newer group edit must retain its pending state while this request finishes.
     db.execute(update(SeerrPolicyState).where(SeerrPolicyState.user_id==user.id,SeerrPolicyState.version==generation).values(**values))
     db.commit()
@@ -146,7 +158,10 @@ def save(request:Request,uid:int,data=Depends(form)):
     if result.rowcount!=1:db.rollback();raise HTTPException(409,'Permissions changed. Reload the page.')
     from .main import set_config
     set_config(db,'seerr_access_'+str(uid),'true' if data.get('seerr_access')=='on' else 'false')
-    db.commit();apply(db,user);request.state.audit_subject=uid;request.state.audit_action='permissions.seerr'
+    db.commit();apply(db,user,expected_observed=actual)
+    db.refresh(row)
+    if row.pending or row.error:raise HTTPException(502,'Seerr did not confirm the requested permissions. Refresh and check the synchronization status.')
+    request.state.audit_subject=uid;request.state.audit_action='permissions.seerr'
     return redirect('/admin/users/'+str(uid)+'?tab=seerr&saved=permissions')
 
 @router.post('/admin/users/{uid}/seerr/retry')

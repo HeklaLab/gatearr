@@ -3,13 +3,13 @@ import ast,json,re
 from pathlib import Path
 root=Path(__file__).resolve().parents[1];path=root/'app/locales/en.json';catalog=json.loads(path.read_text())
 def add(value):
-    if isinstance(value,str) and value.strip() and len(value)<5001:catalog.setdefault(value,value)
+    if isinstance(value,str) and value.strip() and value not in ('HR','IMG','Alex') and len(value)<5001:catalog.setdefault(value,value)
 for file in (root/'app/templates').glob('*.html'):
     for m in re.finditer(r"(['\"])((?:\\.|(?!\1).)*?)\1",file.read_text()):
         try:value=ast.literal_eval(m[0])
         except (ValueError,SyntaxError):continue
         if re.match(r'[A-Z][a-zA-Z ]',value) and '<' not in value and '=' not in value:add(value)
-for file in [root/'app/static/studio.js',root/'app/static/visual-howto.js',root/'app/static/applications.js']:
+for file in [root/'app/static/studio.js',root/'app/static/visual-howto.js',root/'app/static/applications.js',root/'app/static/mail-editor.js']:
     if not file.exists():continue
     for m in re.finditer(r"'((?:\\.|[^'\\])*)'",file.read_text()):
         try:value=ast.literal_eval(m[0])
@@ -38,6 +38,16 @@ for file in [root/'app/seerr_permissions.py']:
         if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='FLAGS' for t in node.targets):
             for v in node.value.values:
                 if isinstance(v,ast.Constant):add(v.value)
+# Typed permission categories and field labels are also dynamic UI sources.
+for name in ('permissions.py','permission_ui.py'):
+    tree=ast.parse((root/'app'/name).read_text())
+    for node in ast.walk(tree):
+        if isinstance(node,ast.Dict):
+            for value in node.values:
+                if isinstance(value,ast.Constant) and isinstance(value.value,str) and ' ' in value.value and value.value[:1].isupper():add(value.value)
+        if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id in ('CATEGORIES','DAYS') for t in node.targets):
+            for value in ast.walk(node.value):
+                if isinstance(value,ast.Constant) and isinstance(value.value,str) and value.value[:1].isupper():add(value.value)
 for value in ('Processing','Awaiting approval','Movies left','Seasons left','Approved','Available','changed','not configured','not imported','failed — retry required','pending'):add(value)
 path.write_text(json.dumps(catalog,indent=2,ensure_ascii=False)+'\n');print('English sources:',len(catalog))
 
@@ -49,7 +59,7 @@ def ui(value):
     if isinstance(value,str) and value in catalog and re.match(r'[A-Z][A-Za-z ]',value) and '${' not in value and not any(x in value for x in ('<','=', '\n','" if ',"' if ")):interface.add(value)
 for file in (root/'app/templates').glob('*.html'):
     for node in Environment().parse(file.read_text()).find_all(nodes.Const):ui(node.value)
-for file in [root/'app/static/studio.js',root/'app/static/visual-howto.js',root/'app/static/applications.js']:
+for file in [root/'app/static/studio.js',root/'app/static/visual-howto.js',root/'app/static/applications.js',root/'app/static/mail-editor.js']:
     for m in re.finditer(r"'((?:\\.|[^'\\])*)'",file.read_text()):
         try:ui(ast.literal_eval(m[0]))
         except (ValueError,SyntaxError):pass
@@ -66,4 +76,16 @@ for node in ast.walk(ast.parse((root/'app/seerr_permissions.py').read_text())):
     if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='FLAGS' for t in node.targets):
         interface.update(v.value for v in node.value.values if isinstance(v,ast.Constant))
 interface.difference_update(('ArrowUp','ArrowDown','Enter'))
+(root/'app/interface_keys.json').write_text(json.dumps(sorted(interface),indent=2,ensure_ascii=False)+'\n')
+
+# Expose dynamically generated permission labels in the translation editor too.
+for filename in ('permissions.py','permission_ui.py'):
+    tree=ast.parse((root/'app'/filename).read_text())
+    for node in ast.walk(tree):
+        if isinstance(node,ast.Dict):
+            for value in node.values:
+                if isinstance(value,ast.Constant) and isinstance(value.value,str) and ' ' in value.value:ui(value.value)
+        if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id in ('CATEGORIES','DAYS') for t in node.targets):
+            for value in ast.walk(node.value):
+                if isinstance(value,ast.Constant):ui(value.value)
 (root/'app/interface_keys.json').write_text(json.dumps(sorted(interface),indent=2,ensure_ascii=False)+'\n')

@@ -8,3 +8,6 @@ body:has(.studio) .shell{display:block;max-width:1800px;width:100%;box-sizing:bo
 .studio-drag-ghost{position:fixed;z-index:10000;pointer-events:none;padding:12px 20px;border-radius:10px;background:#159eff;color:#051c40;border:2px solid #45cdf4;box-shadow:0 8px 30px #0008;font-weight:700}.studio-palette [data-kind]{touch-action:none}
 
 #studio-frame-wrap{position:relative}.studio-interaction-layer{position:absolute;inset:0;z-index:2;cursor:pointer;touch-action:pan-y}.studio-interaction-layer:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.studio-colors label{display:grid;grid-template-rows:minmax(32px,auto) 40px;align-items:end;gap:4px;margin:8px 0}.studio-colors input[type=color]{width:100%;height:40px;margin:0;min-width:0}.studio-inspector label:has(select){display:grid;gap:6px;min-width:0}.studio-inspector select{margin:0;min-width:0}
+
+/* Match the compact shared action controls. */
+.studio-buttons button{min-height:32px;height:auto;padding:7px 12px;font-weight:400}.studio-palette button{padding:8px 10px;font-weight:400}.studio-pages a{padding:9px 14px;border-radius:6px;font-size:13px;font-weight:400}.journey-card .journey-card-title{font-weight:500}

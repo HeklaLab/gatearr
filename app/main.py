@@ -143,6 +143,8 @@ async def scheduled():
         await run_in_threadpool(seerr_pending)
         from .seerr_quotas import run_pending as quota_pending
         await run_in_threadpool(quota_pending)
+        from .permission_refresh import refresh_due as refresh_permissions
+        await run_in_threadpool(refresh_permissions)
         from .usernames import run_pending as username_pending
         await run_in_threadpool(username_pending)
         from .versioning import refresh_due
@@ -258,16 +260,16 @@ async def context(request: Request, call_next):
 
 async def form(request: Request):
     # Starlette bounds multipart fields; also limit body size for urlencoded forms.
-    accepts_icon=request.url.path.startswith("/admin/access/") or request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer","/admin/assets")
+    accepts_icon=request.url.path.startswith("/admin/access/") or request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer","/admin/assets","/admin/settings")
     chunks, length = [], 0
     async for chunk in request.stream():
         length += len(chunk)
-        if length > (2*1024*1024+65536 if accepts_icon else 262144 if request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/')) else 65536):
+        if length > (2*1024*1024+65536 if accepts_icon else 262144 if request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/','/admin/groups/')) or request.url.path.endswith('/permissions/category') else 65536):
             raise HTTPException(413, 'Form too large')
         chunks.append(chunk)
     # Preserve the bounded body for Starlette's form parser after streaming it once.
     request._body = b"".join(chunks)
-    data = await request.form(max_fields=2000 if request.url.path.startswith("/admin/groups/") else 400 if request.url.path.startswith(("/admin/guides/", "/admin/access/")) else 100, max_files=1 if accepts_icon else 0)
+    data = await request.form(max_fields=2000 if request.url.path.startswith("/admin/groups/") or request.url.path.endswith("/permissions/category") else 400 if request.url.path.startswith(("/admin/guides/", "/admin/access/")) else 100, max_files=1 if accepts_icon else 0)
     supplied = str(data.get("csrf", ""))
     if not secrets.compare_digest(supplied, request.state.session.csrf):
         raise HTTPException(403, 'Form expired. Reload the page.')
@@ -279,7 +281,7 @@ async def form(request: Request):
         "/forgot": ("email",),
         "/reset": ("token", "password", "confirm"),
         "/verify-email": ("token",),
-        "/admin/settings": ("app_name", "public_url", "login_text", "logo_url", "emby_link"),
+        "/admin/settings": ("app_name", "public_url", "login_text", "logo_url"),
         "/admin/smtp": ("smtp_host", "smtp_port", "smtp_mode", "smtp_from"),
         "/admin/mail-templates": ("reset_subject", "reset_body", "verify_subject", "verify_body"),
         "/admin/menu": ("label", "url", "position"),
@@ -348,6 +350,8 @@ templates.env.filters['bitand']=lambda value,bit:int(value)&int(bit)
 
 def render(request, template, **kwargs):
     db = request.state.db
+    media_service=db.get(AccessService,'emby')
+    kwargs.setdefault('media_browser_url',media_service.browser_url if media_service else '')
     request.state.button_feedback=not kwargs.get("visual_preview",False)
     locale = request.state.locale
     custom_translations = i18n.overrides(db,locale)
@@ -360,7 +364,6 @@ def render(request, template, **kwargs):
     if request.url.path.startswith(('/setup','/admin/setup/')):
         values.update({key:('true' if key.endswith('_enabled') and value=='on' else value) for key,value in setup_values.items()})
         if 'url' in setup_values:values['emby_url']=setup_values['url'];values['seerr_url']=setup_values['url']
-        if 'browser_url' in setup_values:values['emby_link']=setup_values['browser_url']
     values["login_source"]=config(db,"login_text", "Access your services and manage your account with ease.")
     values["login_text"] = i18n.content(db,'branding:login_text',config(db,'login_text','Access your services and manage your account with ease.'),locale)
     layout = kwargs.pop("layout", None)
@@ -391,12 +394,17 @@ def render(request, template, **kwargs):
     release_status = versioning.status(db) if request.state.user and request.state.user.admin else {}
     footer_layout = kwargs.pop("footer_layout",None) or footer.load(db)
     branded_name = i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale)
+    raw_title=config(db,'browser_title','')
+    browser_title=i18n.content(db,'branding:browser_title',raw_title,locale).replace('${app_name}',branded_name) if raw_title else branded_name+' '+translator('· Your space')
+    logo_url=values.get('logo_url') or ('/static/gatearr-logo.png' if values.get('app_name',settings.app_name)=='Gatearr' else '')
+    brand_display=values.get('brand_display','auto')
     from .themes import load as load_themes
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
         "default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
         "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"tool_names":("radarr","sonarr","bazarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(values.get('logo_url')) or not logo_url),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
         "asset_version":str(max(p.stat().st_mtime_ns for p in Path("app/static").rglob("*") if p.is_file() and p.suffix in (".css",".js",".json"))), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
         "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,
@@ -732,8 +740,9 @@ def admin_section(request:Request,section:str):
     require_admin(request)
     if section=='services':return redirect('/admin/integrations')
     from .sync_status import user_statuses
+    from .connection_health import read_diagnostics
     db=request.state.db
-    return render(request,'applications.html' if section=='services' else 'admin.html',section=section,section_title=ADMIN_SECTIONS[section],sync_statuses=user_statuses(db,request.state.locale),users=list(db.scalars(select(User).where(User.emby_id.is_not(None)).order_by(User.id))),items=list(db.scalars(select(MenuItem).order_by(MenuItem.position,MenuItem.id))),mail_defaults=DEFAULTS)
+    return render(request,'applications.html' if section=='services' else 'admin.html',section=section,section_title=ADMIN_SECTIONS[section],smtp_check=read_diagnostics(db,'smtp_connection_diagnostics'),pending_invites={t.user_id:t.email for t in db.scalars(select(Token).where(Token.purpose=='verify',Token.used.is_(False)).order_by(Token.expires))},sync_statuses=user_statuses(db,request.state.locale),users=list(db.scalars(select(User).where(User.emby_id.is_not(None)).order_by(User.id))),items=list(db.scalars(select(MenuItem).order_by(MenuItem.position,MenuItem.id))),mail_defaults=DEFAULTS)
 
 
 def section_handler(section):
@@ -758,7 +767,16 @@ def admin_settings(request: Request, data=Depends(form)):
         raise ValueError('The public URL must be at the domain root')
     if settings.secure_cookie and not public.startswith("https://"):
         raise ValueError('The public URL must use HTTPS')
-    values = {"login_text": str(data["login_text"])[:2000], "default_locale":i18n.default_language(request.state.db), "app_name":str(data["app_name"]).strip()[:80], "logo_url":url_ok(data["logo_url"],optional=True), "emby_link":url_ok(data["emby_link"],optional=True), "public_url":public}
+    name=str(data['app_name']).strip()
+    title=str(data.get('browser_title',config(db,'browser_title',''))).strip()
+    display=str(data.get('brand_display',config(db,'brand_display','auto')))
+    if not name or len(name)>80 or len(title)>200 or any(ord(c)<32 for c in name+title):raise ValueError('Enter a valid application name and browser title')
+    if display not in ('auto','logo','name','both'):raise ValueError('Invalid branding display')
+    from .icons import icon_value
+    from starlette.datastructures import FormData
+    logo=icon_value(db,FormData([*[(key,value) for key,value in data.multi_items() if key!='icon_url'],('icon_url','' if data.get('remove_logo')=='on' else data.get('logo_url',config(db,'logo_url','')))]))
+    if data.get('remove_logo')=='on':logo=''
+    values = {'login_text':str(data['login_text'])[:2000],'default_locale':i18n.default_language(db),'app_name':name,'logo_url':logo,'browser_title':title,'brand_display':display,'public_url':public}
 
     for key, value in values.items():
         set_config(db, key, value)
@@ -781,6 +799,8 @@ def admin_smtp(request: Request, data=Depends(form)):
         values["smtp_password"] = ""
     for key, value in values.items():
         set_config(db, key, value)
+    diagnostic=db.get(Config,"smtp_connection_diagnostics")
+    if diagnostic:db.delete(diagnostic)
     db.commit()
     return redirect("/admin/emails")
 
@@ -810,6 +830,14 @@ def mail_templates(request: Request, data=Depends(form)):
             i18n.store_content(request.state.db,'mail:'+purpose+':'+part,config(request.state.db,key,DEFAULTS[key]),mail_locale,value)
     request.state.db.commit()
     return redirect("/admin?mail_locale="+mail_locale)
+
+@app.post('/admin/smtp-connection-test')
+def smtp_connection_test(request:Request,data=Depends(form)):
+    require_admin(request);limit(request,'smtp_connection_test',maximum=10)
+    from .connection_health import smtp_probe
+    set_config(request.state.db,'smtp_connection_diagnostics',json.dumps(smtp_probe(request.state.db)))
+    request.state.db.commit()
+    return redirect('/admin/emails#smtp')
 
 @app.post("/admin/smtp-test")
 def smtp_test(request: Request, data=Depends(form)):

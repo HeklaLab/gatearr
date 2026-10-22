@@ -70,7 +70,7 @@ def test_editor_preview_and_test_do_not_save_draft_or_create_real_token(client,m
         assert db.scalar(select(Token)) is None
     page=client.get('/admin/mail-editor?mail_locale=en')
     assert 'script-src \'self\'' in page.headers['content-security-policy']
-    assert 'sandbox=""' in page.text and 'src="/static/mail-editor.js?v=' in page.text
+    assert 'sandbox="allow-same-origin"' in page.text and 'allow-scripts' not in page.text and 'src="/static/mail-editor.js?v=' in page.text
     assert "script-src 'self'" in client.get('/account').headers['content-security-policy']
 
 

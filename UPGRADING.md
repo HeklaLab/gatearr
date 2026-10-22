@@ -1,4 +1,14 @@
-# Upgrading to 0.3.2
+# Upgrading to 0.3.3 — public beta
+
+Back up the complete `/data` volume, including its existing encryption key. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.3.3` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+Migration 0019 merges the former Branding “Emby web URL” into the media application's Browser URL in Applications & API. An existing application address takes precedence; otherwise the old address is carried over. Browser links and automatic Emby login use the same value. API addresses, credentials, accounts, group policies, uploaded assets and published layouts are retained. A database rollback requires restoring the matching backup.
+
+User and group permissions now use categorized native controls and separate media-server, Seerr and admin-tools tabs. Observed permissions refresh every five minutes without writing remote changes; saves read fresh values and reject stale edits. Reload an editor if another administrator or a native application changed its settings. Unsupported structured fields remain read-only rather than being presented as raw JSON. Review permissions with a limited account on your actual server.
+
+Email templates remain stored as sanitized HTML and can be edited in the block studio. Existing customized guides, themes, email templates and portal content are retained. The explicit content reset is optional and is not part of upgrading.
+
+## Previous upgrade: 0.3.2
 
 The former untouched Seerr factory guide becomes a direct link. Customized guides are preserved. New installations and the explicit content reset use the updated Emby Computer (Windows/Mac/Linux), Phone (Android/iPhone) and Smart TV guide tree.
 

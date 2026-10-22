@@ -165,7 +165,7 @@ jobs:
           Path('SHA256SUMS.txt').write_text(''.join(hashlib.sha256(Path(name).read_bytes()).hexdigest()+'  '+name+'\n' for name in ('gatearr.zip','gatearr-docker.zip')))
           PYCODE
           if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" --verify-tag --title "Gatearr $version" --notes-file RELEASE_NOTES.md --repo "$GITHUB_REPOSITORY"
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "Gatearr $version — Public beta" --latest --notes-file RELEASE_NOTES.md --repo "$GITHUB_REPOSITORY"
           fi
           gh release upload "$GITHUB_REF_NAME" gatearr.zip gatearr-docker.zip SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
 
@@ -231,4 +231,4 @@ jobs:
                   archive.write(name,'gatearr/'+name)
           Path('SHA256SUMS.txt').write_text(''.join(hashlib.sha256(Path(name).read_bytes()).hexdigest()+'  '+name+'\n' for name in ('gatearr.zip','gatearr-docker.zip')))
           PYCODE
-          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "Gatearr $VERSION" --notes-file RELEASE_NOTES.md gatearr.zip gatearr-docker.zip SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "Gatearr $VERSION — Public beta" --latest --notes-file RELEASE_NOTES.md gatearr.zip gatearr-docker.zip SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"

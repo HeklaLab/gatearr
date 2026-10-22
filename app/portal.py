@@ -46,6 +46,8 @@ def validate(layout):
         validate_style(block.get('style',{}))
         if block['kind']=='spacer' and (type(block.get('size',32)) is not int or not 0<=block.get('size',32)<=2000):raise ValueError('Invalid spacing size')
         if block['kind']=='applications':
+            subtitles=block.get('subtitles',{})
+            if not isinstance(subtitles,dict) or len(subtitles)>100 or any(not isinstance(k,str) or not isinstance(v,str) or len(v)>300 for k,v in subtitles.items()):raise ValueError('Invalid application subtitles')
             selected=block.get('applications',[])
             if not isinstance(selected,list) or len(selected)>100 or any(not isinstance(k,str) or not re.fullmatch(r'(?:access:[a-z0-9_-]{1,80}|menu:[0-9]+|account|radarr|sonarr|bazarr)',k) for k in selected) or len(set(selected))!=len(selected):raise ValueError('Invalid application selection')
             if len(selected)>block.get('columns',3):raise ValueError('Select no more applications than the configured number')
@@ -104,7 +106,9 @@ def for_display(layout,locale,user=None,db=None,editor=False):
     from .applications import catalog
     available={a['key']:a for a in catalog(db,user,editor=editor,locale=locale)} if db is not None else {}
     for b in indexed.values():
-        if b['kind']=='applications':b['cards']=[available[key] for key in b.get('applications',[]) if key in available]
+        if b['kind']=='applications':
+            b['cards']=[dict(available[key],subtitle=i18n.content(db,'block:'+b['id']+':application-subtitle:'+key,b.get('subtitles',{}).get(key,{'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}.get(key,'Open application')),locale)) for key in b.get('applications',[]) if key in available]
+            b['visible_columns']=min(b.get('columns',3),max(1,len(b['cards'])))
     if db is not None and user and not editor and not getattr(user,'_preview',False) and any(any(a['key']=='access:seerr' for a in b.get('cards',[])) for b in indexed.values()):
         from .seerr_permissions import summary
         statistics=summary(db,user)

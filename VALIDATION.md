@@ -1,3 +1,12 @@
+# Validation — Gatearr 0.3.3 — 22 October 2026
+
+- **260 automated tests passed** locally on Python 3.12, with one existing Starlette/httpx deprecation warning.
+- Regression checks cover typed Emby/Jellyfin policy controls, stale-write rejection, read-only refresh, group ownership and permission tabs, Seerr flags/quotas, the block email studio, branding uploads and browser titles, and public media URL migration 0019.
+- Browser review covered group tab navigation, user/group admin-tools spacing, sticky Logged as banner, email drag/drop and undo, and narrow editor layouts. Native permissions were exercised using simulated APIs; no production Emby, Jellyfin or Seerr validation is claimed.
+- Local isolated HTTP/SMTP smoke exercises setup, account creation/recovery, group policy write/readback and visual editors against simulated services. The smoke now checks typed controls and native policy readback instead of the removed raw-code display.
+- Docker validation and AMD64/ARM64 container publication are gated by GitHub Actions. No local Docker engine is available.
+- Translation structure and placeholders are tested; full native linguistic review of all supported languages is not claimed.
+
 # Validation — Gatearr 0.3.1 — 21 October 2026
 
 - **198 automated tests passed** for the full application suite, with one existing Starlette/httpx deprecation warning.

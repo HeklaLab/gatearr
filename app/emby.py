@@ -103,6 +103,31 @@ class EmbyClient:
             result.append({'Id':str(permission_id).replace('-','').lower(),'Name':str(item['Name'])})
         return result
 
+    def permission_options(self, source):
+        if source=='folders' and self.kind=='emby':
+            data=self.request('GET','/Library/SelectableMediaFolders',token=_ADMIN,timeout=5)
+            if not isinstance(data,list):raise EmbyError('Invalid permission metadata')
+            return [{'Id':str(folder['Guid'])+'_'+str(sub['Id']),'Name':str(folder['Name'])+' / '+str(sub['Name'])} for folder in data if folder.get('Guid') and folder.get('Name') for sub in folder.get('SubFolders',[]) if sub.get('Id') and sub.get('Name') and sub.get('IsUserAccessConfigurable',True)]
+        paths={'devices':'/Devices','ratings':'/Localization/ParentalRatings','folders':'/Library/MediaFolders','channels':'/LiveTv/Channels'}
+        if source not in paths:raise EmbyError('Unsupported permission metadata')
+        params={'Limit':200,'StartIndex':0}
+        if source=='folders':params['IsHidden']='false'
+        rows=[]
+        for _ in range(500):
+            data=self.request('GET',paths[source],token=_ADMIN,params=params,timeout=5)
+            if isinstance(data,list):rows.extend(data);break
+            if not isinstance(data,dict) or not isinstance(data.get('Items'),list):raise EmbyError('Invalid permission metadata')
+            rows.extend(data['Items']);params['StartIndex']+=len(data['Items'])
+            if not data['Items'] or params['StartIndex']>=data.get('TotalRecordCount',params['StartIndex']):break
+        else:raise EmbyError('Invalid permission metadata pagination')
+        result=[]
+        for item in rows:
+            if not isinstance(item,dict):raise EmbyError('Invalid permission metadata')
+            identifier=item.get('Value') if source=='ratings' else item.get('Id')
+            name=item.get('Name')
+            if identifier is not None and name:result.append({'Id':identifier,'Name':str(name)})
+        return result
+
     def copy_options(self):
         result = self.request("GET", "/Users/CopyDataOptions", token=_ADMIN)
         if not isinstance(result, dict) or not isinstance(result.get("DataOptions"), list):

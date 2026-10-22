@@ -21,7 +21,7 @@ def howto_editor(request,key):
     if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
     db=request.state.db;service=access.service_or_404(db,key)
     rows=list(db.scalars(select(Guide).where(Guide.service_key==key)))
-    return render(request,'visual_howto.html',howto_data={'type':'choices','key':key,'name':service.name,'version':service.access_version,'nodes':access.load(service,True),'guides':[{'id':r.id,'title':json.loads(r.draft).get('title',''),'published':bool(r.published)} for r in rows],'server_url':service.server_url,'root':json.loads(config(db,'howto_root_draft_'+key,'{}')),'browser_url':service.browser_url},service=service)
+    return render(request,'visual_howto.html',howto_data={'type':'choices','key':key,'name':service.name,'version':service.access_version,'nodes':[{**node,'icon':access.category_icon(node)} for node in access.load(service,True)],'guides':[{'id':r.id,'title':json.loads(r.draft).get('title',''),'published':bool(r.published)} for r in rows],'server_url':service.server_url,'root':json.loads(config(db,'howto_root_draft_'+key,'{}')),'browser_url':service.browser_url},service=service)
 
 def guide_editor(request,guide_id):
     require_admin(request);row=guides.guide_or_404(request.state.db,guide_id)
@@ -58,7 +58,7 @@ def choices(request:Request,key:str,action:str,data=Depends(form)):
             if n['kind']=='guide':href='/access/'+key+'/guide/'+str(n['guide_id'])+'?preview=1'
             if n['kind']=='link':href=n['url']
             if n['kind']=='browser':href=guides.service_url(db,service) or '#'
-            entries.append({**n,'href':href,'external':n['kind'] in ('link','browser')})
+            entries.append({**n,'icon':access.category_icon(n),'href':href,'external':n['kind'] in ('link','browser')})
         crumbs=[];node=current
         while node:
             crumbs.append({'title':node['title'],'href':'/access/'+key+'/'+node['id']});node=index.get(node.get('parent',''))

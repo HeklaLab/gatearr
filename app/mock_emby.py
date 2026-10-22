@@ -12,6 +12,7 @@ DB = os.getenv("MOCK_DB", "/data/mock.db")
 COPY_OPTIONS = [{"Id": "Policy", "Name": "Library access and permissions"}, {"Id": "Configuration", "Name": "User configuration"}, {"Id": "DisplayPreferences", "Name": "Home screen and display preferences"}]
 LIBRARIES = [{"ItemId":"1001","Guid":"11111111111111111111111111111111","Name":"Movies"}, {"ItemId":"1002","Guid":"22222222222222222222222222222222","Name":"Films"}, {"ItemId":"1003","Guid":"33333333333333333333333333333333","Name":"TV Shows"}]
 DEFAULT_PROFILE = {"Policy": {"SimultaneousStreamLimit":0,"EnableSubtitleDownloading":True,"EnableSubtitleManagement":False,"EnableMediaPlayback":True,"EnableContentDownloading":False,"EnableRemoteAccess":True,"RemoteClientBitrateLimit":0,"ExcludedSubFolders":[],"IsAdministrator": False, "EnableAllFolders": False, "EnabledFolders": ["11111111111111111111111111111111","22222222222222222222222222222222"]}, "Configuration": {"OrderedViews": ["films", "movies"], "HidePlayedInLatest": True}, "DisplayPreferences": {"homeSections": ["myMedia", "continueWatching", "latestMedia"]}}
+DEFAULT_PROFILE['Policy'].update(AccessSchedules=[],EnabledDevices=[],EnableAllDevices=True,MaxParentalRating=None,BlockedTags=[],BlockUnratedItems=[],EnableAllChannels=False,EnabledChannels=[],EnableVideoPlaybackTranscoding=True,EnableAudioPlaybackTranscoding=True,EnablePlaybackRemuxing=True,EnableContentDeletion=False,EnableContentDeletionFromFolders=[])
 API_KEY = os.getenv("MOCK_API_KEY", "demo-emby-key")
 def connection():
     db = sqlite3.connect(DB)
@@ -31,6 +32,7 @@ def profile(user_id):
     with connection() as db:
         row = db.execute("SELECT body FROM profiles WHERE user_id=?", (user_id,)).fetchone()
     data=json.loads(row[0]) if row else deepcopy(DEFAULT_PROFILE)
+    for key,value in DEFAULT_PROFILE['Policy'].items():data['Policy'].setdefault(key,deepcopy(value))
     aliases={'movies':'11111111111111111111111111111111','films':'22222222222222222222222222222222','series':'33333333333333333333333333333333'}
     data['Policy']['EnabledFolders']=[aliases.get(value,value) for value in data['Policy'].get('EnabledFolders',[])]
     return data
@@ -86,6 +88,26 @@ def copy_options(request: Request):
 def libraries(request: Request, StartIndex: int = 0, Limit: int = 200):
     authorize(request)
     return {"Items": LIBRARIES[StartIndex:StartIndex+Limit], "TotalRecordCount": len(LIBRARIES)}
+
+@app.get('/emby/Library/SelectableMediaFolders')
+def selectable_folders(request:Request):
+    authorize(request)
+    return [{**folder,'SubFolders':[{'Id':'family','Name':'Family','IsUserAccessConfigurable':True}]} for folder in LIBRARIES]
+
+@app.get('/emby/Devices')
+def devices(request:Request):
+    authorize(request)
+    return {'Items':[{'Id':'demo-browser','Name':'Web browser'},{'Id':'demo-tv','Name':'Living room TV'}],'TotalRecordCount':2}
+
+@app.get('/emby/Localization/ParentalRatings')
+def parental_ratings(request:Request):
+    authorize(request)
+    return [{'Name':'G','Value':1},{'Name':'PG','Value':5},{'Name':'PG-13','Value':7},{'Name':'R','Value':9}]
+
+@app.get('/emby/LiveTv/Channels')
+def channels(request:Request):
+    authorize(request)
+    return {'Items':[],'TotalRecordCount':0}
 
 @app.post("/emby/Users/New")
 async def create_user(request: Request):

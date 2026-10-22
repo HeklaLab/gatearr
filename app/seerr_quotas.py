@@ -41,9 +41,11 @@ def inspect(db,user):
         current=fingerprint(db)
         if row.connection and row.connection!=current:
             row.baseline=row.individual=row.desired='{}';row.pending=False;row.version+=1
+        if row.observed!='{}' and json.loads(row.observed)!=values and not row.pending:row.version+=1
         row.connection=current;row.observed=json.dumps(values)
         if row.baseline=='{}':row.baseline=row.observed
-        row.checked_at=int(time.time());row.error=''
+        row.checked_at=int(time.time())
+        if row.desired=='{}' or json.loads(row.desired)==values or row.error in ('Seerr unavailable, account not imported, or API permission denied','Seerr is not configured'):row.error=''
     except (SyncError,httpx.HTTPError):row.error='Seerr unavailable, account not imported, or API permission denied'
     db.commit();return row
 
@@ -65,7 +67,7 @@ def apply(db,user):
             if row.baseline=='{}':changes['baseline']=json.dumps(current)
             changes['connection']=source
             if current!=expected:
-                payload={k:original.get(k) for k in PRESERVE};payload.update(expected)
+                payload={k:original[k] for k in PRESERVE if k in original};payload.update(expected)
                 remote(client,'POST',f'api/v1/user/{rid}/settings/main',json=payload)
             _,actual=read(client,rid);changes['observed']=json.dumps(actual)
             if actual!=expected:raise SyncError('Seerr did not apply these quotas. Check the account permissions.')
@@ -94,5 +96,8 @@ def save(request:Request,uid:int,data=Depends(form)):
     values=selected(data)
     result=db.execute(update(SeerrQuotaState).where(SeerrQuotaState.user_id==uid,SeerrQuotaState.version==int(data['version'])).values(individual=json.dumps(values),desired=json.dumps(values) if values else row.baseline,pending=True,version=row.version+1))
     if result.rowcount!=1:db.rollback();raise HTTPException(409,'Permissions changed. Reload the page.')
-    db.commit();apply(db,user);request.state.audit_subject=uid;request.state.audit_action='seerr.quotas'
+    db.commit();apply(db,user)
+    db.refresh(row)
+    if row.pending or row.error:raise HTTPException(502,'Seerr did not confirm the requested quotas. Refresh and check the synchronization status.')
+    request.state.audit_subject=uid;request.state.audit_action='seerr.quotas'
     return redirect('/admin/users/'+str(uid)+'?tab=seerr&saved=quotas')
