@@ -29,7 +29,8 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q
       - run: docker compose -p gatearr-ci -f compose.demo.yaml up -d --build --wait
-      - run: python scripts/smoke.py
+      # Run inside the Compose network so mock-emby and Mailpit resolve.
+      - run: docker compose -p gatearr-ci -f compose.demo.yaml exec -T gatearr python scripts/smoke.py --mailpit http://mailpit:8025
       - if: failure()
         run: docker compose -p gatearr-ci -f compose.demo.yaml logs --no-color
       - if: always()
