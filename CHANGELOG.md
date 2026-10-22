@@ -1,3 +1,22 @@
+# Gatearr 0.3.4
+
+## Bug fixes
+
+- Recompute update availability against the installed version, including cached results; identical versions no longer trigger an update badge.
+- Image widths set in the email builder are respected in editing, preview and saved messages.
+
+## Interface adjustments
+
+- Permission selections expand with the page, without nested scroll regions; library controls use the available width.
+- Email template and language selectors, subject, save status and editing actions use an aligned responsive header.
+- Email block deletion uses the same red danger button as the portal builder.
+- Updates and feedback share the left overview column; customization reset is on the right.
+- Release history shows each version once, expands only the installed version and marks it with a green current-version indicator.
+
+## Improvements
+
+- Reviewed interface terminology across all 21 bundled languages, with natural app wording for navigation, accounts, permissions, guides, email editing and updates; administrator overrides are preserved.
+
 # Gatearr 0.3.3
 
 ## Bug fixes

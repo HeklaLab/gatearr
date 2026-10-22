@@ -7,7 +7,7 @@
   if(event.defaultPrevented)return;const form=event.target,button=event.submitter||form.querySelector('button:not([type=button])');if(!button||form.method.toLowerCase()!=='post')return;
   const action=new URL(button.getAttribute('formaction')||form.getAttribute('action')||location.href,location.href);if(action.origin!==location.origin)return;
   if(busy.has(button)){event.preventDefault();return;}
-  const native=!action.pathname.startsWith('/admin/')&&!['/account/preferences','/account/language','/language'].includes(action.pathname)||action.pathname.endsWith('/assist')||action.pathname.startsWith('/admin/setup/')||['preview','test'].includes(button.value)||action.pathname.includes('smtp-test');
+  const native=!action.pathname.startsWith('/admin/')&&!['/account/preferences','/account/language','/language'].includes(action.pathname)||action.pathname.endsWith('/assist')||action.pathname.startsWith('/admin/setup/')||['preview','test'].includes(button.value)||action.pathname.includes('smtp-test')||action.pathname==='/admin/updates/check';
   if(native){start(button,true);return;}
   event.preventDefault();const data=new FormData(form,button);start(button);button.disabled=true;
   try{

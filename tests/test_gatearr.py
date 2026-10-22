@@ -1,10 +1,11 @@
 import json
+from html import unescape
 from copy import deepcopy
 from types import SimpleNamespace
 import httpx
 import pytest
 from sqlalchemy import select
-from app import main, portal, integrations
+from app import main, portal, integrations, i18n
 from app.db import SessionLocal
 from app.models import User, Config, IntegrationJob, Token
 from app.security import encrypt, decrypt, digest
@@ -19,7 +20,7 @@ def test_languages_public_account_and_errors(client):
     setup(client)
     assert post(client,'/language',{'locale':'en','next':'/admin'},'/admin').status_code == 303
     page=client.get('/admin').text
-    assert 'Branding' in page and 'Emails' in page
+    assert i18n.translate('Branding','en') in page and i18n.translate('Emails','en') in page
     page=client.get('/admin/emails').text
     assert 'SMTP server' in page and 'Email templates' in page
     assert 'No TLS (test network)' in page
@@ -216,7 +217,7 @@ def test_catalogs_match_and_builder_english(client):
     post(client,'/language',{'locale':'en','next':'/admin'},'/admin')
     for path,expected in [('/admin/portal','Make it yours.'),('/admin/integrations','API connections and notifications')]:
         page=client.get(path)
-        assert page.status_code==200 and expected in page.text
+        assert page.status_code==200 and i18n.translate(expected,'en') in unescape(page.text)
 
 
 def test_email_verification_queues_integrations_only_after_proof(client,sent):

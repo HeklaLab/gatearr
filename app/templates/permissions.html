@@ -4,18 +4,18 @@
 <p class="permission-refresh-notice" role="status" hidden>{{ _('Permissions changed on the server. Refresh this page to load the latest values; your unsaved changes have been kept.') }} <a href="?tab=emby">{{ _('Refresh permissions') }}</a></p>
 {% if policy_state.error %}<p class="save-error" role="alert">{{ _(policy_state.error) }}</p>{% endif %}
 {% if request.query_params.get('saved')=='libraries' %}<p class="success-message" role="status">{{ _('Library access saved and verified in {server}.',server=media_name) }}</p>{% endif %}<div class="permission-categories">
-{% for category in permission_categories %}<section class="card permission-category"><h3>{{ _(category.title) }}</h3>
+{% for category in permission_categories %}<section class="card permission-category permission-category-{{ category.id }}"><h3>{{ _(category.title) }}</h3>
 <form method="post" action="/admin/users/{{ member.id }}/permissions/category">
 <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="version" value="{{ policy_state.version }}"><input type="hidden" name="category" value="{{ category.id }}">
 <fieldset {% if owner_group or policy_state.error=='Media server unreachable; showing the last observed permissions' %}disabled{% endif %}>
-{% for field in category.fields %}<div class="policy-control policy-{{ field.editor }}">
-<div class="policy-control-heading"><label for="policy-{{ field.key }}">{{ content('policy-label:'+field.key,field.label) }}</label><span class="sync-indicator sync-{{ field.access_color if field.access_color is defined else field.color }}" title="{{ _(field.detail) }}" aria-label="{{ _(field.detail) }}">●</span></div>
+{% for field in category.fields %}<{% if field.editor=='choices' %}details{% else %}div{% endif %} class="policy-control policy-{{ 'choice-field' if field.editor=='choices' else field.editor }}" {% if field.editor=='choices' and field.key=='EnabledFolders' %}open{% endif %}>
+<{% if field.editor=='choices' %}summary{% else %}div{% endif %} class="policy-control-heading">{% if field.editor=='choices' %}<span>{{ content('policy-label:'+field.key,field.label) }} <small class="hint">({{ field.options|length }})</small></span>{% else %}<label for="policy-{{ field.key }}">{{ content('policy-label:'+field.key,field.label) }}</label>{% endif %}<span class="sync-indicator sync-{{ field.access_color if field.access_color is defined else field.color }}" title="{{ _(field.detail) }}" aria-label="{{ _(field.detail) }}">●</span></{% if field.editor=='choices' %}summary{% else %}div{% endif %}>
 {% if field.editable and not field.unavailable %}
 <input type="hidden" name="fields" value="{{ field.key }}"><input type="hidden" name="hash_{{ field.key }}" value="{{ field.hash }}">
 {% set control_name=field.key %}{% include 'policy_input.html' %}
 {% else %}<p class="hint">{{ _('Server information unavailable. Refresh before editing.' if field.unavailable else 'Managed by the media server') }} · {{ _(field.display) }}</p>{% endif %}
 {% if field.desired and field.color!='green' %}<small class="sync-indicator sync-{{ field.color }}">{{ _(field.detail) }}</small>{% endif %}
-</div>{% endfor %}
+</{% if field.editor=='choices' %}details{% else %}div{% endif %}>{% endfor %}
 {% if category.id=='security' %}<label class="check"><input type="checkbox" name="confirm_sensitive">{{ _('Confirm the account security change') }}</label>{% endif %}
 {% if category.can_edit %}<div class="form-actions"><button>{{ _('Save changes') }}</button><button name="action" value="inherit" class="secondary">{{ _('Use original values') }}</button></div>{% endif %}
 </fieldset></form></section>{% endfor %}</div>

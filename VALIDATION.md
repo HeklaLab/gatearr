@@ -1,3 +1,13 @@
+# Validation — Gatearr 0.3.4 — 22 October 2026
+
+- **286 automated tests passed**, with the existing Starlette/httpx deprecation warning.
+- Reviewed common interface terminology in all 21 bundled catalogs. Catalog keys and all interpolation placeholders are unchanged. Automated page checks cover every non-English language, RTL markup for Arabic/Hebrew, and persistence/priority of custom interface and email translations. This is a focused terminology review, not independent native-speaker proofreading of every catalog sentence.
+- Regressions cover stale update-cache results after upgrade, semantic version equality despite a different build revision, cache invalidation, a single collapsed/open release history, and image width preservation through email save/reload and multipart rendering.
+- Browser checks verified a 140 px image renders at 140 px and its preview carries the same width; Delete uses the shared danger color. Temporary email edits were discarded without saving.
+- At 390 px, Updates, email editing and user permissions fit the page without horizontal overflow. Permission choices have no nested scrolling or maximum-height clipping. Only the installed release is expanded.
+- Local isolated HTTP/SMTP smoke passed against simulated media and Seerr servers, including account recovery, native policy readback and editor flows. No production-server or local Docker validation is claimed.
+- The existing demonstration data was preserved. The expanded 30-library fixture is confined to the local preview launcher and is not included in the release. GitHub Actions gates publication on Docker startup and HTTP/SMTP validation.
+
 # Validation — Gatearr 0.3.3 — 22 October 2026
 
 - **260 automated tests passed** locally on Python 3.12, with one existing Starlette/httpx deprecation warning.

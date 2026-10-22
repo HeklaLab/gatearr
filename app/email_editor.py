@@ -28,7 +28,7 @@ def editor(request,purpose,locale,subject=None,html=None,notice=''):
     html=clean(html)
     sample={'app_name':config(db,'app_name',settings.app_name),'username':'Alex','minutes':'30','link':config(db,'public_url',settings.public_url)+('/reset?token=preview' if purpose=='reset' else '/verify-email?token=preview')}
     preview=document(interpolate(html,sample))
-    return render(request,'mail_editor.html',edit_locale=locale,purpose=purpose,purposes=PURPOSES,subject=subject,html=html,mail_preview=preview,notice=notice,edit_language_name=i18n.languages(db,all=True)[locale],source_stamp=i18n.source_hash(config(db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(db,purpose)))
+    return render(request,'mail_editor.html',edit_locale=locale,mail_languages=i18n.languages(db,all=True),purpose=purpose,purposes=PURPOSES,subject=subject,html=html,mail_preview=preview,notice=notice,edit_language_name=i18n.languages(db,all=True)[locale],source_stamp=i18n.source_hash(config(db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(db,purpose)))
 
 @router.get('/admin/mail-editor')
 def page(request:Request):

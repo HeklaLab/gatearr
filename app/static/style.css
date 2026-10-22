@@ -54,7 +54,7 @@ button,.button{margin-block:6px;max-width:100%}button+button,button+.button,.but
 
 .button+.admin-cards,.button+.columns{margin-top:24px}.tool-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
-.footer-column-editor .rich-editor{font-size:16px;font-weight:400}.rich-editor img{max-height:160px;width:auto;object-fit:contain}.rich-editor a{color:var(--accent);text-decoration:underline}
+.footer-column-editor .rich-editor{font-size:16px;font-weight:400}.footer-column-editor .rich-editor img{max-height:160px;width:auto;object-fit:contain}.rich-editor a{color:var(--accent);text-decoration:underline}
 
 /* 0.2.2: visible controls and aligned service/account forms. */
 button.secondary,.button.secondary{background:#1c2e48;border:1px solid #547295;color:#f0f6ff}.admin-navigation a,.admin-tabs a{background:#142238;border:1px solid #435b79;color:#edf4ff}

@@ -2,15 +2,15 @@
 
 **A self-hosted front door for your media server: account self-service, user groups, permissions, Access guides and a portal you can make your own.**
 
-**v0.3.3 is the current public beta.** Gatearr entered public beta with v0.3.2. Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
+**v0.3.4 is the current public beta.** Gatearr entered public beta with v0.3.2. Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
 
-[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.3.3) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
+[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.3.4) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
 
 If something is broken, confusing or missing, please open an issue. Include versions, deployment details and reproduction steps; remove secrets and personal information from logs/screenshots. This is an early beta: back up persistent data and test permission changes with a limited account before applying them broadly.
 
 ## Interface preview — v0.3.2
 
-Current public-beta screenshots, captured from a configured demo with fictional accounts and example addresses.
+Screenshots from v0.3.2, captured from a configured demo with fictional accounts and example addresses.
 
 ### Your applications in one place
 
@@ -142,7 +142,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.3` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.3.4` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 

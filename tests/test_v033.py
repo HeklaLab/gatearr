@@ -54,7 +54,7 @@ def test_identity_and_security_navigation(client):
     assert 'Open portal as this user' not in page
     nav=client.get('/admin/security').text
     assert 'href="/admin/security"' not in nav.split('</nav>')[0]
-    assert nav.index('Create / clone users')<nav.index('>Security</a>')
+    assert nav.index('href="/admin/emby"')<nav.index('href="/admin/security"')
     assert post(client,f'/admin/users/{uid}/assist',{},'/admin/users').status_code==303
     home=client.get('/home').text
     assert home.index('Logged as demo')<home.index('<div class="shell">') and 'Assistance mode' not in home

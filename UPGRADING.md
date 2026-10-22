@@ -1,4 +1,14 @@
-# Upgrading to 0.3.3 — public beta
+# Upgrading to 0.3.4 — public beta
+
+Back up `/data`, including its encryption key. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.3.4` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+No database schema change is required when upgrading from 0.3.3. The existing application configuration, accounts, permissions, templates, published pages and administrator translation overrides are retained. Bundled interface wording is revised across all supported languages; custom overrides continue to take precedence.
+
+Update availability is recomputed against the installed version, so an old cached result cannot advertise the version already installed. A different build revision alone no longer triggers an update notice. Library lists expand within the page rather than nested scroll areas. Email image widths use explicit image dimensions and remain responsive in previews and messages.
+
+The expanded 30-library preview is local demonstration data only; it is not included in the release or added to connected servers.
+
+## Previous upgrade: 0.3.3
 
 Back up the complete `/data` volume, including its existing encryption key. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.3.3` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
 

@@ -28,8 +28,8 @@ def test_version_page_and_update_notification_are_admin_only_and_escaped(client,
     setup(client);calls=remote(monkeypatch)
     assert post(client,'/admin/updates/check',{},'/admin/updates').status_code==303
     page=client.get('/admin/updates').text
-    assert ('Gatearr '+VERSION) in page and '0.4.0' in page and 'Installed release history' in page
-    assert '&lt;script&gt;untrusted&lt;/script&gt;' in page and 'malicious.test' not in page
+    assert ('Gatearr '+VERSION) in page and '0.4.0' in page and i18n.translate('Installed release history','en') in page
+    assert 'untrusted' not in page and 'malicious.test' not in page
     assert 'class="update-notice"' in client.get('/account').text
     assert len(calls)==1
     logout(client);login_user(client)
@@ -56,7 +56,7 @@ def test_release_cache_backoff_failure_retention_and_opt_out(client,monkeypatch)
     assert 'GitHub could not be reached' not in client.get('/admin/updates').text
 
 
-@pytest.mark.parametrize('tag,available',[('0.0.9',False),('0.1.0',False),('0.2.1',False),('0.2.2',False),('0.2.3',False),('0.2.4',False),('0.3.0',False),('0.3.2',False),('0.3.3',False),('0.3.4',True),('0.10.0',True)])
+@pytest.mark.parametrize('tag,available',[('0.0.9',False),('0.1.0',False),('0.2.1',False),('0.2.2',False),('0.2.3',False),('0.2.4',False),('0.3.0',False),('0.3.2',False),('0.3.3',False),('0.3.4',False),('0.3.5',True),('0.10.0',True)])
 def test_semantic_version_comparison(client,monkeypatch,tag,available):
     setup(client);remote(monkeypatch,version=tag)
     monkeypatch.setattr(versioning,'BUILD_REVISION','')
@@ -65,7 +65,7 @@ def test_semantic_version_comparison(client,monkeypatch,tag,available):
 
 def test_same_version_rebuild_and_invalid_release_are_handled(client,monkeypatch):
     setup(client);remote(monkeypatch,version=VERSION);monkeypatch.setattr(versioning,'BUILD_REVISION','a'*40)
-    with SessionLocal() as db:assert versioning.check(db,True)['available']
+    with SessionLocal() as db:assert not versioning.check(db,True)['available']
     remote(monkeypatch,version='../../bad')
     with SessionLocal() as db:
         state=versioning.check(db,True)
