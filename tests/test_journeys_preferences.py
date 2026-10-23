@@ -104,7 +104,7 @@ def test_preference_permissions_queue_and_forced_seerr(client):
         configured(db,'seerr')
         main.set_config(db,'seerr_notification_mode','optional');db.commit()
     page=client.get('/account').text
-    assert 'Receive the newsletter' not in page and 'Receive notifications about my requests' in page
+    assert 'Receive the newsletter' not in page and 'My requests are available' in page
     assert post(client,'/account/preferences',{'service':'seerr','enabled':'on'},'/account').status_code==303
     with SessionLocal() as db:
         user=db.scalar(select(User).where(User.emby_id=='user-1'))

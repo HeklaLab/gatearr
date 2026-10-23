@@ -12,6 +12,7 @@ DEFAULTS.update({
     'email_changed_body':'Hello ${username},\n\nAn administrator changed the email address on your account. If you did not expect this change, contact your administrator.\n${link}',
     'password_changed_subject':'${app_name} — password changed',
     'password_changed_body':'Hello ${username},\n\nAn administrator changed your account password. If you did not expect this change, contact your administrator.\n${link}'})
+DEFAULTS.update({'new_season_subject':'${app_name} — ${title}: a new season is available','new_season_body':'Hello ${username},\n\nSeason ${season} of ${title} is now available. Some episodes may still be arriving.\n${link}\n\n${app_name}'})
 DEFAULTS_BY_LOCALE = {"en": DEFAULTS}
 
 def config(db, key, default=""):

@@ -103,7 +103,7 @@ def test_guides_journeys_menus_and_branding_use_the_created_language(client):
 def test_new_language_email_templates_and_disabled_language_fallback(client):
     setup(client);language(client)
     assert translate(client,'mail:invite:subject','${app_name} — bienvenido').status_code==303
-    html='<h2>Hola ${username}</h2><a href="${link}">Confirmar</a><img src="https://example.com/banner.png">'
+    html='<h2>Hola ${username}</h2><a href="${link}">Confirmar</a><img src="http://testserver/static/gatearr-logo.png">'
     assert post(client,'/admin/mail-editor',{'mail_locale':'es','purpose':'invite','subject':'${app_name} — bienvenido','html':html},'/admin/mail-editor').status_code==303
     with SessionLocal() as db:
         message=compose(db,'member@example.com','invite',{'app_name':'Gatearr','username':'Alex','link':'https://portal.test/verify-email?token=test','minutes':'30','_locale':'es'})

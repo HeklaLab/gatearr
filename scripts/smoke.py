@@ -50,10 +50,29 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         assert '<html lang="en">' in client.get('/setup').text
         submit(client, '/setup', {'app_name':'Gatearr','public_url':base,'media_server':'emby','url':media_base,'api_key':'demo-emby-key','browser_url':'https://emby.example.com'}, '/setup')
         submit(client,'/setup/admin',{'user_id':'demo-admin-1','password':'AdminPassword123!'},'/setup/admin')
-        for step in ('seerr','tools','smtp'):
+        for step in ('applications','smtp'):
             submit(client,'/admin/setup/'+step,{'action':'skip'},'/admin/setup/'+step)
         submit(client,'/admin/setup/finish',{},'/admin/setup/finish')
+        # This HTTP/SMTP suite exercises account flows without a browser solver.
+        # The actual widget and replay checks have their own browser/security tests.
+        submit(client,'/admin/security/captcha',{'retention':'30'},'/admin/security/captcha')
         submit(client, '/admin/smtp', {'smtp_host': smtp_host, 'smtp_port': smtp_port, 'smtp_mode': 'plain', 'smtp_from': 'portal@example.com', 'smtp_username': '', 'smtp_password': ''}, '/admin')
+        # Exercise both directions against the isolated native photo contract.
+        import base64,struct,zlib
+        def pixel(color):
+            def chunk(kind,value):return struct.pack('>I',len(value))+kind+value+struct.pack('>I',zlib.crc32(kind+value)&0xffffffff)
+            return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',1,1,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(b'\0'+bytes(color)))+chunk(b'IEND',b'')
+        photo=pixel([30,160,240,255]);updated_photo=pixel([100,210,80,255])
+        response=client.post('/account/photo',data={'csrf':csrf(client,'/account')},files={'icon_file':('profile.png',photo,'image/png')})
+        assert response.status_code==303
+        native_photo=httpx.get(media_base+'/Users/demo-admin-1/Images/Primary',headers={'X-Emby-Token':'demo-emby-key'},trust_env=False)
+        assert native_photo.content==photo
+        def photo_url():return re.search(r'src="(/avatars/[^\"]+)"',client.get('/account').text)[1].replace('&amp;','&')
+        previous_photo=photo_url();assert client.get(previous_photo).content==photo
+        native_write=httpx.post(media_base+'/Users/demo-admin-1/Images/Primary',headers={'X-Emby-Token':'demo-emby-key','Content-Type':'image/png'},content=base64.b64encode(updated_photo),trust_env=False)
+        assert native_write.status_code==204
+        submit(client,'/admin/sync',{},'/admin')
+        assert photo_url()!=previous_photo and client.get(photo_url()).content==updated_photo
         submit(client, '/admin/settings', {'app_name': 'Gatearr', 'login_text': 'Your media world, all in one place.', 'logo_url': '', 'public_url': base}, '/admin')
         submit(client, '/admin/menu', {'label': 'Seerr', 'url': 'https://requests.example.com', 'icon': 'link', 'position': '10', 'new_tab': 'on'}, '/admin')
         submit(client, '/admin/sync', {}, '/admin')
@@ -87,7 +106,13 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         group=client.post('/admin/groups',data={'csrf':csrf(client,'/admin/groups'),'name':'Demo members'})
         assert group.status_code==303
         group_path=group.headers['location']
-        submit(client,group_path,{'version':0,'members':demo_id,'permission':['SimultaneousStreamLimit','EnableSubtitleDownloading'],'value_SimultaneousStreamLimit':'2','value_EnableSubtitleDownloading':'false','library_mode':'selected','libraries':['11111111111111111111111111111111']},group_path)
+        membership={'version':0,'members':demo_id,'permission':['SimultaneousStreamLimit','EnableSubtitleDownloading'],'value_SimultaneousStreamLimit':'2','value_EnableSubtitleDownloading':'false','library_mode':'selected','libraries':['11111111111111111111111111111111']}
+        review=client.post(group_path,data={'csrf':csrf(client,group_path),**membership,'review_only':'on'})
+        assert review.status_code==200, 'Group permissions could not be reviewed'
+        reviewed=review.json()
+        assert reviewed['required'] and len(reviewed['users'])==1
+        assert any('simultaneous' in d['label'] for d in reviewed['users'][0]['differences'])
+        submit(client,group_path,{**membership,'review_token':reviewed['review_token']},group_path)
         deadline=time.monotonic()+45
         while time.monotonic()<deadline:
             detail=client.get('/admin/users/'+demo_id+'?tab=emby').text
@@ -135,6 +160,8 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
             html=client.get('/admin/design/'+page).text
             return json.loads(re.search(r'<script id="studio-data" type="application/json">(.*?)</script>',html)[1])
         visual=design_state('home');layout=visual['layout']
+        app_row=next(b for b in layout['blocks'] if b['kind']=='applications' and 'access:emby' in b.get('applications',[]))
+        app_row['applications']=['access:emby','access:seerr'];app_row['columns']=2
         layout['blocks'].append({'id':'smoke-visual','kind':'text','region':'main','span':12,'order':999,'title':'Visual studio smoke','body':'<p><b>Live preview</b></p>','rich':True})
         payload={'payload':json.dumps(layout),'version':visual['version']}
         assert 'Visual studio smoke' in submit(client,'/admin/design/home/preview',payload,'/admin/design/home').text
@@ -183,7 +210,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
             raise AssertionError('Email not propagated to Seerr')
         statuses=client.get('/admin/users').text
         assert statuses.count('sync-green') >= 3 and 'Last success:' in statuses
-    print('Smoke passed: setup, native clone, library access, settings copy, visual home/login preview and publication, draft/publish, nested application journeys, PNG icons and Seerr preferences, hover sync indicators, email proof, password change/reset and automatic Seerr propagation.')
+    print('Smoke passed: setup, native photo upload/readback/cache invalidation, native clone, library access, settings copy, visual home/login preview and publication, draft/publish, nested application journeys, PNG icons and Seerr preferences, hover sync indicators, email proof, password change/reset and automatic Seerr propagation.')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

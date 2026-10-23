@@ -32,6 +32,14 @@ def connect(request,data):
     if settings.secure_cookie and parsed.scheme!='https':raise ValueError('The public URL must use HTTPS')
     locale=str(data.get("default_locale",i18n.default_language(db)))
     if locale not in i18n.languages(db,all=True) or locale not in i18n.CATALOGS:raise ValueError("Choose a supported language")
+    from .icons import icon_value
+    logo=icon_value(db,data) if getattr(data.get('icon_file'),'filename','') else ''
+    preset=str(data.get('preset','boreal'))
+    from .themes import PRESETS
+    if preset not in PRESETS:raise ValueError('Invalid theme')
+    language=db.get(Language,locale)
+    language.enabled=True
+    set_config(db,'default_locale',locale)
     connect_media(db,data)
     db.rollback()
     db.execute(text('BEGIN IMMEDIATE'))
@@ -43,14 +51,17 @@ def connect(request,data):
     db.add(Session(digest=fingerprint,csrf=secrets.token_urlsafe(32),expires=now()+1800,setup_expires=now()+1800,version=0))
     set_config(db,'onboarding_media_verified','true')
     set_config(db,'setup_owner_digest',fingerprint)
-    if 'default_locale' in data:
-        for language in db.scalars(select(Language)):language.enabled=language.code==locale
     set_config(db,'default_locale',locale)
+    if logo:set_config(db,'logo_url',logo)
+    import json
+    theme={'mode':'user','preset':preset,'dark':PRESETS[preset]['dark'],'light':PRESETS[preset]['light']}
+    for key in ('themes_draft','themes_published'):set_config(db,key,json.dumps(theme))
     set_config(db,'app_name',name)
     set_config(db,'public_url',public)
     db.commit()
     response=redirect('/setup/admin')
     cookie(response,raw,settings.secure_cookie or parsed.scheme=='https')
+    if 'default_locale' in data:response.set_cookie('gatearr_language',locale,max_age=31536000,samesite='lax',secure=settings.secure_cookie,httponly=True)
     request.state.rotated=True
     return response
 
@@ -75,9 +86,10 @@ def claim(request,data):
     limit(request,'setup_admin',str(data.get('user_id','')),maximum=10)
     remote=main.emby.user(str(data.get('user_id','')))
     if remote.get('Policy',{}).get('IsDisabled'):raise HTTPException(401,'Invalid credentials')
+    if not str(data.get('password','')).strip():raise HTTPException(401,'Invalid credentials')
     try:proof=main.emby.authenticate(remote['Name'],str(data.get('password','')))['User']
     except EmbyError:raise HTTPException(401,'Invalid credentials')
-    if proof.get('Id')!=remote['Id'] or proof.get('Policy',{}).get('IsDisabled'):
+    if proof.get('Id')!=remote['Id'] or proof.get('HasPassword') is False or proof.get('Policy',{}).get('IsDisabled'):
         raise HTTPException(401,'Invalid credentials')
     # Serialize the final claim; another browser cannot install a second first admin.
     owner=request.state.session.digest
@@ -95,7 +107,7 @@ def claim(request,data):
     user.locale=request.state.locale
     set_config(db,'setup_complete','true')
     set_config(db,'onboarding_required','true')
-    set_config(db,'onboarding_step','seerr')
+    set_config(db,'onboarding_step','applications')
     db.delete(db.get(Config,'setup_owner_digest'))
     db.commit()
     return rotate(request,user)

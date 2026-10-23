@@ -105,11 +105,11 @@ def test_tool_ticket_origin_acl_replay_and_revocation(client):
     assert client.get('/tools/radarr/app/').status_code==401
 
 
-def test_tracearr_is_retired_from_live_ui_and_workers(client):
+def test_tracearr_integration_does_not_join_email_propagation_workers(client):
     from app.integrations import SERVICES
     setup(client)
     assert SERVICES==('seerr',)
-    assert 'Tracearr' not in client.get('/admin/integrations').text
+    assert 'Tracearr' in client.get('/admin/integrations').text
     assert post(client,'/admin/integrations',{'service':'tracearr','enabled':'on'},'/admin/integrations').status_code==400
     assert client.head('/healthz').status_code==200 and client.head('/',follow_redirects=False).status_code==303
 

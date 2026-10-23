@@ -1,3 +1,41 @@
+# Validation — Gatearr 0.4.0 — 23 October 2026
+
+## Publication review — 23 October 2026
+
+- **380 automated tests passed** on Python 3.12; one existing Starlette/httpx deprecation warning. Coverage includes authentication/recovery, native revocation, CSRF/origin checks, proxy traversal/authorization, image limits, private photos, dependency-gated widgets/mail, group lifecycle and session-bound group review with drift/expiry/tamper rejection.
+- A new isolated real HTTP/SMTP smoke passed: five-stage setup, native picture upload/readback/cache invalidation, account cloning, group permission preview/confirmation and native readback, page/guide/email editors, verification, password change/recovery and Seerr propagation. Upstream services were simulators.
+- 51 page-width checks covered the portal, account, admin mosaic, identity, builder, integrations, email tabs, themes, groups, user detail, Captcha, languages and updates at 1280, 768, 390 and 320 px. No global horizontal overflow or console warnings/errors appeared in these checks. Screenshots were renewed from the running application, with fictional accounts and local addresses; existing v0.3.2 images remain historical assets.
+- Browser follow-up caught and fixed a Jellyfin placeholder reverting after dynamic language changes and a malformed preset-logo preview. Rechecked Jellyfin plus French/German/English switching, selected-preset preservation, the five-step mobile layout and stacked mobile group comparisons. No permission changes were confirmed during browser inspection.
+- Python pinned runtime audit: no known vulnerabilities and no skipped package entries. OSV returned no known advisories for the four bundled CAPTCHA npm packages at the review time. This does not cover unknown vulnerabilities, container/base-OS packages or upstream native applications.
+- Source review rechecked session rotation, hashed identifiers, CSRF/origin validation, live administrator checks, scoped statistics, safe uploads, native credential forwarding and container hardening configuration. See SECURITY_REVIEW.md for residual deployment risks.
+- No local Docker engine or live production Emby/Jellyfin/Seerr/Tracearr deployment was available. GitHub Actions must pass the actual Docker Compose build/health/HTTP-SMTP checks before image/release publication. The test suite does not establish a guarantee of zero vulnerabilities.
+
+## Earlier interface follow-up
+
+- **365 automated tests passed**, one existing Starlette/httpx warning. Ten initial regressions plus two additional failure-path cases cover fresh conditional defaults/non-overwrite, Emby and Jellyfin image API paths/base64/headers, private avatar access, native tag/removal invalidation, email-only dependencies, group rename conflicts, two-factor destructive confirmation, administrator guards, linked API preflight and partial native deletion retention.
+- The complete isolated HTTP/SMTP smoke passed. It now includes Gatearr-to-native photo upload, native readback, a direct native photo change, synchronization and invalidated Gatearr image URLs, as well as account cloning, groups/library permissions, editors, verified email, password changes/recovery and Seerr propagation. All upstream services in this run were simulators.
+- Browser review completed all five dynamic setup stages in French. Language switching preserved entered API URL/key; a wrong native password displayed beside the buttons without clearing the form. Seerr testing showed server green/API red for a rejected key, then both green with the accepted key. SMTP connectivity and validation were checked. Finishing created media/Seerr cards, their aligned widgets and a full-width account card.
+- The capsule navigation, dropdown and portal were visually reviewed at 1280, 768 and 320 px; the navigation stays on one line at tablet/mobile widths and the document has no horizontal overflow at those tested widths. CSS colors remain independent of geometry. The local user demo is reloaded with its saved accounts and designs preserved.
+- Native JPEG/PNG profiles are validated and bounded; Jellyfin upload routing is covered with an HTTP mock transport. No real upstream deployment or Docker engine was exercised. Natural wording was revised in the bundled catalogs and placeholder/catalog consistency checked; this is not independent native-speaker proofreading of all 21 languages.
+- No GitHub publication was performed by this follow-up.
+
+## Earlier 0.4.0 validation
+
+
+- Public-exposure security pass: 20 new regressions cover blank/passwordless native authentication, immediate administrator revocation and native outage refusal, native administrator URL-token suppression, encoded HTTP/WebSocket path checks, tool-proxy revocation, assistance proxy isolation, native/portal role separation and recovery-token referrers. The complete suite reports 353 passed, one existing warning.
+- After updating Certifi to 2026.10.19, pip-audit reports no known vulnerabilities across all 32 pinned runtime packages, with none skipped. OSV returns no known advisories for the four bundled npm packages at the audit time. These checks exclude unscanned container/OS packages.
+- Isolated HTTP/SMTP smoke passed after hardening. The user demo was reloaded with its four users and existing configuration retained; health/login respond 200. The review and residual public-deployment risks are documented in [SECURITY_REVIEW.md](SECURITY_REVIEW.md). No security correction was published or deployed to a production server.
+
+- **353 automated tests passed**, with one existing Starlette/httpx deprecation warning. Coverage includes six theme palettes, policy and draft revision checks; widget audience selection and priority; native library privacy and user-scoped counts without a library selector; Tracearr stable identity, pagination and rejection of cross-user/server data; current native disabled-account checks before cached statistics; request/season baselines, deduplication, independent dependency failures and mail cancellation after consent or integration changes.
+- Real headless Chrome completed Cap's HashWX and instrumentation challenge using local widget/WASM assets. The resulting token was rejected on the wrong form (400), accepted once on password recovery (200) and rejected on replay (400). The instrumentation frame is isolated; the login/recovery parent keeps JavaScript unsafe-eval disabled. No cloud assets or captcha dashboard are used.
+- Asset-policy regressions cover a valid PNG larger than 2 MiB, rejection above 5 MiB, remote-image refusal, server-specific widget logos and Tracearr mail dependency checks through legacy endpoints. Browser checks confirmed aligned email-template actions, a compact appearance-policy row, disabled widget entries and a successful large-logo upload and email-image upload.
+- Additional browser checks verified three nested widgets match application-card widths at 1280, 768, 390 and 320 px, with no horizontal overflow. Presets, connection saves/tests, successive email saves and translation resets update without page navigation. Missing captcha prevents the browser submission without clearing credentials; its local SVG checkmark was rendered after a real challenge.
+- Browser checks cover Applications & API, themes, Captcha settings and the portal builder at 1280, 768, 390 and 320 px without horizontal page overflow. Palette and connection screens were rendered for visual review. API tests cover private widget output and native-interface authorization. Real native iframe policies remain deployment-dependent.
+- Full isolated HTTP/SMTP smoke passed through setup, native account cloning, library/group permission readback, visual editors, uploads, verified email, password changes/recovery and Seerr propagation. Test service responses are simulated. Tracearr contracts were checked against its public v2 source, including bitrate in kbps; traffic remains an estimate based on recorded sessions.
+- The existing local demonstration was backed up before migration 0020 and reloaded without resetting its accounts, integrations or 30-library fixture. Fictional libraries and demo services remain outside the shipped repository.
+- All 21 catalogs retain matching source keys and interpolation placeholders. New-season mail defaults are localized in all bundled languages. Core wording was reviewed; exhaustive native-speaker proofreading of every sentence is not claimed.
+- No local Docker engine is available, so Docker build/startup and live native-server validation are **not** claimed. The Node runtime image tag was checked for Linux AMD64/ARM64; the existing GitHub workflow still gates future publication on tests, Docker startup and HTTP/SMTP smoke. Nothing was published during this development pass.
+
 # Validation — Gatearr 0.3.4 — 22 October 2026
 
 - **286 automated tests passed**, with the existing Starlette/httpx deprecation warning.
@@ -111,3 +149,45 @@ Tracearr's current [identity schema](https://github.com/connorgallopo/Tracearr/b
 The release has not been built/run locally inside Docker because no Docker engine is available in this workspace. The repository contains CI Docker build/smoke steps; a successful build of the earlier release was supplied by the user from Windows. The executed integration tests use the included simulators and HTTP mock transports, not the user's Windows Emby, Seerr or Tracearr instances. The corrected GUID mapping still needs a live single-library check on that Emby server.
 
 Setup must remain private until completed. Without an installation token, an unconfigured public portal cannot determine its owner solely from an arbitrary visitor's chosen media-server URL/key. CSRF, rate limits and first-admin password proof remain active.
+
+## 0.4.0 interface follow-up — 2026-10-23
+
+- Anonymous header now uses the approved capsule navigation and a compact language menu.
+- Branding logo upload, explanatory text, removal checkbox and identity fields have explicit spacing.
+- Group settings are compact and appear above permissions; members appear below permissions. Existing rename/deletion safeguards are retained.
+- Email templates and SMTP settings have separate tabs; SMTP saves and diagnostics return to the SMTP tab.
+- Full regression suite: **365 passed, 1 existing deprecation warning**. Browser checks used an isolated simulator-backed demo, including 320px group/branding layouts with no document overflow. Main demo data and CAPTCHA settings were preserved.
+- Two admin-home mockups were prepared separately; the production admin landing page was not redesigned in this follow-up.
+
+## 0.4.0 approved Mosaic home and capsule navigation — 2026-10-23
+
+- Replaced the admin landing with the approved Mosaic layout: six compact section links and a separate updates strip, using existing localized labels and theme colors.
+- Added a measured, sliding capsule selection. The live capsule remains connected while the destination content is replaced, so the transition survives fast responses.
+- Capsule links between Home, My account and Administration now fetch authenticated, uncached HTML and replace content without a document reload. History, focus, body layout, footer, account menu and CSRF form fields are updated; expired sessions use normal sign-in navigation. Other application links retain their normal navigation and page-specific script initialization.
+- No HTML response scripts are evaluated. Requests stay on the same origin and rapid navigation cancels superseded requests. Reduced-motion preferences disable the sliding animation.
+- Full suite: **365 passed** (one existing deprecation warning); final focused portal/security/profile checks: **47 passed**. Browser verification covered the three destinations, browser back/forward, account controls, theme switching after navigation, retained capsule DOM, and a 320px viewport without document overflow.
+- Demo data, service configuration and main-demo CAPTCHA settings were preserved. No GitHub publication was performed.
+
+## 0.4.0 consistent admin section labels — 2026-10-23
+
+- All administration section and editor headings now share one localized `Administration · Section` label, including pages that previously omitted it.
+- One shared style controls accent color, typography, uppercase presentation and spacing; visual builders no longer use a separate cyan override for these labels. Public portal content is unchanged.
+- 47 targeted regression tests passed with the existing deprecation warning. Browser checks confirmed the email and portal-builder headings use the shared presentation.
+
+## 0.4.0 theme-matched default logos — 2026-10-23
+
+- Blue Boréal, Electric Lime and Neon Rose now select their bundled default logo automatically. Dark mode uses a light wordmark with a colored symbol; light mode retains the original dark wordmark and colored details. Auto mode follows the appearance policy.
+- Header, branding preview, portal logo blocks and initial setup share the default-logo behavior. Applying a theme draft updates the editor immediately; public pages use the published preset. Navigation away from a draft restores the published identity.
+- Uploaded custom logos retain priority and are not filtered or replaced by theme selection. Initial-setup upload previews also retain priority over preset selection.
+- The local bundled-image allowlist accepts only the three known logo PNG paths, with no general filesystem or remote-image allowance.
+- Full regression suite: **367 passed**, one existing deprecation warning. Added regression coverage for draft/public separation, publication, custom upload precedence and exact bundled-image allowlisting. Browser verification covered both new presets in light and dark modes and immediate draft switching without page reload.
+
+## 0.4.0 interface refinement — 2026-10-23
+
+- Portal-builder color controls now use labeled swatch rows with visible hex values, grouped by button/background settings. Gradient controls are collapsed when unused.
+- Tracearr activity widgets display the selected calendar/rolling period and UTC date range. Calendar rollover invalidates aggregate caches; previews show the same period metadata. The actual query bounds and displayed dates are checked for week, month and rolling 30-day periods.
+- Preset colors and default logo preview update on click before the asynchronous draft save finishes; save failures restore the last saved preview.
+- Account appearance settings are available from the header only; the duplicate account card was removed. The default English profile heading is now “Profile picture.”
+- Integration detail summaries use a shared status column. Browser measurements confirmed identical dot positions across all seven services.
+- Existing regression suite: 367 passed, one existing deprecation warning. Three additional period checks passed as part of 44 targeted widget checks. Browser verification covered color layout, account fields, immediate logo preview and integration status alignment.
+- A separate interactive proposal was prepared for language management with flags; the current translation-center page was not replaced.

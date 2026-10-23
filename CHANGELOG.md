@@ -1,3 +1,56 @@
+# 0.4.0 — 23 October 2026
+
+## New features
+
+- Installer: five-stage multilingual installation with dynamic navigation, logo upload and initial preset selection; native PNG application logos and separate server/API tests.
+- Conditional fresh-install portal defaults, editable afterward without replacing saved layouts; rename the blue preset to Blue Boréal.
+- Capsule top navigation, native Emby/Jellyfin user photos, consolidated email-only preferences and guarded group rename/deletion.
+
+- Three editable theme presets: Blue Boréal, Electric Lime and Neon Rose, each with light/dark variants and an animated personal appearance capsule.
+- Tracearr personal statistics, explicit server/account matching, native interface access, and admin-only Tdarr interface access.
+- Independent compact media, Seerr, Tracearr and Library updates blocks with optional app logos and audience priorities.
+- Personal request availability and new-season announcements, optional Tracearr-dependent season email template and notification preferences.
+- Locally bundled Cap protection for sign-in and password recovery, with per-form controls and aggregate statistics in Security → Captcha.
+
+## Interface adjustments
+
+- Keep all five setup steps aligned on small screens and show group permission differences as readable stacked comparisons on phones.
+- Preserve the Jellyfin address placeholder and selected preset logo when switching installation languages.
+
+- Review current native media-server and Seerr rights before adding group members; show only differences with a paginated, per-user confirmation and reject stale reviews.
+- Apply the approved compact language panel with flags and inline settings; remove the assistance explanatory sentence from user account settings.
+
+- Align email-template actions in a responsive grid and compact the appearance-policy controls.
+- Use application logos for widget palette entries and disable them until their services are connected, including Jellyfin equivalents.
+
+- Color presets preview immediately without changing navigation geometry; improve theme and translation spacing.
+- Save themes, connections, emails, translations, security and notification preferences without reloading the page; the appearance capsule also switches in place.
+
+- Media widgets automatically count the current user’s authorized content, without an administrator library selector or sums of overlapping views.
+- Unified Applications & API overview, expandable service settings and read-only diagnostics, separate from saving.
+- Existing compact controls and red/green status indicators are retained across light and dark themes.
+
+## Security hardening
+
+- Update the vulnerable Certifi trust store to 2026.10.19.
+- Revalidate native account status for administrator requests and native-tool proxies; block privileged actions if verification fails.
+- Refuse blank/passwordless native authentication, keep native administrator tokens out of automatic-login URLs, reject encoded proxy traversal, and suppress recovery-token referrers.
+- Document public deployment requirements and the privileged native-service trust boundary.
+
+## Bug fixes
+
+- Align nested widget columns with application cards at every breakpoint, and keep metrics inside narrow blocks.
+- Restore the Tracearr-dependent new-season template link in the main email menu.
+- Keep captcha-required alerts on the current form and show a visible local checkmark after completion.
+
+## Improvements
+
+- Allow PNG/SVG uploads up to 5 MiB, remove remote image URLs across editors, and enforce the rule on legacy writes and public pages.
+- Enforce Tracearr dependencies across mail editing and translation routes.
+
+- User-scoped data, server-bound Tracearr identities, incremental library baselines and send-time notification authorization checks.
+- Cap Core and solver assets run locally inside the Gatearr container, without a dashboard, Redis or cloud CAPTCHA account.
+
 # Gatearr 0.3.4
 
 ## Bug fixes

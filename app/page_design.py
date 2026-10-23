@@ -27,7 +27,7 @@ def style_css(value):
 def asset_url(value,db=None,optional=False):
     from .models import IconAsset
     if not value and optional:return ''
-    if re.fullmatch(r'/static/services/(?:emby|jellyfin|seerr|radarr|sonarr|bazarr)\.png',value):return value
+    if re.fullmatch(r'/static/services/(?:emby|jellyfin|seerr|radarr|sonarr|bazarr|tracearr|tdarr)\.png',value):return value
     if re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(?:png|svg)',value):
         if db is not None and not db.get(IconAsset,value.split('/')[-1].split('.')[0]):raise ValueError('Image not found')
         return value

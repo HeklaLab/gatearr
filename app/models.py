@@ -248,3 +248,51 @@ class SeerrQuotaState(Base):
     error: Mapped[str] = mapped_column(String(120),default='')
     checked_at: Mapped[int | None] = mapped_column(Integer)
     connection: Mapped[str] = mapped_column(String(64),default='')
+
+class PortalCache(Base):
+    __tablename__='portal_caches'
+    key: Mapped[str] = mapped_column(String(64),primary_key=True)
+    data: Mapped[str] = mapped_column(Text)
+    checked_at: Mapped[int] = mapped_column(Integer)
+
+class LibraryPreference(Base):
+    __tablename__='library_preferences'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    seasons: Mapped[bool] = mapped_column(Boolean,default=True)
+    email: Mapped[bool] = mapped_column(Boolean,default=False)
+    statistics: Mapped[bool] = mapped_column(Boolean,default=True)
+
+class LibraryEvent(Base):
+    __tablename__='library_events'
+    key: Mapped[str] = mapped_column(String(64),primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),index=True)
+    source: Mapped[str] = mapped_column(String(64))
+    kind: Mapped[str] = mapped_column(String(20))
+    item_id: Mapped[str] = mapped_column(String(128))
+    title: Mapped[str] = mapped_column(String(500))
+    data: Mapped[str] = mapped_column(Text,default='{}')
+    created_at: Mapped[int] = mapped_column(Integer)
+    watched: Mapped[bool] = mapped_column(Boolean,default=False)
+
+class CaptchaToken(Base):
+    __tablename__='captcha_tokens'
+    key: Mapped[str] = mapped_column(String(64),primary_key=True)
+    scope: Mapped[str] = mapped_column(String(128))
+    expires: Mapped[int] = mapped_column(Integer,index=True)
+    used: Mapped[bool] = mapped_column(Boolean,default=False)
+
+class CaptchaMetric(Base):
+    __tablename__='captcha_metrics'
+    day: Mapped[int] = mapped_column(Integer,primary_key=True)
+    form: Mapped[str] = mapped_column(String(20),primary_key=True)
+    outcome: Mapped[str] = mapped_column(String(20),primary_key=True)
+    count: Mapped[int] = mapped_column(Integer,default=0)
+
+class UserPhoto(Base):
+    __tablename__='user_photos'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    source: Mapped[str] = mapped_column(String(64))
+    remote_tag: Mapped[str] = mapped_column(String(200),default='')
+    content: Mapped[bytes | None] = mapped_column(LargeBinary)
+    mime: Mapped[str] = mapped_column(String(30),default='image/png')
+    checked_at: Mapped[int] = mapped_column(Integer,default=0)

@@ -60,7 +60,7 @@ def test_optional_connection_is_validated_before_saving(client,monkeypatch):
     real=httpx.Client
     def handler(req):return httpx.Response(401,json={'error':'private-debug'})
     monkeypatch.setattr(onboarding.httpx,'Client',lambda **kw:real(transport=httpx.MockTransport(handler),**kw))
-    response=post(client,'/admin/setup/seerr',{'url':'https://seerr.test','api_key':'bad-secret','notification_mode':'optional'},'/admin/setup/seerr')
+    response=post(client,'/admin/setup/applications/seerr/save',{'enabled':'on','url':'https://seerr.test','api_key':'bad-secret','notification_mode':'optional'},'/admin/setup/seerr')
     assert response.status_code==502 and 'bad-secret' not in response.text and 'private-debug' not in response.text
     with SessionLocal() as db:
         assert db.get(Config,'seerr_api_key') is None

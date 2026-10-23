@@ -14,7 +14,7 @@ from alembic import command
 from fastapi.testclient import TestClient
 from app import main
 from app.db import SessionLocal
-from app.models import Base, AccessService,Language,ContentTranslation
+from app.models import Base, AccessService,Language,ContentTranslation,Config
 from app.emby import EmbyError
 
 command.upgrade(AlembicConfig('alembic.ini'), 'head')
@@ -54,6 +54,7 @@ def fake(monkeypatch):
     monkeypatch.setattr('app.versioning.refresh_due',lambda:None)
     monkeypatch.setattr('app.permissions.run_pending',lambda:None)
     monkeypatch.setattr('app.permission_refresh.refresh_due',lambda:None)
+    monkeypatch.setattr('app.library_updates.run_due',lambda:None)
     instance = FakeEmby()
     monkeypatch.setattr(main, 'emby', instance)
     monkeypatch.setattr('app.onboarding.probe_media', lambda kind,base,key: {'id':'test-media-server','name':'Test media','count':len(instance.users())})
@@ -70,6 +71,7 @@ def client(fake):
         db.flush()
         db.add_all([ContentTranslation(locale=locale,resource=resource,source_hash=stamp,value=value) for locale,resource,stamp,value in SEED_CONTENT])
         db.add(AccessService(key="emby",name="Emby",browser_url="",server_url=""))
+        db.add_all([Config(key='captcha_login',value='false'),Config(key='captcha_forgot',value='false')])
         db.commit()
     with TestClient(main.app) as instance:
         yield instance

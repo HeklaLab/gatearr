@@ -13,7 +13,8 @@ from .emby import client_for,EmbyError,_ADMIN
 from .integrations import request as remote_request
 
 router=APIRouter()
-STEPS=('media','seerr','tools','smtp','finish')
+STEPS=('media','applications','smtp','finish')
+LEGACY={'seerr':'applications','tools':'applications'}
 
 def probe_media(kind,base,key):
     client=client_for(kind,base,key)
@@ -65,12 +66,13 @@ def connect_media(db,data):
 def start(request:Request):
     require_admin(request)
     if config(request.state.db,'onboarding_required')!='true':return redirect('/admin/integrations')
-    step=config(request.state.db,'onboarding_step','media')
+    step=LEGACY.get(config(request.state.db,'onboarding_step','media'),config(request.state.db,'onboarding_step','media'))
     return redirect('/admin/setup/'+(step if step in STEPS else 'media'))
 
 @router.get('/admin/setup/{step}')
 def page(request:Request,step:str):
     require_admin(request)
+    step=LEGACY.get(step,step)
     if step not in STEPS:raise HTTPException(404,'Step not found')
     db=request.state.db
     if config(db,'onboarding_required')!='true':return redirect('/admin/integrations')
@@ -80,40 +82,27 @@ def page(request:Request,step:str):
 @router.post('/admin/setup/{step}')
 def save(request:Request,step:str,data=Depends(form)):
     require_admin(request)
+    legacy=step
+    step=LEGACY.get(step,step)
     if step not in STEPS:raise HTTPException(404,'Step not found')
     db=request.state.db
     if config(db,'onboarding_required')!='true':raise HTTPException(403,'Setup already completed')
+    if legacy=='seerr' and data.get('action')!='skip':return application_save(request,'seerr',data)
     if data.get('action')=='skip':
         if step in ('media','finish'):raise HTTPException(400,'A media server connection is required')
     elif step=='media':
         limit(request,'onboarding_connection',maximum=15)
         connect_media(db,data)
-    elif step=='seerr':
-        limit(request,'onboarding_connection',maximum=15)
-        from .admin_features import integrations_save
-        from starlette.datastructures import FormData
-        from .integrations import SyncError
-        from .security import email_ok
-        from uuid import UUID
-        base=check_base(data.get('url',''))
-        key=str(data.get('api_key','')).strip() or decrypt(config(db,step+'_api_key'))
-        if not key:raise ValueError('API key required')
-        try:
-            with httpx.Client(base_url=base+'/',timeout=15,trust_env=False,follow_redirects=False) as client:
-                result=remote_request(client,'GET','api/v1/user',headers={'X-Api-Key':key},params={'take':1,'skip':0})
-                if not isinstance(result,dict) or not isinstance(result.get('results'),list):raise ValueError('Invalid connection response')
-        except SyncError:
-            raise HTTPException(502,'Connection refused or service unavailable. Check the settings and try again.')
-        integrations_save(request,FormData({**dict(data),'service':step,'enabled':'on'}))
-    elif step=='tools':
-        from .tools_proxy import configure_tools
-        configure_tools(request,data)
+    elif step=='applications':
+        pass
     elif step=='smtp':
         from .main import admin_smtp
         admin_smtp(request,data)
     elif step=='finish':
         if config(db,'onboarding_media_verified')!='true':
             raise HTTPException(400,'A media server connection is required')
+        from .portal import initialize
+        initialize(db,request.state.user)
         set_config(db,'onboarding_required','false')
         set_config(db,'onboarding_step','finish')
         db.commit()
@@ -123,3 +112,42 @@ def save(request:Request,step:str,data=Depends(form)):
     set_config(db,'onboarding_step',next_step)
     db.commit()
     return redirect('/admin/setup/'+next_step)
+
+
+@router.post('/admin/setup/applications/{service}/save')
+def application_save(request:Request,service:str,data=Depends(form)):
+    require_admin(request)
+    if config(request.state.db,'onboarding_required')!='true':raise HTTPException(403,'Setup already completed')
+    from .integration_ui import save,SERVICES
+    if service not in SERVICES:raise HTTPException(404,'Invalid service')
+    if data.get('enabled')=='on':
+        result=application_test(request,service,data)
+        if result['state']!='connected':raise HTTPException(502,result['detail'])
+    save(request,service,data)
+    return redirect('/admin/setup/applications?saved='+service+'#service-'+service)
+
+@router.post('/admin/setup/applications/{service}/test')
+def application_test(request:Request,service:str,data=Depends(form)):
+    require_admin(request);limit(request,'onboarding_connection',maximum=30)
+    from .integration_ui import SERVICES
+    from .connection_health import probe
+    if service not in SERVICES:raise HTTPException(404,'Invalid service')
+    base=check_base(data.get('url',''))
+    encoded=config(request.state.db,service+'_api_key')
+    key=str(data.get('api_key','')).strip() or (decrypt(encoded) if encoded else '')
+    values={'url':base,'key':key,'kind':media_kind(request.state.db)}
+    state,detail=probe(service,values)
+    return {'state':state,'detail':detail,'diagnostics':values.get('diagnostics',{})}
+
+
+@router.post('/admin/setup/smtp/test')
+def email_test(request:Request,data=Depends(form)):
+    require_admin(request);limit(request,'onboarding_connection',maximum=30)
+    from .connection_health import smtp_probe
+    if data.get('smtp_mode') not in ('ssl','starttls','plain'):raise ValueError('Invalid SMTP mode')
+    if not 1<=int(data.get('smtp_port','0'))<=65535:raise ValueError('Invalid SMTP port')
+    values={k:str(data[k]) for k in ('smtp_host','smtp_port','smtp_mode','smtp_username','smtp_password') if k in data and (k!='smtp_password' or data[k])}
+    result=smtp_probe(request.state.db,values)
+    from .i18n import translate
+    result['detail']=translate(result['detail'],request.state.locale)
+    return result

@@ -81,3 +81,8 @@ def normalize_fields(db,value,resource,fields):
         value[field]=base
         value.pop(field+'_fr',None);value.pop(field+'_en',None)
     return value
+
+
+def language_flag(code):
+    region={'en':'GB','fr':'FR','de':'DE','es':'ES','it':'IT','pt-br':'BR','pt':'PT','nl':'NL','da':'DK','sv':'SE','nb':'NO','fi':'FI','cs':'CZ','pl':'PL','uk':'UA','ru':'RU','tr':'TR','ar':'SA','he':'IL','ja':'JP','ko':'KR','zh-cn':'CN','el':'GR','ro':'RO','hu':'HU','bg':'BG','sk':'SK','hr':'HR','id':'ID','vi':'VN','th':'TH','hi':'IN','is':'IS'}.get(code.lower())
+    return ''.join(chr(127397+ord(c)) for c in region) if region else '🌐'

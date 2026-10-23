@@ -23,7 +23,7 @@ for file in (root/'app').glob('*.py'):
                 if isinstance(a,ast.Constant) and isinstance(a.value,str):add(a.value)
         if file.name=='mailer.py' and isinstance(n,ast.Dict):
             for k,v in zip(n.keys,n.values):
-                if isinstance(k,ast.Constant) and isinstance(k.value,str) and re.fullmatch(r'(invite|reset|verify|email_changed|password_changed)_(subject|body)',k.value) and isinstance(v,ast.Constant):add(v.value)
+                if isinstance(k,ast.Constant) and isinstance(k.value,str) and re.fullmatch(r'(invite|reset|verify|email_changed|password_changed|new_season)_(subject|body)',k.value) and isinstance(v,ast.Constant):add(v.value)
 def authored(value):
     if isinstance(value,dict):
         for k,v in value.items():
@@ -48,6 +48,10 @@ for name in ('permissions.py','permission_ui.py'):
         if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id in ('CATEGORIES','DAYS') for t in node.targets):
             for value in ast.walk(node.value):
                 if isinstance(value,ast.Constant) and isinstance(value.value,str) and value.value[:1].isupper():add(value.value)
+for node in ast.walk(ast.parse((root/'app/widgets.py').read_text())):
+    if isinstance(node,ast.Dict):
+        for v in node.values:
+            if isinstance(v,ast.Constant) and isinstance(v.value,str) and v.value[:1].isupper():add(v.value)
 for value in ('Processing','Awaiting approval','Movies left','Seasons left','Approved','Available','changed','not configured','not imported','failed — retry required','pending'):add(value)
 path.write_text(json.dumps(catalog,indent=2,ensure_ascii=False)+'\n');print('English sources:',len(catalog))
 

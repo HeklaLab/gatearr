@@ -181,7 +181,8 @@ def save_category(request:Request,uid:int,data=Depends(form)):
     from .group_access import unlocked
     from .permission_ui import metadata,controls,parse
     unlocked(db,user)
-    remote=emby.user(user.emby_id).get('Policy',{});row=state(db,user,remote)
+    remote=emby.user(user.emby_id).get('Policy',{})
+    row=state(db,user,remote)
     if row.version!=int(data.get('version','-1')):raise HTTPException(409,'Permissions changed. Reload this page.')
     meta=metadata(emby,remote,emby.libraries())
     groups=controls(fields(remote,row),meta)
@@ -254,7 +255,7 @@ def group_page(request:Request,gid:int):
     group_values={**reference,**{k:v for k,v in policy.items() if k in reference}}
     group_state=SimpleNamespace(desired=encoded(policy),confirmed=encoded(policy),pending=False,error='')
     categories=controls([f for f in fields(group_values,group_state) if f['key'] not in GROUP_EXCLUDED],metadata(emby,group_values,libraries))
-    return render(request,'group_editor.html',group=group,permission_categories=categories,permission_days=DAYS,seerr_categories=CATEGORIES,policy=policy,group_access=json.loads(group.access_policy),seerr_permissions=FLAGS,ownership=ownership,permission_keys=[k for k in sorted(reference) if k not in GROUP_EXCLUDED|LIBRARY_KEYS],reference_values=reference,reference_labels={k:label(k) for k in reference},members=set(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id==gid))),group_users=users,libraries=libraries)
+    return render(request,'group_editor.html',group=group,membership_hash=membership_hash(db,gid),permission_categories=categories,permission_days=DAYS,seerr_categories=CATEGORIES,policy=policy,group_access=json.loads(group.access_policy),seerr_permissions=FLAGS,ownership=ownership,permission_keys=[k for k in sorted(reference) if k not in GROUP_EXCLUDED|LIBRARY_KEYS],reference_values=reference,reference_labels={k:label(k) for k in reference},members=set(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id==gid))),group_users=users,libraries=libraries)
 
 @router.post('/admin/groups/{gid}')
 def save_group(request:Request,gid:int,data=Depends(form)):
@@ -306,13 +307,16 @@ def save_group(request:Request,gid:int,data=Depends(form)):
     if data.get('manage_admin')=='on':settings['gatearr_admin']=data.get('gatearr_admin')=='on'
     if data.get('manage_tools')=='on':
         tools=sorted(set(data.getlist('tools')))
-        if any(k not in ('radarr','sonarr','bazarr') for k in tools):raise ValueError('Invalid tool access')
+        if any(k not in ('radarr','sonarr','bazarr','tracearr','tdarr') for k in tools):raise ValueError('Invalid tool access')
         settings['tools']=tools
     if data.get('manage_seerr_access')=='on':settings['seerr_access']=data.get('seerr_access')=='on'
     from .seerr_quotas import selected as quota_values
     quotas=quota_values(data)
     if quotas:settings['seerr_quotas']=quotas
     if data.get('manage_seerr_permissions')=='on':settings['seerr_permissions']=selected_permissions(data,json.loads(group.access_policy).get('seerr_permissions',0))
+    from .group_review import review
+    preview=review(request,data,group,[indexed[uid] for uid in members-old_members],policy,settings,remotes,emby)
+    if preview is not None:return preview
     request.state.audit_detail='Group: '+group.name+'\nMembers: '+', '.join(indexed[uid].name for uid in sorted(members))+'\nPermissions: '+', '.join(label(key)+' = '+('Yes' if value is True else 'No' if value is False else str(value) if type(value) is int else 'Custom selection') for key,value in policy.items())
     affected=members|old_members
     states={}
@@ -337,7 +341,13 @@ def assign_group(request:Request,uid:int,data=Depends(form)):
     if not user or not user.emby_id:raise HTTPException(404,'User not found')
     gid=int(data.get('group_id') or '0');group=db.get(PermissionGroup,gid) if gid else None
     if gid and not group:raise HTTPException(404,'Group not found')
-    remote=emby.user(user.emby_id).get('Policy',{});row=state(db,user,remote)
+    remote=emby.user(user.emby_id).get('Policy',{})
+    from .group_access import group_for
+    from .group_review import review
+    old=group_for(db,user)
+    preview=review(request,data,group,[user] if group and (not old or old.id!=gid) else [],json.loads(group.policy) if group else {},json.loads(group.access_policy) if group else {},{uid:remote},emby)
+    if preview is not None:return preview
+    row=state(db,user,remote)
     db.execute(delete(GroupMember).where(GroupMember.user_id==uid))
     if group:db.add(GroupMember(user_id=uid,group_id=gid))
     db.flush();recompute(db,user,row);guard(db,user,json.loads(row.desired))
@@ -345,3 +355,94 @@ def assign_group(request:Request,uid:int,data=Depends(form)):
     apply_access(db,user,group);db.commit()
     request.state.audit_subject=uid;request.state.audit_detail='Owning group: '+(group.name if group else 'None')
     return redirect('/admin/users/'+str(uid)+'?tab=access')
+
+
+def membership_hash(db,gid):
+    return fingerprint(sorted(db.scalars(select(GroupMember.user_id).where(GroupMember.group_id==gid))))
+
+@router.post('/admin/groups/{gid}/rename')
+def rename_group(request:Request,gid:int,data=Depends(form)):
+    require_admin(request);db=request.state.db;group=db.get(PermissionGroup,gid)
+    if not group:raise HTTPException(404,'Group not found')
+    name=str(data.get('name','')).strip()
+    if not name or len(name)>100:raise ValueError('Invalid name')
+    if db.scalar(select(PermissionGroup.id).where(PermissionGroup.name==name,PermissionGroup.id!=gid)):raise ValueError('Group name already exists')
+    result=db.execute(update(PermissionGroup).where(PermissionGroup.id==gid,PermissionGroup.version==int(data.get('version','-1'))).values(name=name,version=PermissionGroup.version+1))
+    if result.rowcount!=1:raise HTTPException(409,'Group changed. Reload this page.')
+    db.commit();request.state.audit_detail='Group renamed: '+name
+    return redirect('/admin/groups/'+str(gid))
+
+
+def delete_local_user(db,user):
+    from .models import Base,Config
+    # Delete dependent rows before the user; session children use FK cascades.
+    for table in reversed(Base.metadata.sorted_tables):
+        if table.name=='users':continue
+        for column in table.columns:
+            if any(f.target_fullname=='users.id' for f in column.foreign_keys):db.execute(delete(table).where(column==user.id))
+    db.execute(delete(Config).where(Config.key=='seerr_access_'+str(user.id)))
+    db.delete(user)
+
+@router.post('/admin/groups/{gid}/delete')
+def delete_group(request:Request,gid:int,data=Depends(form)):
+    actor=require_admin(request);db=request.state.db
+    from sqlalchemy import text
+    db.rollback();db.execute(text('BEGIN IMMEDIATE'))
+    group=db.get(PermissionGroup,gid)
+    if not group:raise HTTPException(404,'Group not found')
+    if group.version!=int(data.get('version','-1')) or data.get('membership')!=membership_hash(db,gid):raise HTTPException(409,'Group changed. Reload this page.')
+    mode=str(data.get('mode',''))
+    if mode not in ('group','users'):raise ValueError('Choose what to delete')
+    members=list(db.scalars(select(User).join(GroupMember).where(GroupMember.group_id==gid).order_by(User.id)))
+    if mode=='users':
+        if data.get('confirm_delete')!='on' or data.get('confirmation')!='DELETE':raise ValueError('Check the confirmation box and type DELETE')
+        # Preflight the whole selection before any irreversible request.
+        remotes={u['Id']:u for u in emby.users()}
+        for member in members:
+            if member.id==actor.id or member.admin or remotes.get(member.emby_id,{}).get('Policy',{}).get('IsAdministrator'):raise HTTPException(409,'Administrators and your own account cannot be deleted with a group')
+        from .seerr_permissions import configured,connection,read_permissions
+        from .integrations import SyncError,request as remote_request
+        if configured(db):
+            for member in members:
+                resolved=False
+                try:
+                    with connection(db,member) as (client,rid):
+                        resolved=True
+                        if rid==1 or read_permissions(client,rid)&2:raise HTTPException(409,'Administrators cannot be deleted with a group')
+                except SyncError as exc:
+                    if resolved or exc.code!='not_found':raise HTTPException(502,'Linked account verification failed. No deletion was started.')
+        removed=0
+        expected_members={member.id for member in members}
+        for member in members:
+            try:
+                if configured(db):
+                    resolved=False
+                    try:
+                        with connection(db,member) as (client,rid):
+                            resolved=True
+                            if rid==1 or read_permissions(client,rid)&2:raise HTTPException(409,'Administrators cannot be deleted with a group')
+                            remote_request(client,'DELETE',f'api/v1/user/{rid}')
+                    except SyncError as exc:
+                        if resolved or exc.code!='not_found':raise
+                if member.emby_id in remotes:
+                    from .emby import _ADMIN
+                    from urllib.parse import quote
+                    emby.request('DELETE','/Users/'+quote(member.emby_id,safe=''),token=_ADMIN)
+                    if any(u['Id']==member.emby_id for u in emby.users()):raise EmbyError('Deletion not verified')
+                expected_members.remove(member.id)
+                delete_local_user(db,member);db.commit();removed+=1
+                db.execute(text('BEGIN IMMEDIATE'));db.expire_all()
+                current=db.get(PermissionGroup,gid)
+                if not current or current.version!=int(data.get('version','-1')) or membership_hash(db,gid)!=fingerprint(sorted(expected_members)):
+                    raise HTTPException(409,'Group changed during deletion; refresh before retrying')
+            except (EmbyError,SyncError,HTTPException):
+                db.rollback()
+                raise HTTPException(502,f'Deletion stopped after {removed} complete account deletion(s). Some linked accounts or requests may already be deleted. Remaining group members were kept; refresh and check the servers before retrying.')
+    else:
+        from .group_access import apply_access
+        states={u.id:state(db,u,emby.user(u.emby_id).get('Policy',{})) for u in members}
+        db.execute(delete(GroupMember).where(GroupMember.group_id==gid));db.flush()
+        for member in members:
+            recompute(db,member,states[member.id]);guard(db,member,json.loads(states[member.id].desired));apply_access(db,member,None)
+    db.delete(group);db.commit();request.state.audit_detail='Group deleted; mode='+mode
+    return redirect('/admin/groups')

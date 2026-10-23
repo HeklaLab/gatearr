@@ -47,15 +47,21 @@ def validate(db,page,value):
     value=deepcopy(value);value['page']=page;portal.validate(value)
     login_forms=sum(b['kind']=='login_form' for b in value['blocks'])
     if (page=='login' and login_forms!=1) or (page!='login' and login_forms):raise ValueError('The sign-in page must contain exactly one sign-in form')
+    if page!='home' and any(b['kind'].startswith('widget_') for b in value['blocks']):raise ValueError('Widgets belong on the member portal')
     if page=='login' and any(b['kind'] in ('services','account','guides','application','applications') or b.get('visibility','everyone')!='everyone' for b in value['blocks']):raise ValueError('Use public blocks on the sign-in page')
     for b in value['blocks']:
-        if b['kind']=='application' and b.get('service_key','emby') not in ('radarr','sonarr','bazarr') and not db.get(AccessService,b.get('service_key','emby')):raise ValueError('Invalid service')
-        if b['kind']=='image':asset_url(b['url'],db)
+        if b['kind']=='application' and b.get('service_key','emby') not in ('radarr','sonarr','bazarr','tracearr','tdarr') and not db.get(AccessService,b.get('service_key','emby')):raise ValueError('Invalid service')
+        if b['kind']=='image':
+            from .image_sources import require_image
+            b['url']=require_image(b['url'],db)
         if b.get('rich'):b['body']=footer.clean_html(b.get('body',''))
     return value
 
 def save(db,page,value,expected,publish=False):
     value=validate(db,page,value)
+    if publish:
+        from .widgets import conflicts
+        if conflicts(value['blocks']):raise ValueError('Widget audiences overlap at the same priority. Change their audience or priority.')
     if page=='home':
         try:return portal.save(db,value,expected,publish)
         except ValueError as e:
@@ -78,7 +84,7 @@ def save(db,page,value,expected,publish=False):
 def editor(request,page='home'):
     require_admin(request);db=request.state.db
     from .themes import load as themes
-    return render(request,'visual_builder.html',builder_data={'page':page,'layout':load(db,page,True),'version':version(db,page),'palette':themes(db)['dark'],'services':catalog(db,editor=True),'menus':sorted({'main',*(m.menu_key for m in db.scalars(select(MenuItem)))})},builder_page=page)
+    return render(request,'visual_builder.html',builder_data={'page':page,'layout':load(db,page,True),'version':version(db,page),'palette':themes(db)['dark'],'services':catalog(db,editor=True),'widgets':__import__('app.widgets',fromlist=['builder_data']).builder_data(db),'menus':sorted({'main',*(m.menu_key for m in db.scalars(select(MenuItem)))})},builder_page=page)
 
 @router.get('/admin/design/{page}')
 def design(request:Request,page:str):return editor(request,page)
@@ -118,7 +124,7 @@ def application_order(request:Request,data=Depends(form)):
 
 @router.get('/admin/design/home/howto/{key}')
 def howto(request:Request,key:str):
-    if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
+    if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise HTTPException(400,'How to is unavailable for this application')
     from .visual_howto import howto_editor
     return howto_editor(request,key)
 
@@ -131,7 +137,7 @@ def guide(request:Request,guide_id:int):
 def enable_howto(request:Request,item_id:int,data=Depends(form)):
     require_admin(request);db=request.state.db;item=db.get(MenuItem,item_id)
     if not item:raise HTTPException(404,'Application not found')
-    if item.label.strip().casefold() in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
+    if item.label.strip().casefold() in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise HTTPException(400,'How to is unavailable for this application')
     key=item.access_service
     if not key:
         key='service-'+str(item.id)
@@ -144,7 +150,7 @@ def enable_howto(request:Request,item_id:int,data=Depends(form)):
 @router.post('/admin/design/home/application/{key}/behavior')
 def application_behavior(request:Request,key:str,data=Depends(form)):
     require_admin(request);db=request.state.db
-    if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'Access guides are unavailable for admin tools')
+    if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise HTTPException(400,'Access guides are unavailable for admin tools')
     service=db.get(AccessService,key)
     if not service:raise HTTPException(404,'Application not found')
     mode=data.get('mode')

@@ -189,3 +189,26 @@ async def password(request: Request, user_id: str):
             raise HTTPException(403)
         db.execute("UPDATE users SET password=? WHERE id=?", (hasher.hash(data["NewPw"]), user_id))
         db.commit()
+
+# Native photo routes for the isolated development simulator only.
+@app.get('/emby/Users/{user_id}/Images/Primary')
+def photo_read(user_id:str,request:Request):
+    from fastapi.responses import Response
+    authorize(request,user_id)
+    with connection() as db:
+        db.execute('CREATE TABLE IF NOT EXISTS photos (user_id TEXT PRIMARY KEY, content BLOB, mime TEXT)')
+        row=db.execute('SELECT content,mime FROM photos WHERE user_id=?',(user_id,)).fetchone()
+    if not row:raise HTTPException(404)
+    return Response(row[0],media_type=row[1])
+
+@app.post('/emby/Users/{user_id}/Images/Primary',status_code=204)
+async def photo_write(user_id:str,request:Request):
+    import base64,hashlib
+    authorize(request,user_id)
+    try:raw=base64.b64decode(await request.body(),validate=True)
+    except ValueError:raise HTTPException(400)
+    with connection() as db:
+        if not db.execute('SELECT 1 FROM users WHERE id=?',(user_id,)).fetchone():raise HTTPException(404)
+        db.execute('CREATE TABLE IF NOT EXISTS photos (user_id TEXT PRIMARY KEY, content BLOB, mime TEXT)')
+        db.execute('INSERT OR REPLACE INTO photos VALUES (?,?,?)',(user_id,raw,request.headers.get('content-type','image/png')));db.commit()
+    data=profile(user_id);data['PrimaryImageTag']=hashlib.sha256(raw).hexdigest();save_profile(user_id,data)

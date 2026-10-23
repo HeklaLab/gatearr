@@ -22,7 +22,7 @@ def test_single_language_dark_theme_and_parent_navigation(client):
     assert 'color-scheme:dark' in css and 'linear-gradient' in css and '@media' not in css
     with SessionLocal() as db:
         main.set_config(db,'themes_published',json.dumps({'mode':'light','light':{},'dark':{'bg':'#080f24','surface':'#111e3c','gradient_start':'#062751','gradient_end':'#080f24'}}));db.commit()
-    assert themes.DARK['bg'] in client.get('/theme.css').text
+    assert 'color-scheme:light' in client.get('/theme.css').text
 
 
 def test_footer_columns_upload_and_draft_retention(client):

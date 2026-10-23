@@ -8,6 +8,9 @@ import nh3
 TAGS={'p','div','br','strong','b','em','i','u','s','h1','h2','h3','ul','ol','li','blockquote','a','img','span','hr'}
 
 def attribute(tag,name,value):
+    if tag=='img' and name=='src':
+        from .image_sources import local_path
+        return value if local_path(value) else None
     if name in ('href','src'):
         if tag=='a' and value=='${link}':return value
         parsed=urlsplit(value)
@@ -17,7 +20,7 @@ def attribute(tag,name,value):
 
 def clean(value):
     if len(value)>50000:raise ValueError('Template too long or invalid subject')
-    return nh3.clean(value,tags=TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attribute,url_schemes={'https','http'},url_relative=lambda value:value if value=='${link}' else None,filter_style_properties={'color','background-color','text-align','font-size','font-weight','font-style','text-decoration','line-height','max-width','display','margin-left','margin-right','padding','border-radius'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
+    return nh3.clean(value,tags=TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attribute,url_schemes={'https','http'},url_relative=lambda value:value if value=='${link}' or __import__('app.image_sources',fromlist=['local_path']).local_path(value) else None,filter_style_properties={'color','background-color','text-align','font-size','font-weight','font-style','text-decoration','line-height','max-width','display','margin-left','margin-right','padding','border-radius'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
 
 class PlainText(HTMLParser):
     def __init__(self):super().__init__();self.parts=[]
@@ -40,8 +43,8 @@ def interpolate(value,values):
 def validate(value,html=False,subject=False):
     if len(value)>(50000 if html else 10000) or (subject and (not value.strip() or len(value)>300 or '\r' in value or '\n' in value)):
         raise ValueError('Template too long or invalid subject')
-    try:Template(value).substitute(app_name='Gatearr',username='Member',link='https://example.com/verify-email?token=example',minutes='30')
-    except (ValueError,KeyError):raise ValueError('Allowed variables: ${app_name}, ${username}, ${link}, ${minutes}')
+    try:Template(value).substitute(app_name='Gatearr',username='Member',link='https://example.com/verify-email?token=example',minutes='30',title='Series',season='5')
+    except (ValueError,KeyError):raise ValueError('Allowed variables: ${app_name}, ${username}, ${link}, ${minutes}, ${title}, ${season}')
     value=clean(value) if html else value
     if not subject and '${link}' not in (plain(value) if html else value):raise ValueError('The message body must contain ${link}')
     return value

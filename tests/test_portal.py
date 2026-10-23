@@ -19,7 +19,7 @@ def csrf(client, path='/login'):
 def post(client, path, data, page='/login'):
     return client.post(path, data={'csrf': csrf(client, page), **data}, follow_redirects=False)
 
-def setup(client,empty_journeys=False,locale="en"):
+def setup(client,empty_journeys=False,locale="en",fresh_layout=False):
     client.cookies.set("gatearr_language",locale)
     response=post(client, '/setup', {'app_name':'Gatearr','public_url':'http://testserver','media_server':'emby','url':'http://emby.test/emby','api_key':'test-api-key'}, '/setup')
     if response.status_code==303:
@@ -33,7 +33,16 @@ def setup(client,empty_journeys=False,locale="en"):
                 db.query(Guide).delete()
                 service=db.get(AccessService,'emby');service.access_draft=service.access_published=None;service.access_version=0;service.entry_mode='direct'
             db.commit()
-        for step in ('seerr','tools','smtp'):
+        if not fresh_layout:
+            from app import portal
+            import json
+            with SessionLocal() as db:
+                for key in ('portal_draft','portal_published'):main.set_config(db,key,json.dumps(portal.DEFAULT))
+                for key in ('themes_draft','themes_published'):
+                    row=db.get(Config,key)
+                    if row:db.delete(row)
+                db.commit()
+        for step in ('applications','smtp'):
             assert post(client,'/admin/setup/'+step,{'action':'skip'},'/admin/setup/'+step).status_code==303
         assert post(client,'/admin/setup/finish',{},'/admin/setup/finish').status_code==303
     return response
@@ -201,7 +210,7 @@ def test_rate_limit_login_and_reset(client):
 
 def test_branding_menu_smtp_encryption_and_template_validation(client):
     setup(client)
-    response = post(client, '/admin/settings', {'app_name': 'Usarr', 'login_text': '<script>alert(1)</script>', 'logo_url': 'https://example.com/logo.png', 'public_url': 'http://testserver', 'emby_link': 'https://emby.example.com'}, '/admin')
+    response = post(client, '/admin/settings', {'app_name': 'Usarr', 'login_text': '<script>alert(1)</script>', 'logo_url': '', 'public_url': 'http://testserver', 'emby_link': 'https://emby.example.com'}, '/admin')
     assert response.status_code == 303
     assert post(client, '/admin/menu', {'label': 'Seerr', 'url': 'javascript:alert(1)', 'icon': 'link', 'position': '1'}, '/admin').status_code == 400
     assert post(client, '/admin/menu', {'label': 'Seerr', 'url': 'https://requests.example.com', 'icon': 'link', 'position': '1', 'new_tab': 'on'}, '/admin').status_code == 303
@@ -245,7 +254,7 @@ def test_linked_admin_uses_normal_email_recovery(client):
 def test_health_and_migration_schema(client):
     assert client.get('/healthz').json() == {'status': 'ok'}
     with SessionLocal() as db:
-        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0019'
+        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0021'
 
 
 def test_form_limits_and_null_origin(client):
@@ -268,3 +277,12 @@ def test_migration_downgrade_and_upgrade(client):
     command.upgrade(configuration, 'head')
     assert 'mail_jobs' in inspect(engine).get_table_names()
     assert client.get('/healthz').status_code == 200
+
+
+def reviewed_post(client,path,data,page='/login'):
+    """Explicitly review and confirm a membership addition in tests."""
+    token=csrf(client,page)
+    preview=client.post(path,data={'csrf':token,**data,'review_only':'on'},follow_redirects=False)
+    assert preview.status_code==200,preview.text
+    proof=preview.json().get('review_token','')
+    return client.post(path,data={'csrf':token,**data,'review_token':proof},follow_redirects=False)

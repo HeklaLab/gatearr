@@ -65,7 +65,7 @@ def test_radarr_root_api_has_explicit_urlbase_error_and_preserves_form(client,mo
     assert result.status_code==400
     assert 'server and API key are valid' in result.text and '/tools/radarr/app' in result.text
     assert 'radarr.private:7878' in result.text and 'do-not-show-this-key' not in result.text
-    assert 'name="radarr_url"' in result.text and 'server and API key are valid' in result.text
+    assert 'name="url"' in result.text and 'server and API key are valid' in result.text
     with SessionLocal() as db:assert main.config(db,'radarr_enabled')!='true'
 
 
@@ -81,11 +81,11 @@ def test_configured_tools_are_available_to_admins_and_independent_member_grants(
     setup(client)
     with SessionLocal() as db:
         owner=db.scalar(select(User).where(User.admin.is_(True)));owner.tool_access='[]'
-        for tool in tools_proxy.TOOLS:main.set_config(db,tool+'_enabled','true')
-        db.scalar(select(User).where(User.admin.is_(True))).tool_access=json.dumps(list(tools_proxy.TOOLS))
+        for tool in tools_proxy.PROXY_TOOLS:main.set_config(db,tool+'_enabled','true')
+        db.scalar(select(User).where(User.admin.is_(True))).tool_access=json.dumps(list(tools_proxy.PROXY_TOOLS))
         db.commit()
     page=client.get('/home').text
-    for tool in tools_proxy.TOOLS:
+    for tool in tools_proxy.PROXY_TOOLS:
         assert 'href="/tools/'+tool+'"' in page
         assert client.get('/tools/'+tool).status_code==200
     # Custom portals without a services block still expose configured admin tools.
@@ -94,7 +94,7 @@ def test_configured_tools_are_available_to_admins_and_independent_member_grants(
         layout=portal.load(db);layout['blocks']=[b for b in layout['blocks'] if b['kind']!='applications'];main.set_config(db,'portal_published',json.dumps(layout));db.commit()
     assert 'href="/tools/radarr"' not in client.get('/home').text
     logout(client);login_user(client)
-    for tool in tools_proxy.TOOLS:assert client.get('/tools/'+tool).status_code==403
+    for tool in tools_proxy.PROXY_TOOLS:assert client.get('/tools/'+tool).status_code==403
     with SessionLocal() as db:
         member=db.scalar(select(User).where(User.name=='demo'));member.tool_access='["radarr"]';db.commit()
     assert client.get('/tools/radarr').status_code==200 and client.get('/tools/sonarr').status_code==403

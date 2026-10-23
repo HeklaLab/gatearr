@@ -8,7 +8,7 @@ from app.rich_mail import clean,interpolate,validate
 from app.security import decrypt
 from test_portal import setup,post,prepare_user,logout,smtp
 
-HTML='<h2>Welcome ${username}</h2><p><strong>Enjoy ${app_name}</strong></p><p><a href="${link}">Join us</a></p><img src="https://example.com/banner.png" alt="Banner">'
+HTML='<h2>Welcome ${username}</h2><p><strong>Enjoy ${app_name}</strong></p><p><a href="${link}">Join us</a></p><img src="http://testserver/static/gatearr-logo.png" alt="Banner">'
 
 def edit(client,**overrides):
     return post(client,'/admin/mail-editor',{'purpose':'invite','mail_locale':'en','subject':'Welcome ${username}','html':HTML,**overrides},'/admin/mail-editor')
@@ -41,7 +41,7 @@ def test_editor_saves_bilingual_templates_and_multipart_with_escaped_values(clie
     assert en.get_content_type()=='multipart/alternative'
     html=en.get_body(preferencelist=('html',)).get_content()
     text=en.get_body(preferencelist=('plain',)).get_content()
-    assert '&lt;img src=x onerror=bad&gt;' in html and '<strong>' in html and 'banner.png' in html
+    assert '&lt;img src=x onerror=bad&gt;' in html and '<strong>' in html and 'gatearr-logo.png' in html
     assert 'href="https://portal.test/verify-email?token=a&amp;next=b"' in html
     assert 'https://portal.test/verify-email?token=a&next=b' in text
     assert fr['Subject']=='Bonjour Alex' and 'Welcome' not in fr.get_body(preferencelist=('html',)).get_content()
@@ -51,7 +51,7 @@ def test_rich_mail_removes_active_html_and_unsafe_urls():
     raw='<p style="text-align:center;color:#123456;position:fixed">Safe</p><script>bad()</script><svg onload="bad()"></svg><form><input></form><a href="javascript:alert(1)">Bad</a><img src="data:image/svg+xml,bad" onerror="bad()"><img src="https://example.com/a.png" onload="bad()"><a href="${link}">Verify</a>'
     result=validate(raw,html=True)
     for value in ('<script','bad()','<svg','<form','onerror','onload','javascript:','data:image','position:'):assert value not in result
-    assert 'text-align:center' in result and 'https://example.com/a.png' in result and '${link}' in result
+    assert 'text-align:center' in result and 'https://example.com/a.png' not in result and '${link}' in result
     final=interpolate('<a href="${link}">Go</a>',{'link':'javascript:alert(1)'})
     assert 'javascript:' not in final
 

@@ -57,6 +57,11 @@ def version(db): return int(config(db,'footer_version','0'))
 
 def save(db,value,expected,publish=False):
     validate(value)
+    from .image_sources import require_image
+    for item in value.get('items',[]):
+        if item.get('icon_url'):require_image(item['icon_url'],db)
+    for block in value.get('design',{}).get('blocks',[]):
+        if block.get('kind')=='image':block['url']=require_image(block.get('url',''),db)
     db.execute(insert(Config).values(key='footer_version',value='0').on_conflict_do_nothing())
     result=db.execute(update(Config).where(Config.key=='footer_version',Config.value==str(expected)).values(value=str(expected+1)))
     if result.rowcount!=1:

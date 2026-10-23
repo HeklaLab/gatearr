@@ -126,7 +126,7 @@ def test_smtp_connection_test_uses_saved_settings_without_sending_email(client,m
     assert client.post('/admin/smtp-connection-test',data={'csrf':'bad'}).status_code==403
     assert post(client,'/admin/smtp-connection-test',{'smtp_host':'untrusted.test'},'/admin/emails').status_code==303
     assert calls==[('smtp.test',2525)]
-    page=client.get('/admin/emails').text
+    page=client.get('/admin/emails?tab=smtp').text
     assert 'SMTP connection verified' in page and '192.0.2.25' in page
     assert 'data-feedback="test"' in page and 'No email is sent.' in page
 

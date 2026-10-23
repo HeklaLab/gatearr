@@ -1,3 +1,4 @@
+from test_portal import reviewed_post
 import json,time
 from contextlib import contextmanager
 import httpx,pytest
@@ -65,11 +66,18 @@ def test_cannot_disable_self_or_skip_confirmation(client):
     assert post(client,path+'/activation',{'action':'disable','version':v},path).status_code==400
 
 
-def test_single_group_locks_individual_rights_and_restores_access(client,policy_api):
+def test_single_group_locks_individual_rights_and_restores_access(client,policy_api,monkeypatch):
     uid,store,writes,api=policy_api
     path=post(client,'/admin/groups',{'name':'Family'},'/admin/groups').headers['location']
+    @contextmanager
+    def native_seerr(db,user):yield None,2
+    monkeypatch.setattr(sp,'configured',lambda db:True)
+    monkeypatch.setattr(sp,'connection',native_seerr)
+    monkeypatch.setattr(sp,'read_permissions',lambda c,rid:32)
+    from app import seerr_quotas
+    monkeypatch.setattr(seerr_quotas,'read',lambda c,rid:({},dict.fromkeys(seerr_quotas.FIELDS,None)))
     data={'version':0,'members':[uid],'manage_tools':'on','tools':['radarr'],'manage_seerr_access':'on','manage_seerr_permissions':'on','seerr_permission':['32','262144'],'library_mode':'selected','libraries':['11111111111111111111111111111111']}
-    assert post(client,path,data,path).status_code==303
+    assert reviewed_post(client,path,data,path).status_code==303
     with SessionLocal() as db:
         assert json.loads(db.get(User,uid).tool_access)==['radarr']
         assert db.get(SeerrPolicyState,uid).desired==32+262144
@@ -137,7 +145,7 @@ def test_applications_are_consolidated_and_theme_preview_is_local(client):
     assert text.count('name="key" value="emby"')==1
     theme=client.get('/admin/branding/themes')
     assert 'theme-preview.js' in theme.text and "script-src 'self'" in theme.headers['content-security-policy']
-    assert '<h2>Dark</h2>' not in theme.text
+    assert '<h2>Dark</h2>' in theme.text and '<h2>Light</h2>' in theme.text
 
 
 def test_french_setup_is_default_reference_and_english_can_be_disabled(client):
@@ -150,9 +158,11 @@ def test_french_setup_is_default_reference_and_english_can_be_disabled(client):
     for step in ('seerr','tools','smtp'):assert post(client,'/admin/setup/'+step,{'action':'skip'},'/admin/setup/'+step).status_code==303
     assert post(client,'/admin/setup/finish',{},'/admin/setup/finish').status_code==303
     with SessionLocal() as db:
-        assert i18n.languages(db)=={'fr':'Français'}
+        assert i18n.languages(db)=={'en':'English','fr':'Français'}
         assert i18n.default_language(db)=='fr'
         assert db.scalar(select(User).where(User.admin.is_(True))).locale=='fr'
+    assert 'language-switch' in client.get('/home').text
+    assert post(client,'/admin/translations/languages/en',{'name':'English'},'/admin/translations').status_code==303
     assert 'language-switch' not in client.get('/home').text
     assert post(client,'/admin/translations/languages/fr',{'name':'Français'},'/admin/translations').status_code==400
     assert post(client,'/admin/translations/languages',{'language':'en','enabled':'on'},'/admin/translations').status_code==303

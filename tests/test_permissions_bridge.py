@@ -1,3 +1,4 @@
+from test_portal import reviewed_post
 import json,re,time
 from copy import deepcopy
 from types import SimpleNamespace
@@ -60,7 +61,7 @@ def test_failed_policy_readback_is_red_not_success(client,policy_api,monkeypatch
 def test_group_membership_applies_and_removal_restores_baseline(client,policy_api):
     uid,store,writes,api=policy_api
     r=post(client,'/admin/groups',{'name':'Family'},'/admin/groups');path=r.headers['location']
-    response=post(client,path,{'version':0,'members':[uid],'permission':['SimultaneousStreamLimit','EnableSubtitleDownloading'],'value_SimultaneousStreamLimit':'2','value_EnableSubtitleDownloading':'false','library_mode':'selected','libraries':['11111111111111111111111111111111']},path)
+    response=reviewed_post(client,path,{'version':0,'members':[uid],'permission':['SimultaneousStreamLimit','EnableSubtitleDownloading'],'value_SimultaneousStreamLimit':'2','value_EnableSubtitleDownloading':'false','library_mode':'selected','libraries':['11111111111111111111111111111111']},path)
     assert response.status_code==303
     with SessionLocal() as db:
         row=db.get(PolicyState,uid);assert row.pending;p.apply(db,db.get(User,uid),row,api)

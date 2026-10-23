@@ -1,0 +1,20 @@
+{%- set path=request.url.path -%}
+{%- set label='' -%}
+{%- if path.startswith('/admin/branding/themes') -%}{% set label='Theme' %}
+{%- elif path.startswith('/admin/branding') -%}{% set label='Identity' %}
+{%- elif path.startswith('/admin/footer') -%}{% set label='Footer builder' %}
+{%- elif path.startswith(('/admin/portal','/admin/design/')) -%}{% set label='Portal builder' %}
+{%- elif path.startswith(('/admin/access','/admin/guides','/admin/visual-howto','/admin/visual-guide')) -%}{% set label='Access guides' %}
+{%- elif path.startswith('/admin/security/captcha') -%}{% set label='Captcha' %}
+{%- elif path.startswith('/admin/security') -%}{% set label='Security' %}
+{%- elif path.startswith('/admin/groups') -%}{% set label='Groups' %}
+{%- elif path.startswith('/admin/emby') -%}{% set label='Create / clone users' %}
+{%- elif path.startswith('/admin/users') -%}{% set label='Users' %}
+{%- elif path.startswith('/admin/mail-editor') -%}{% set label='Email templates' %}
+{%- elif path.startswith('/admin/emails') -%}{% set label='Emails' %}
+{%- elif path.startswith(('/admin/integrations','/admin/services')) -%}{% set label='Applications & API' %}
+{%- elif path.startswith('/admin/translations') -%}{% set label='Translations / Labels' %}
+{%- elif path.startswith('/admin/activity') -%}{% set label='Activity log' %}
+{%- elif path.startswith('/admin/updates') -%}{% set label='Updates' %}
+{%- endif -%}
+<span class="eyebrow admin-eyebrow">{{ _('Administration') }}{% if label %} · {{ _(label) }}{% endif %}</span>

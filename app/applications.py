@@ -15,7 +15,7 @@ def catalog(db,user=None,editor=False,locale='en'):
     menu_rows=list(db.scalars(select(MenuItem).order_by(MenuItem.position,MenuItem.id)))
     attached={m.access_service for m in menu_rows if m.access_service}
     for s in db.scalars(select(AccessService).order_by(AccessService.name)):
-        if s.key in ('radarr','sonarr','bazarr') or s.key in attached and s.key not in ('emby','seerr'):continue
+        if s.key in ('radarr','sonarr','bazarr','tracearr','tdarr') or s.key in attached and s.key not in ('emby','seerr'):continue
         if s.key=='seerr' and not can_seerr:continue
         href=access_href(db,s.key)
         manual=next((m for m in menu_rows if m.access_service==s.key or m.label.casefold()==s.key),None)
@@ -26,11 +26,14 @@ def catalog(db,user=None,editor=False,locale='en'):
         if any(a['key']=='access:'+(item.access_service or item.label.casefold()) for a in result):continue
         key=item.access_service
         if not can_seerr and (key=='seerr' or item.label.casefold()=='seerr'):continue
-        if key in ('radarr','sonarr','bazarr'):continue
+        if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):continue
         href=access_href(db,key) if key else item.url
         result.append(dict(key='menu:'+str(item.id),name=content(db,'menu:'+str(item.id)+':label',item.label,locale),href=href,image=item.icon_url or default_icon(key or item.label,media),icon=item.icon,external=item.new_tab and not key,howto=key or '',menu_key=item.menu_key))
-    for tool in ('radarr','sonarr','bazarr'):
+    for tool in ('radarr','sonarr','bazarr','tracearr','tdarr'):
         if editor or tool in tools:result.append(dict(key=tool,name=tool.capitalize(),href='/tools/'+tool,image=default_icon(tool,media),icon='gears',external=False,howto=''))
+    if media=='jellyfin':
+        for application in result:
+            if application['image']=='/static/services/emby.png':application['image']=default_icon('jellyfin')
     result.append(dict(key='account',name='My account',href='/account',image='',icon='user-circle',external=False,howto=''))
     return result
 
@@ -45,8 +48,8 @@ def normalize(layout,db):
         if kind=='account' and old_services and b['id']=='account' and b.get('body')=='Manage your details and password.':
             b['_remove']=True;continue
         if kind=='services':
-            b['applications']=[a['key'] for a in apps if (a['key']!='access:emby' or b.get('include_emby')) and (not a.get('menu_key') or a['menu_key']==b.get('menu_key','main')) and (a['key']!='account' or b['id']==last_legacy) and (a['key'] not in ('radarr','sonarr','bazarr') or config(db,a['key']+'_enabled')=='true')]
-        elif kind=='application':b['applications']=[b.get('service_key','emby') if b.get('service_key') in ('radarr','sonarr','bazarr') else 'access:'+b.get('service_key','emby')]
+            b['applications']=[a['key'] for a in apps if (a['key']!='access:emby' or b.get('include_emby')) and (not a.get('menu_key') or a['menu_key']==b.get('menu_key','main')) and (a['key']!='account' or b['id']==last_legacy) and (a['key'] not in ('radarr','sonarr','bazarr','tracearr','tdarr') or config(db,a['key']+'_enabled')=='true')]
+        elif kind=='application':b['applications']=[b.get('service_key','emby') if b.get('service_key') in ('radarr','sonarr','bazarr','tracearr','tdarr') else 'access:'+b.get('service_key','emby')]
         elif kind=='account':b['applications']=['account']
         b.update(kind='applications',span=12,region='main');b.pop('parent',None);b.pop('slot',None);b.setdefault('columns',3)
     value['blocks']=[b for b in value['blocks'] if not b.pop('_remove',False)]

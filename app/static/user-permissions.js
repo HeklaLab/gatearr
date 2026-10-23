@@ -4,7 +4,7 @@
  const groupTabs=document.querySelector('[data-group-tabs]');
  if(groupForm&&groupTabs){
   const selectTab=key=>{
-   if(!['members','emby','seerr','access'].includes(key))key='members';
+   if(!['emby','seerr','access'].includes(key))key='emby';
    groupForm.querySelector('[name=active_tab]').value=key;
    for(const panel of groupForm.querySelectorAll('[data-group-panel]'))panel.hidden=panel.dataset.groupPanel!==key;
    for(const link of groupTabs.querySelectorAll('[data-group-tab]')){
@@ -20,7 +20,7 @@
    event.preventDefault();selectTab(link.dataset.groupTab);
    const url=new URL(location.href);url.searchParams.set('tab',link.dataset.groupTab);history.pushState(null,'',url);
   });
-  window.addEventListener('popstate',()=>selectTab(new URL(location.href).searchParams.get('tab')||'members'));
+  window.addEventListener('popstate',()=>selectTab(new URL(location.href).searchParams.get('tab')||'emby'));
  }
 
  for(const time of document.querySelectorAll('time[data-timestamp]'))time.textContent=new Date(Number(time.dataset.timestamp)*1000).toLocaleString(document.documentElement.lang);

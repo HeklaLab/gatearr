@@ -8,13 +8,13 @@ from starlette.datastructures import UploadFile
 from .models import IconAsset
 from .security import url_ok
 
-MAX_BYTES=2*1024*1024
+MAX_BYTES=5*1024*1024
 MAX_DIMENSION=1024
 SIGNATURE=b'\x89PNG\r\n\x1a\n'
 
 
 def clean_png(raw):
-    def invalid():raise ValueError('Choose a valid PNG image (up to 2 MB and 1024 × 1024 pixels)')
+    def invalid():raise ValueError('Choose a valid PNG image (up to 5 MB and 1024 × 1024 pixels)')
     if len(raw)>MAX_BYTES or not raw.startswith(SIGNATURE):invalid()
     pos=8;chunks=[];compressed=[];header=None;ended=False;data_ended=False;palette=False
     while pos<len(raw):
@@ -84,7 +84,8 @@ def icon_value(db,data):
         match=re.fullmatch(r'/media/icons/([a-f0-9]{64})\.(?:png|svg)',value)
         if not match or not db.get(IconAsset,match[1]):raise ValueError('Invalid icon URL')
         return value
-    return url_ok(value,optional=True)
+    from .image_sources import require_image
+    return require_image(value,db,optional=True)
 
 
 import json
