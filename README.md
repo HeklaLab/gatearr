@@ -90,7 +90,9 @@ Sharing a media server with family or friends can turn its owner into the help d
 | Need | What Gatearr provides |
 | --- | --- |
 | Forgotten passwords | Email-based self-service password recovery, verification and invitations for accounts on the connected media server. SMTP and an account email are required. |
-| Repeated account configuration | User groups managing libraries, Emby permissions, Seerr permissions/quotas and Gatearr/admin-tool access. Each user belongs to at most one group. |
+| Repeated account configuration | User groups managing libraries, Emby permissions, Seerr permissions/quotas and Gatearr/admin-tool access. Before adding users, Gatearr compares their current native permissions, libraries and application access with the group. Only differences are displayed, one user at a time for bulk additions. Confirmations expire and are rejected if the underlying rights or group change.
+
+Each user belongs to at most one group. |
 | Permission management | Edit supported media policy fields: streams, downloads, subtitles, remote access and more. Read-back indicators distinguish verified, pending, different and failed values. |
 | Helping users connect | Visual **Access guides** with nested device choices, illustrated steps and store/download links. Starter Emby guides cover browser, Windows, Mac, Linux, Android, iPhone and Smart TV. |
 | A portal that looks like your own | Drag-and-drop **Login screen**, **Portal** and **Footer** builders, live previews, application rows, rich text, uploaded logos/images, menus, colors, gradients, button/hover styles and editable light/dark presets. |
@@ -206,7 +208,7 @@ The Windows example uses port 8088. Open `http://localhost:8088/setup`. For Emby
 
 ### First-run wizard
 
-Six steps: media server/name/public URL → existing media administrator selection → optional Seerr → optional Radarr/Sonarr/Bazarr on one screen → optional SMTP → finish.
+Five steps: portal identity/media server → existing media administrator selection → optional applications on one screen → optional email → finish. All 21 bundled interface languages, a logo upload and an initial theme preset are available from the first step.
 
 The first Gatearr administrator is an existing active media account whose password is verified. Other imported accounts can later receive the Gatearr admin role. Media administrator status does not automatically grant Gatearr administration. The first-admin selection is browser-bound, expires after 30 minutes and cannot be claimed twice.
 
@@ -236,15 +238,15 @@ accounts.example.com {
 }
 ```
 
-Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTED_PROXY_IPS` to the proxy's exact address/CIDR as seen by Gatearr. If already installed, update the stored public URL in Branding too. Validate the Caddy configuration before reloading it. A formatting warning is different from a failed certificate challenge; use the actual error/status to diagnose it. `GET /healthz` and `HEAD /healthz` check application/database readiness.
+Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTED_PROXY_IPS` to the proxy's exact address/CIDR as seen by Gatearr. If already installed, update the stored public URL in Appearance too. Validate the Caddy configuration before reloading it. A formatting warning is different from a failed certificate challenge; use the actual error/status to diagnose it. `GET /healthz` and `HEAD /healthz` check application/database readiness.
 
 ## Administration
 
-- **Branding**: configurable name, uploaded logo and browser-tab title, Portal builder (including Access guides and Footer), and Theme with live preview.
+- **Appearance**: configurable name, uploaded logo and browser-tab title, Portal builder (including Access guides and Footer), and Theme with live preview.
 - **Users**: accounts, group membership, libraries/media policies, Seerr permissions/quotas, admin-tool access and assistance.
 - **Applications & API**: application links, private/public addresses, connections and health checks in one place.
-- **Emails**: SMTP and localized invitation/recovery/verification/account-change templates.
-- **Security**: configurable password complexity for passwords created or changed through Gatearr. Native rules also apply.
+- **Emails**: separate template and SMTP tabs; localized invitation/recovery/verification/account-change templates and a Tracearr-dependent new-season template.
+- **Security**: password complexity and local Captcha protection for sign-in/recovery, with per-form controls and aggregate statistics. Native password rules also apply.
 - **Translations / Labels**: active languages, fixed labels and custom content translations.
 - **Activity log**: readable changes with actor, affected user, result and selected before/after values. Secrets are excluded; retention is bounded.
 - **Updates and changelog**: release checks, installed version, changelog, feedback links and customization reset.
@@ -265,7 +267,7 @@ Review/edit the fields actually returned by the media server: streams, downloads
 
 Each user belongs to at most one group. Group membership locks individual library, permission and application-access editing; edit the owning group instead. Removing membership restores captured original values for settings previously managed by the group. Existing multi-group configurations are migrated as described in [UPGRADING.md](UPGRADING.md).
 
-Seerr permissions and movie/season quotas can be managed per user or group. Unrelated settings are preserved and writes are read back. Seerr’s native rules still apply: users with **Manage Users** are exempt from request quotas, and protected owner/admin settings cannot always be changed through its API. Card counters can be enabled independently for administrators and members.
+Seerr permissions and movie/season quotas can be managed per user or group. Unrelated settings are preserved and writes are read back. Seerr’s native rules still apply: users with **Manage Users** are exempt from request quotas, and protected owner/admin settings cannot always be changed through its API. Request and quota counters use independent portal widgets, with administrator-selected metrics, optional logos and role/group audiences.
 
 Indicators distinguish verified values, pending/drift and failures. Observing remote changes does not silently overwrite them. Deactivation blocks Gatearr, rotates configured remote passwords and blocks Gatearr recovery; reactivation permits a new reset. Native sessions and recovery paths remain governed by their applications; see the upgrade notes.
 
@@ -273,7 +275,7 @@ Emby libraries use virtual-folder GUIDs, not numeric navigation IDs. Jellyfin us
 
 ### Themes, footer and icons
 
-The current beta offers one customizable dark theme. Edit its palette and subtle gradient in Appearance → Theme. Save a draft and publish it. Existing custom dark colors are retained; the shipped blue preset is made darker.
+Blue Boréal, Electric Lime and Neon Rose each provide editable light/dark palettes. Apply a preset in Appearance → Theme to preview its colors and matching default logo, customize either palette if needed, then publish. Presets replace colors without changing layout. Administrators can enforce dark/light or allow the personal appearance capsule in the account menu. Custom uploaded logos take priority, and upgrades retain existing custom colors.
 
 The footer is centered and supports one, two or three rich-text columns, links and uploaded images. Save a draft, preview it, then publish. Only the selected number of column editors is shown. Each has rich text and direct PNG/SVG image upload. Legacy content is prefilled into one editable column. Hidden columns are kept in the draft and restored when you increase the count.
 
@@ -326,7 +328,7 @@ docker compose up -d --wait
 docker compose logs --since=2m gatearr
 ```
 
-Startup runs migrations automatically. See [UPGRADING.md](UPGRADING.md) before upgrading from older packages. The v0.2.0 migration removes the retired Tracearr connection secrets, queued jobs/checks and newsletter fields. Other accounts, mappings, roles, emails, Seerr/media connections and custom portal content remain.
+Startup runs migrations automatically. See [UPGRADING.md](UPGRADING.md) before upgrading from older packages. The historical v0.2.0 migration removed the former Tracearr connection secrets, queued jobs/checks and newsletter fields. Version 0.4.0 introduces a new Tracearr integration; configure its current API connection rather than restoring the retired credentials. Other accounts, mappings, roles, emails, Seerr/media connections and custom portal content remain.
 
 Server-side role recovery uses an existing media account:
 
@@ -355,7 +357,7 @@ Help improve this first public beta: [report bugs](https://github.com/HeklaLab/g
 Gatearr is independently developed and is not affiliated with or endorsed by Emby, Jellyfin, Seerr or the other integrated applications. Their names/logos belong to their respective owners.
 
 
-### First installation and account management (0.4.0 follow-up)
+### Portal defaults and native profile pictures
 
 The five-step installer configures portal identity/media server, the first administrator, optional applications, outgoing email and a final summary. All 21 bundled interface languages are available during setup. Changing language translates the current screen without discarding entered fields. PNG/SVG logo uploads are limited to 5 MiB; the supplied Gatearr logo is shown initially. Choose Blue Boréal, Electric Lime or Neon Rose before continuing. Application tests distinguish unauthenticated HTTP reachability from authenticated API validation; Tdarr has an interface check only.
 
