@@ -1,6 +1,8 @@
-## 0.4.0
+## Upgrading to 0.4.0 — public beta
 
-Back up the persistent database and bootstrap.json before upgrading. Migration 0020 adds widget caches, personal notifications and captcha accounting without replacing users or portal content. Existing embedded Seerr counters in saved layouts are converted into audience-specific widget blocks.
+Back up the persistent database and bootstrap.json before upgrading. Migrations 0020 and 0021 add widget caches, personal library updates, Captcha accounting and native photo metadata without replacing users or portal content. Existing embedded Seerr counters in saved layouts are converted into audience-specific widget blocks.
+
+Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.4.0` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`. Existing portal content remains editable; new-install defaults do not overwrite published layouts.
 
 Cap is bundled in the Docker image and protects login/recovery by default. No new environment secrets, cloud accounts or services are required. For a direct Python installation, install Node.js 24 LTS and optionally set `CAP_NODE` to its executable. A missing captcha worker fails closed; administrators can configure each form in Security → Captcha.
 
@@ -8,7 +10,7 @@ Existing dark colors are retained. Apply/publish a preset deliberately to replac
 
 Tracearr needs public API v2 identity/history support. When it monitors several servers of the same type, configure the corresponding server UUID. Tdarr is interface-only; Tracearr/Tdarr native interfaces retain their own authentication and browser frame policies.
 
-New-season notifications require Tracearr and user consent; SMTP plus a verified address are also required for email. First sync establishes a baseline without emailing historical additions. Restore the pre-upgrade backup when rolling back to 0.3.4; that release cannot render the new widget types.
+The Library updates widget is placed by the administrator and does not require a user subscription. New-season email requires Tracearr, SMTP, a verified address and user opt-in. First sync establishes a baseline without emailing historical additions. Restore the pre-upgrade backup when rolling back to 0.3.4; that release cannot render the new widget types.
 
 # Upgrading to 0.3.4 — public beta
 

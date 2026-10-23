@@ -30,7 +30,7 @@
 
 ## Upgrade and validation
 
-Back up the complete `/data` volume, including its encryption key, before upgrading. Migrations 0020 and 0021 retain existing accounts and configuration and moves legacy Seerr application counters into widget blocks. To roll back to 0.3.4, restore the pre-upgrade backup. See UPGRADING.md for dependencies and native-interface requirements.
+Back up the complete `/data` volume, including its encryption key, before upgrading. Migrations 0020 and 0021 retain existing accounts and configuration and move legacy Seerr application counters into widget blocks. To roll back to 0.3.4, restore the pre-upgrade backup. See UPGRADING.md for dependencies and native-interface requirements.
 
 Local validation: **380 automated tests passed**, plus a full isolated HTTP/SMTP installation/account/group/editor smoke and 51 responsive page-width checks at 1280, 768, 390 and 320 px. Runtime Python and bundled CAPTCHA dependency audits found no known vulnerabilities at the review time. Native services were simulated. Docker build/startup and multiarchitecture images are gated by GitHub Actions; production native services and public TLS were not tested locally.
 
