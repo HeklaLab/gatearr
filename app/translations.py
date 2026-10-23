@@ -49,17 +49,34 @@ def translations(request:Request):
     query=request.query_params.get('q','')[:200];page=max(1,int(request.query_params.get('page','1')))
     custom=i18n.overrides(db,locale);reference_overrides=i18n.overrides(db,source_locale);rows=[]
     if scope in ('all','interface'):
-        for key in sorted(i18n.INTERFACE_KEYS):
+        for key in sorted(i18n.PUBLIC_INTERFACE_KEYS):
             source=i18n.translate(key,source_locale,overrides=reference_overrides)
             default=i18n.CATALOGS.get(locale,{}).get(key,'')
             value=custom.get(key,default)
             rows.append({'key':key,'source':source,'default':default,'value':value,'custom':key in custom,'translated':bool(value),'context':'Interface','hash':'','kind':'text','maximum':5000,'scope':'interface'})
     if scope in ('all','content','email'):
+        if scope=='email' and locale not in i18n.languages(db):raise HTTPException(400,'Enable this language before editing email translations')
         stored={(row.resource,row.source_hash):row.value for row in db.scalars(select(ContentTranslation).where(ContentTranslation.locale==locale))}
         for entry in sources(db):
+            if entry['key'].startswith('mail:') and locale not in i18n.languages(db):continue
             if scope!='all' and (entry['key'].startswith('mail:'))!=(scope=='email'):continue
             key=entry['key'];stamp=i18n.source_hash(entry['source']);value=stored.get((key,stamp),i18n.CATALOGS.get(locale,{}).get(entry['source'],''))
             rows.append({**entry,'reference':i18n.content(db,key,entry['source'],source_locale),'hash':stamp,'value':value,'default':'','custom':bool(value),'translated':bool(value) or locale==source_locale,'edit_href':source_link(key),'scope':'email' if key.startswith('mail:') else 'content','stale':any(resource==key and old_hash!=stamp for resource,old_hash in stored) and not value})
+    # Equal subtitles are independent resources, but one editor can update them together.
+    # Keep differing existing translations separate and never merge unrelated blocks.
+    grouped={};display_rows=[]
+    for row in rows:
+        if row.get('target') and row['scope']=='content':
+            identity=(row['context'],row['source'],row['kind'],row['value'],row.get('reference'))
+            existing=grouped.get(identity)
+            if existing:
+                existing['related_keys'].append(row['key'])
+                existing['targets'].append(row['target'])
+                continue
+            row['related_keys']=[row['key']];row['targets']=[row['target']]
+            grouped[identity]=row
+        display_rows.append(row)
+    rows=display_rows
     for row in rows:row['anchor']=i18n.source_hash(row['key']+'\0'+row['source'])[:16]
     total_sources=len(rows);translated=sum(row['translated'] for row in rows)
     rows=[row for row in rows if query.casefold() in '\n'.join((row['key'],row['source'],row['value'],row['context'])).casefold()]
@@ -114,11 +131,12 @@ def save(request:Request,data=Depends(form)):
     raw='' if action=='reset' else str(data.get('value','')).strip()
     if scope=='interface':
         key=i18n.canonical(key)
-        if key not in i18n.CATALOGS['en']:raise HTTPException(400,'Unknown translation')
+        if key not in i18n.PUBLIC_INTERFACE_KEYS:raise HTTPException(400,'This administration label cannot be customized')
         value=validated_value(key,locale,raw);storage_key=i18n.translation_key(locale,key)
         if value and value!=i18n.CATALOGS.get(locale,{}).get(key):set_config(db,storage_key,value)
         else:db.execute(delete(Config).where(Config.key==storage_key))
     elif scope in ('content','email'):
+        if scope=='email' and locale not in i18n.languages(db):raise HTTPException(400,'Enable this language before editing email translations')
         if locale==i18n.default_language(db):raise ValueError('Edit source content in its original editor')
         entry=next((item for item in sources(db) if item['key']==key and i18n.source_hash(item['source'])==data.get('source_hash')),None)
         if not entry or (key.startswith('mail:'))!=(scope=='email'):raise HTTPException(409,'The source text has changed. Reload the translation page.')
@@ -128,7 +146,14 @@ def save(request:Request,data=Depends(form)):
             value=clean_html(raw)
         elif entry['kind'] in ('html','subject','mail'):value=rich_mail.validate(raw,html=entry['kind']=='html',subject=entry['kind']=='subject') if raw else ''
         else:value=validated_value(key,locale,raw,entry['source'])
-        i18n.store_content(db,key,entry['source'],locale,value)
+        related=list(dict.fromkeys(data.getlist('related_key') or [key]))
+        if key not in related or len(related)>100:raise HTTPException(400,'Invalid translation group')
+        catalog={item['key']:item for item in sources(db) if i18n.source_hash(item['source'])==data.get('source_hash')}
+        for resource in related:
+            target=catalog.get(resource)
+            if not target or (resource!=key and (not entry.get('target') or not target.get('target') or any(target[field]!=entry[field] for field in ('context','source','kind')))):
+                raise HTTPException(409,'The source text has changed. Reload the translation page.')
+            i18n.store_content(db,resource,entry['source'],locale,value)
     else:raise ValueError('Invalid translation section')
     db.commit()
     view_scope=data.get('view_scope',scope)

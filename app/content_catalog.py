@@ -13,13 +13,17 @@ def sources(db):
         if source:rows[(key,i18n.source_hash(source))]={'key':key,'source':source,'context':context,'kind':kind,'maximum':maximum}
     add('branding:browser_title',config(db,'browser_title',''),'Branding',maximum=200)
     add('branding:app_name',config(db,'app_name','Gatearr'),'Branding',maximum=80)
-    add('branding:login_text',config(db,'login_text','Access your services and manage your account with ease.'),'Sign-in page',maximum=2000)
     for draft in (False,True):
         for block in portal.load(db,draft)['blocks']:
             for field in ('title','body','alt'):add('block:'+block['id']+':'+field,block.get(field,''),'Block '+block['id']+(' · draft' if draft else ' · published'),'footer_html' if block.get('rich') and field=='body' else 'text')
             if block['kind']=='applications':
                 defaults={'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}
-                for key in block.get('applications',[]):add('block:'+block['id']+':application-subtitle:'+key,block.get('subtitles',{}).get(key,defaults.get(key,'Open application')),'Application subtitle · '+block['id'],maximum=300)
+                for key in block.get('applications',[]):
+                    add('block:'+block['id']+':application-subtitle:'+key,block.get('subtitles',{}).get(key,defaults.get(key,'Open application')),'Application subtitle · '+block['id'],maximum=300)
+                    source=block.get('subtitles',{}).get(key,defaults.get(key,'Open application'))
+                    if source:
+                        entry=rows[('block:'+block['id']+':application-subtitle:'+key,i18n.source_hash(source))]
+                        entry['target']=('My account' if key=='account' else key.split(':')[-1].capitalize())
     from . import footer
     from .visual_builder import load as load_design
     for page in ('login','footer'):
@@ -51,4 +55,23 @@ def sources(db):
         for part in ('subject','body','html'):
             source=html_source(db,purpose) if part=='html' else config(db,purpose+'_'+part,DEFAULTS[purpose+'_'+part])
             add('mail:'+purpose+':'+part,source,'Email · '+purpose,'html' if part=='html' else 'subject' if part=='subject' else 'mail',50000 if part=='html' else 300 if part=='subject' else 10000)
-    return list(rows.values())
+    # Keep native admin translations separate from editable public content.
+    public_blocks=set(); public_subtitles=set()
+    for draft in (False,True):
+        blocks=portal.load(db,draft)['blocks'];by_id={b['id']:b for b in blocks}
+        for block in blocks:
+            ancestor=block;admin_only=False;seen=set()
+            while ancestor and ancestor['id'] not in seen:
+                seen.add(ancestor['id']);admin_only|=ancestor.get('visibility')=='admins';ancestor=by_id.get(ancestor.get('parent'))
+            if admin_only:continue
+            public_blocks.add(block['id'])
+            for app in block.get('applications',[]):
+                if app not in ('radarr','sonarr','bazarr','tdarr','tracearr'):public_subtitles.add('block:'+block['id']+':application-subtitle:'+app)
+    def public(entry):
+        key=entry['key']
+        if key.startswith('policy-label:'):return False
+        if key.startswith('block:'):
+            if key.split(':')[1] not in public_blocks:return False
+            if ':application-subtitle:' in key:return key in public_subtitles
+        return True
+    return [entry for entry in rows.values() if public(entry)]

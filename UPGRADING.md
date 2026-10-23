@@ -1,3 +1,15 @@
+## Upgrading to 0.4.1 — public beta
+
+Back up the complete `/data` volume, including `bootstrap.json` or the configured encryption key. Pin `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.4.1` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+There are no new database migrations compared with 0.4.0. Existing accounts, integrations, uploaded logos, published layouts and customized email templates are retained. The corrected starter portal applies to defaults; it does not replace a customized portal.
+
+Administration-only label overrides stay stored but are no longer applied or editable. Public-facing labels remain customizable. Disabled email translations also stay stored. Only unchanged factory invitation text adopts the new default wording.
+
+Connection tests now use entered values before saving. Radarr/Sonarr/Bazarr still need their documented native URL Base. Tdarr uses its WebUI URL through Gatearr's authenticated proxy and retains native authentication; verify the interface, assets and live updates against your installed Tdarr version after upgrading. Tracearr keeps its separate public-interface address. No new tool grants can be assigned while the corresponding service is unconfigured.
+
+Logo preparation accepts browser-readable PNG/SVG/JPEG/WebP sources up to 5 MiB and prepares a bounded PNG; server validation remains enforced. Crop/zoom changes apply only when the logo form is saved.
+
 ## Upgrading to 0.4.0 — public beta
 
 Back up the persistent database and bootstrap.json before upgrading. Migrations 0020 and 0021 add widget caches, personal library updates, Captcha accounting and native photo metadata without replacing users or portal content. Existing embedded Seerr counters in saved layouts are converted into audience-specific widget blocks.

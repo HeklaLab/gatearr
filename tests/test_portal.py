@@ -223,7 +223,7 @@ def test_branding_menu_smtp_encryption_and_template_validation(client):
     bad['reset_body'] = '${untrusted}'
     assert post(client, '/admin/mail-templates', bad, '/admin').status_code == 400
     logout(client)
-    assert '&lt;script&gt;' in client.get('/login').text
+    assert '&lt;script&gt;' not in client.get('/login').text  # Identity no longer edits login content
     login_user(client)
     with SessionLocal() as db:
         layout=__import__('app.portal',fromlist=['load']).load(db);row=next(b for b in layout['blocks'] if b['kind']=='applications');row['applications'].append('menu:'+str(db.scalar(select(MenuItem.id))));main.set_config(db,'portal_published',__import__('json').dumps(layout));db.commit()

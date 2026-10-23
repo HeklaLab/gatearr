@@ -11,7 +11,7 @@ body .studio-palette,body .studio-inspector,body .studio-toolbar{background:var(
 @media(max-width:650px){.integration-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.integration-detail-grid{grid-template-columns:1fr}.integration-result{padding-inline-start:0;border-inline-start:0}.library-announcement{flex-wrap:wrap}.widget-metrics{gap:15px}.captcha-chart{gap:3px}.captcha-chart small{writing-mode:vertical-rl}.theme-capsule{flex:none}.integration-detail>summary{padding:15px}.integration-detail-grid{padding:0 15px 15px}}
 @media(prefers-reduced-motion:reduce){.theme-capsule:before{transition:none}}
 
-:root{--accent-label:light-dark(color-mix(in srgb,var(--accent) 45%,var(--text)),var(--accent))}.eyebrow,.admin-navigation a[aria-current]{color:var(--accent-label)}
+:root{--accent-label:light-dark(color-mix(in srgb,var(--accent) 35%,var(--text)),var(--accent))}.eyebrow,.admin-navigation a[aria-current]{color:var(--accent-label)}
 
 .widget-activity{display:flex;gap:4px;align-items:flex-end;min-height:36px;margin-top:12px}.widget-activity span{flex:1;min-width:2px;background:var(--accent);border-radius:2px 2px 0 0}
 /* Header navigation has a larger generic gap; keep the capsule geometry local. */
@@ -32,3 +32,10 @@ cap-widget{--cap-checkmark:url("/static/cap-check.svg");--cap-checkbox-backgroun
 .mail-template-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));gap:12px;margin-top:20px}.mail-template-grid .button{margin:0;width:100%;height:auto;min-height:40px;padding:10px 14px;white-space:normal;text-align:center}
 #theme-editor .appearance-policy{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:18px 20px}.appearance-policy h2{font-size:16px;margin:0}.appearance-policy form{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:0}.appearance-policy label{margin:0;width:230px;max-width:100%}.appearance-policy button{flex:none}.studio-palette button img{width:20px;height:20px;object-fit:contain;flex:none}.studio-palette button:disabled{opacity:.4;cursor:not-allowed}
 @media(max-width:600px){.appearance-policy form{width:100%;align-items:end}.appearance-policy label{flex:1;min-width:150px}.appearance-policy button{height:40px;min-height:40px}}
+
+/* Readable semantic colors on the selected appearance, including saved/custom palettes. */
+.sync-orange{color:light-dark(#865400,#ffcb7c)}
+.success-message{color:var(--status-good)}
+
+
+.widget-activity span,.captcha-chart span{background:var(--accent-label,var(--accent))}

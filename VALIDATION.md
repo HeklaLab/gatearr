@@ -1,3 +1,12 @@
+# Gatearr 0.4.1 validation — 2026-10-23
+
+- **403 automated tests passed**, one optional rendered-theme export test skipped, and one existing Starlette/httpx deprecation warning. All shipped top-level JavaScript files passed syntax checks.
+- Browser checks covered structured user profiles, group permission sections, immediate language switching, complete device breadcrumbs, consistent guide rows, theme-control alignment and portal/access-guide previews at desktop and phone widths. Preview sizing recalculates without an inner scrollbar; preview/palette wheel input scrolls the builder page.
+- The earlier six-theme review measured 294 text samples across 30 rendered pages at or above 4.5:1. This is a preset readability check, not a complete accessibility certification or a guarantee for arbitrary custom colors. See docs/THEME_CONTRAST_041.md.
+- Existing screenshots are unchanged. No demo database, credentials, uploaded user logos or local browser screenshots are included in this release.
+- Native services in automated/browser checks were simulated. Actual Tdarr deployment compatibility still requires verification. Docker startup, HTTP/SMTP smoke and multiarchitecture images are validated by GitHub Actions before release publication, rather than a local Docker engine.
+- No additional migration is introduced after 0.4.0. The release preserves custom portal layouts, uploaded logos, authored templates and stored integration settings.
+
 # Validation — Gatearr 0.4.0 — 23 October 2026
 
 ## Publication review — 23 October 2026

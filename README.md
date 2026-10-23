@@ -4,9 +4,9 @@
 
 A free, open-source, self-hosted account portal for **Emby and Jellyfin**. Give your users one place to access their media services, manage their accounts, reset forgotten passwords and follow device connection guides. Manage user groups, library permissions and optional Seerr requests from an interface you can make your own.
 
-**0.4.0 public beta** brings theme presets, compact personal widgets, a multilingual installer and locally bundled Captcha. Gatearr entered public beta with v0.3.2. Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
+**0.4.1 public beta** refreshes administration with a sidebar, animated capsule tabs and structured user profiles. It adds dynamic user search, guided selectors, logo cropping and clearer connection diagnostics, while improving theme readability and visual builders. Gatearr entered public beta with v0.3.2. Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
 
-[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.4.0) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
+[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.4.1) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
 
 If something is broken, confusing or missing, please open an issue. Include versions, deployment details and reproduction steps; remove secrets and personal information from logs/screenshots. This is an early beta: back up persistent data and test permission changes with a limited account before applying them broadly.
 
@@ -14,7 +14,7 @@ If something is broken, confusing or missing, please open an issue. Include vers
 
 **Requires an existing Emby/Jellyfin server and Docker Compose v2.** Seerr, Tracearr and the administration tools are optional. SMTP enables invitations and self-service password recovery.
 
-1. Download [gatearr-docker.zip for v0.4.0](https://github.com/HeklaLab/gatearr/releases/download/v0.4.0/gatearr-docker.zip) and extract it.
+1. Download [gatearr-docker.zip for v0.4.1](https://github.com/HeklaLab/gatearr/releases/download/v0.4.1/gatearr-docker.zip) and extract it.
 2. Copy `.env.example` to `.env`, review the [installation prerequisites](#installation-prerequisites), then run:
 
    ```sh
@@ -29,13 +29,13 @@ If something is broken, confusing or missing, please open an issue. Include vers
 
 Complete setup privately. For access from other devices or the internet, configure `PUBLIC_URL`, your existing HTTPS reverse proxy and the [documented security boundaries](SECURITY_REVIEW.md). Keep the persistent `/data` volume, including `bootstrap.json`.
 
-**Docker:** `ghcr.io/heklalab/gatearr:0.4.0` · **Architectures:** AMD64 / ARM64 · **License:** MIT
+**Docker:** `ghcr.io/heklalab/gatearr:0.4.1` · **Architectures:** AMD64 / ARM64 · **License:** MIT
 
 [Windows instructions](#windows--docker-desktop) · [Full Docker instructions](#start-with-docker) · [Upgrade an existing installation](UPGRADING.md) · [Community on Reddit](https://www.reddit.com/r/gatearr/)
 
 ## Interface preview — v0.4.0
 
-Actual screenshots of the 0.4.0 application, captured from an isolated demo with fictional accounts, local addresses and simulated services. These are not design mockups.
+Screenshots retained from 0.4.0; administration navigation and editors have since been refined in 0.4.1. Captured from an isolated demo with fictional accounts, local addresses and simulated services. These are not design mockups.
 
 ### Your applications and personal widgets
 
@@ -83,7 +83,19 @@ Flagged language rows provide translation and inline settings. Group assignments
 
 ![Gatearr 0.4.0 paginated native permission comparison before group assignment](screenshots/gatearr-group-review-v040.png)
 
-## What's new in 0.4.0
+## What's new in 0.4.1
+
+- **Administration:** fixed sidebar, shared animated capsule tabs, dynamic navigation, structured user profiles and clearer group permission sections.
+- **Everyday controls:** search users while typing, paginate by 10/20/50/100/all, use guided dropdowns, select languages directly and resize/crop logos before uploading.
+- **Readable themes:** improved foreground contrast across all six presets, matching bundled logos and aligned appearance controls.
+- **Visual builders:** complete device breadcrumbs, compact reorder/edit actions and content-sized previews with one page scrollbar.
+- **Connections:** test entered URLs/API keys before saving, get clearer URL Base/host/authentication diagnostics and open the Tdarr WebUI through Gatearr's protected proxy.
+- **Personalization:** edit public-facing labels while administration keeps its bundled translations; email editing offers enabled languages only. Updated default invitations introduce common access, password recovery and device guides.
+- **Fixes:** default widget/application alignment with Tracearr enabled, centered CAPTCHAs, assistance-language handling and disabled new grants for unconfigured tools. Existing custom portals, logos and email templates remain intact.
+
+See [release notes](RELEASE_NOTES.md) and [upgrade instructions](UPGRADING.md). Screenshots below retain the 0.4.0 examples.
+
+## Features introduced in 0.4.0
 
 - **First installation:** five dynamic stages, all 21 bundled interface languages, portal logo and initial preset, native account claim, optional applications with separate server/API tests, SMTP and final review.
 - **Appearance:** three editable light/dark presets, matching default logos, an animated icon-only appearance capsule in the account menu, and immediate previews. Administrators can enforce dark/light or leave the choice to users.
@@ -212,7 +224,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.4.0` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.4.1` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 

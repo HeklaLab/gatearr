@@ -24,16 +24,21 @@ def save(request:Request,service:str,data=Depends(form)):
             base=parsed.scheme+'://'+parsed.netloc
         if service in ('radarr','sonarr','bazarr') and active and data.get('proxy_acknowledge')!='on':raise ValueError('Confirm the private upstream and proxy authentication setup')
         set_config(db,service+'_url',base)
-        if data.get('api_key'):set_config(db,service+'_api_key',encrypt(data['api_key']))
+        if data.get('api_key'):
+            token=str(data['api_key']).strip()
+            if service=='tracearr' and token.lower().startswith('bearer '):token=token[7:].strip()
+            set_config(db,service+'_api_key',encrypt(token))
         if data.get('clear_key')=='on':set_config(db,service+'_api_key','')
         if service!='tdarr' and active and not config(db,service+'_api_key'):raise ValueError('API key required')
         set_config(db,service+'_enabled','true' if active else 'false')
-        if service in ('tracearr','tdarr') and data.get('interface_enabled')=='on' and not data.get('public_url'):raise ValueError('Public interface address required')
+        if service=='tracearr' and data.get('interface_enabled')=='on' and not data.get('public_url'):raise ValueError('Public interface address required')
         set_config(db,service+'_interface_enabled','true' if data.get('interface_enabled')=='on' else 'false')
     if service=='tracearr':
         import uuid
         server=str(data.get('tracearr_server_id','')).strip()
-        if server:uuid.UUID(server)
+        if server:
+            try:uuid.UUID(server)
+            except ValueError:raise ValueError('Tracearr media server ID must be a UUID, not a URL. Leave it empty when only one matching server is monitored.')
         set_config(db,'tracearr_server_id',server)
     existing=db.get(AccessService,service) if service in ('emby','seerr') else None
     public=url_ok(data.get('public_url',existing.browser_url if existing else config(db,service+'_public_url')),optional=True)

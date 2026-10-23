@@ -1,3 +1,25 @@
+# 0.4.1 — 23 October 2026
+
+- Remove nested scrolling from portal-builder side panels and size its preview to the full page content.
+- Size access-guide previews to their full content, including phone preview widths, and use the builder page for scrolling.
+- Flatten access-guide choice and step rows, group reorder arrows beside editing actions and give every breadcrumb the same height.
+- Replace the account-menu language dropdown with direct flag/name buttons and a visible active-language check.
+- Add a complete access-guide breadcrumb through the final device, clickable parent menus and an explicit device-picker return; fix the preview back link and save pending drafts before leaving.
+- Keep the global header stationary between portal and wide admin pages and preserve the capsule slide during dynamic navigation.
+- Implement the approved structured user profile, full-width user/group permission accordions and automatic account-menu language selection.
+- Add the approved fixed administration sidebar and unify local navigation as sliding capsules with service logos and dynamic loading.
+- Align user-list controls and add proportional logo resizing with an interactive crop/zoom tool in identity and setup.
+- Improve text, links, capsules, account badges, focus indicators and bundled wordmarks across all six theme variants, especially Electric Lime light.
+- Add dynamic user search/pagination, compact group settings, full-width password settings and consistent image upload controls.
+- Test entered integration settings before saving; improve URL Base, authentication and network diagnostics.
+- Proxy the Tdarr WebUI through authenticated Gatearr routes, including assets, native cookies and WebSockets.
+- Limit customizable labels to public user journeys, show the edit language and retain native admin translations.
+- Offer active email languages only and improve the factory invitation while preserving custom templates.
+- Preserve existing grants while disabling new grants to unconfigured tools.
+- Center CAPTCHA forms, remove the Member caption, fix quota spacing and make assistance language changes session-local.
+- Keep default media/request widgets aligned with their apps and Tracearr on its own row.
+
+
 # 0.4.0 — 23 October 2026
 
 ## New features

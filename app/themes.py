@@ -39,7 +39,7 @@ def css(db,user=None,draft=False):
     def rules(name):
         p=value[name];colors=''.join('--'+key+':'+p[key]+';' for key in portal.DEFAULT['theme'])
         bg='linear-gradient('+str(p['angle'])+'deg,'+p['gradient_start']+','+p['gradient_end']+')' if p['gradient'] else p['bg']
-        logo='brightness(0) invert(1)' if name=='dark' else 'none'
+        logo='brightness(0) invert(1)' if name=='dark' else 'brightness(0)'
         return ':root{'+colors+'--default-brand-logo:url("'+logo_url(value['preset'])+'");--logo-filter:'+logo+';color-scheme:'+name+';}body{background:'+bg+';}'
     return rules(mode) if mode in ('light','dark') else rules('light')+'@media(prefers-color-scheme:dark){'+rules('dark')+'}'
 

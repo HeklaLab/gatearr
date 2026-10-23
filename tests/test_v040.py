@@ -137,8 +137,9 @@ def test_tdarr_has_no_api_key_and_requires_explicit_admin_grant(client):
     result=post(client,'/admin/connections/tdarr/save',{'enabled':'on','url':'http://tdarr:8265','public_url':'https://tdarr.example','interface_enabled':'on'},'/admin/integrations');assert result.status_code==303
     with SessionLocal() as db:
         owner=db.scalar(select(User).where(User.admin.is_(True)));owner.tool_access='["tdarr"]';db.commit()
-    page=client.get('/tools/tdarr');assert page.status_code==200 and 'src="https://tdarr.example"' in page.text
-    assert "frame-src 'self' https://tdarr.example" in page.headers['content-security-policy']
+    page=client.get('/tools/tdarr');assert page.status_code==200 and 'src="/tools/tdarr/app/tdarr/"' in page.text
+    assert "frame-src 'self';" in page.headers['content-security-policy']
+    assert "https://tdarr.example" not in page.headers['content-security-policy']
     with SessionLocal() as db:
         owner=db.scalar(select(User).where(User.admin.is_(True)));owner.tool_access='[]';db.commit()
     assert client.get('/tools/tdarr').status_code==403

@@ -26,7 +26,7 @@ def howto_editor(request,key):
 def guide_editor(request,guide_id):
     require_admin(request);row=guides.guide_or_404(request.state.db,guide_id)
     service=access.service_or_404(request.state.db,row.service_key)
-    return render(request,'visual_howto.html',howto_data={'type':'guide','id':row.id,'key':row.service_key,'name':service.name,'version':row.version,'article':json.loads(row.draft),'published':bool(row.published),'server_url':service.server_url},service=service)
+    return render(request,'visual_howto.html',howto_data={'type':'guide','id':row.id,'nodes':access.load(service,True),'key':row.service_key,'name':service.name,'version':row.version,'article':json.loads(row.draft),'published':bool(row.published),'server_url':service.server_url},service=service)
 
 @router.post('/admin/visual-howto/{key}/{action}')
 def choices(request:Request,key:str,action:str,data=Depends(form)):

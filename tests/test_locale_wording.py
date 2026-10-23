@@ -37,14 +37,17 @@ def test_reviewed_labels_render_in_each_language_without_changing_user_overrides
         else:db.get(Language,code).enabled=True
         db.flush()
         user=db.scalar(select(User).where(User.emby_id=='admin-1'));user.locale=code
-        # An administrator's terminology must win over a revised bundled value.
+        # Public customization survives, but native admin labels are no longer editable.
         main.set_config(db,i18n.translation_key(code,'Branding'),'Custom appearance label')
+        main.set_config(db,i18n.translation_key(code,'Home'),'Custom home label')
         i18n.store_content(db,'mail:reset:subject','${app_name} — reset your password',code,'Custom ${app_name}')
         db.commit()
     updates=client.get('/admin/updates').text
-    assert 'Custom appearance label' in updates
+    assert 'Custom appearance label' not in updates
+    assert 'Custom home label' in updates
     assert i18n.translate('Current version',code) in updates
     assert ('dir="rtl"' in updates)==(code in ('ar','he'))
     with SessionLocal() as db:
         assert i18n.content(db,'mail:reset:subject','${app_name} — reset your password',code)=='Custom ${app_name}'
-        assert i18n.overrides(db,code)['Branding']=='Custom appearance label'
+        assert 'Branding' not in i18n.overrides(db,code)
+        assert i18n.overrides(db,code)['Home']=='Custom home label'

@@ -20,6 +20,10 @@ def configured(db,service):
 def probe(service,values):
     base,key=values['url'],values['key']
     diagnostics=values.setdefault('diagnostics',{});diagnostics.update(host=urlsplit(base).hostname,reachable=False,api_valid=False,tls=urlsplit(base).scheme=='https');started=time.perf_counter()
+    try:diagnostics['resolved_ips']=sorted({item[4][0] for item in socket.getaddrinfo(diagnostics['host'],None,type=socket.SOCK_STREAM)})[:4]
+    except OSError:diagnostics['resolved_ips']=[]
+    import ipaddress
+    diagnostics['ip_types']={ip:('Private network' if ipaddress.ip_address(ip).is_private else 'Public network') for ip in diagnostics['resolved_ips']}
     headers={'X-Emby-Token':key} if service=='emby' else {'X-Api-Key':key}
     if service=='emby' and values['kind']=='jellyfin':headers={'Authorization':'MediaBrowser Client="Gatearr", Device="Portal", DeviceId="gatearr-portal", Version="1.0", Token="'+key+'"'}
     if service=='tracearr':headers={'Authorization':'Bearer '+key}
@@ -48,7 +52,12 @@ def probe(service,values):
         try:diagnostics['resolved_ips']=sorted({item[4][0] for item in socket.getaddrinfo(diagnostics['host'],None,type=socket.SOCK_STREAM)})[:4]
         except OSError:diagnostics['resolved_ips']=[]
         if response.status_code in (401,403):return 'error','Authentication rejected'
-        if response.status_code!=200:return 'error','Server returned HTTP '+str(response.status_code)
+        if response.status_code!=200:
+            if service in ('radarr','sonarr','bazarr') and response.status_code==404:
+                with httpx.Client(timeout=5,trust_env=False,follow_redirects=False) as client:
+                    root=client.get(base+('/api/system/status' if service=='bazarr' else '/api/v3/system/status'),headers=headers)
+                if root.status_code==200 and isinstance(root.json(),dict):return 'error','API available at the server root. Configure URL Base: /tools/'+service+'/app'
+            return 'error','Server returned HTTP '+str(response.status_code)
         body=response.json()
         valid=isinstance(body,dict) and (bool(body.get('Id')) if service=='emby' else isinstance(body.get('results'),list) if service=='seerr' else isinstance(body.get('data'),list) if service=='tracearr' else bool(body))
         diagnostics['api_valid']=valid

@@ -78,7 +78,7 @@ def test_guides_journeys_menus_and_branding_use_the_created_language(client):
     assert post(client,'/admin/menu',{'label':'Requests','url':'https://requests.test','icon':'link','position':'1'},'/admin').status_code==303
     with SessionLocal() as db:mid=db.scalar(select(MenuItem.id))
     assert translate(client,'menu:'+str(mid)+':label','Solicitudes').status_code==303
-    assert translate(client,'branding:login_text','Tus servicios en un solo lugar').status_code==303
+    assert translate(client,'login-block:login-intro:body','Tus servicios en un solo lugar').status_code==303
     assert translate(client,'branding:app_name','Puerta').status_code==303
     response=post(client,'/admin/guides/create',{'service_key':'emby','title':'Mobile setup'},'/admin/guides');gid=int(response.headers['location'].split('/')[-1])
     assert post(client,f'/admin/guides/{gid}',{'version':0,'action':'publish','title':'Mobile setup','step_count':1,'step_0_id':'install','step_0_title':'Connect','step_0_body':'Server {server_host}:{server_port}, user {username}','step_0_link_url':'https://example.com/app','step_0_link_label':'Download'},f'/admin/guides/{gid}').status_code==303

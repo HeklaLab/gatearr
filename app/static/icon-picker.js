@@ -1,3 +1,4 @@
+(()=>{
 'use strict';
 let catalogPromise;
 const catalog=()=>catalogPromise||(catalogPromise=fetch('/static/fontawesome-icons.json').then(r=>{if(!r.ok)throw new Error();return r.json();}).catch(error=>{catalogPromise=null;throw error;}));
@@ -11,3 +12,5 @@ document.querySelectorAll('[data-icon-picker]').forEach(root=>{
  panel.addEventListener('keydown',e=>{if(e.key==='Escape'){panel.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.focus();}});
  file.addEventListener('change',()=>{if(file.files.length)image.value='';});
 });
+
+})();

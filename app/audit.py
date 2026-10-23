@@ -29,7 +29,7 @@ def activity(request:Request):
     events=list(request.state.db.scalars(query))
     names={u.id:u.name for u in request.state.db.scalars(select(User))}
     from . import i18n
-    overrides=i18n.overrides(request.state.db,request.state.locale)
+    overrides={}  # Audit labels always use the bundled administration translations.
     tr=lambda text:i18n.translate(text,request.state.locale,overrides=overrides)
     entries=[]
     for event in events:

@@ -8,6 +8,7 @@ ROOT=Path(__file__).parent
 CATALOGS={p.stem:json.loads(p.read_text()) for p in (ROOT/'locales').glob('*.json') if p.stem!='languages'}
 LEGACY_KEYS=json.loads((ROOT/'legacy_i18n.json').read_text())
 BASE_LANGUAGE='en'
+PUBLIC_INTERFACE_KEYS=frozenset(json.loads((ROOT/'public_interface_keys.json').read_text()))
 INTERFACE_KEYS=frozenset(json.loads((ROOT/'interface_keys.json').read_text()))
 
 def canonical(message):return LEGACY_KEYS.get(str(message),str(message))
@@ -49,13 +50,18 @@ ACCOUNT_LABEL_DEFAULTS={'en':ACCOUNT_LABEL_KEYS}
 def translation_key(locale,message):return 'ui_translation_'+locale+'_'+source_hash(canonical(message))
 
 def overrides(db,locale):
-    names={translation_key(locale,key):key for key in CATALOGS['en']}
+    names={translation_key(locale,key):key for key in PUBLIC_INTERFACE_KEYS}
     return {names[row.key]:row.value for row in db.scalars(select(Config).where(Config.key.like('ui_translation_'+locale+'_%'))) if row.key in names and row.value}
 
 def content(db,resource,source,locale):
     if not source:return source
     row=db.get(ContentTranslation,(locale,resource,source_hash(source)))
     if row and row.value:return row.value
+    if resource=='login-block:login-intro:body':
+        from .mailer import config
+        if source==config(db,'login_text','Access your services and manage your account with ease.'):
+            old=db.get(ContentTranslation,(locale,'branding:login_text',source_hash(source)))
+            if old and old.value:return old.value
     translated=CATALOGS.get(locale,{}).get(source)
     if translated:return translated
     base=default_language(db)

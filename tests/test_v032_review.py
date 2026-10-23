@@ -143,7 +143,7 @@ def test_builder_logs_are_readable_and_reset_requires_admin_and_csrf(client):
 def test_review_navigation_group_counts_and_admin_tools(client):
     setup(client)
     page=client.get('/admin/access-guides').text
-    tabs=re.search(r'<nav class="admin-tabs">(.*?)</nav>',page,re.S).group(1)
+    tabs=re.search(r'<div class="admin-sidebar-children">(.*?)</div>',page,re.S).group(1)
     assert 'Access guide' not in tabs and 'Footer' not in tabs
     assert tabs.count('aria-current="page"')==1 and 'Portal builder' in tabs
     with SessionLocal() as db:
@@ -161,8 +161,8 @@ def test_review_navigation_group_counts_and_admin_tools(client):
     with SessionLocal() as db:
         from sqlalchemy import delete
         db.execute(delete(GroupMember).where(GroupMember.user_id==uid));db.commit()
-    assert post(client,f'/admin/users/{uid}/role',{'tools':['radarr']},'/admin').status_code==303
-    with SessionLocal() as db:assert json.loads(db.get(User,uid).tool_access)==['radarr']
+    assert post(client,f'/admin/users/{uid}/role',{'tools':['radarr']},'/admin').status_code==400
+    with SessionLocal() as db:assert json.loads(db.get(User,uid).tool_access)==[]
     assert client.get('/tools/radarr').status_code in (403,404)
     assert post(client,f'/admin/users/{uid}/role',{'tools':['unknown']},'/admin').status_code==400
 

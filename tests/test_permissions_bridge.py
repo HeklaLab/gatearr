@@ -14,6 +14,10 @@ ORIGINAL_CLIENT=httpx.Client
 @pytest.fixture
 def policy_api(client,monkeypatch):
     setup(client)
+    from app.security import encrypt
+    with SessionLocal() as db:
+        for k,v in {'radarr_enabled':'true','radarr_url':'http://radarr.test','radarr_api_key':encrypt('fixture-key')}.items():main.set_config(db,k,v)
+        db.commit()
     store={key:{'EnableAllFolders':False,'EnabledFolders':[],'ExcludedSubFolders':[],'IsAdministrator':False,'IsDisabled':False,'EnableSubtitleDownloading':True,'SimultaneousStreamLimit':0,'AccessSchedules':[],'BlockedTags':[]} for key in ('user-1','admin-1')}
     writes=[]
     api=SimpleNamespace(user=lambda uid:{'Id':uid,'Policy':deepcopy(store[uid])},libraries=lambda:[{'Id':'11111111111111111111111111111111','Name':'Movies'},{'Id':'22222222222222222222222222222222','Name':'Films'}],policy=lambda uid,value:(writes.append((uid,deepcopy(value))),store[uid].update(value)),users=lambda:[],copy_options=lambda:[])

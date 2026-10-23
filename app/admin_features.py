@@ -260,6 +260,25 @@ def test_connection(request: Request, data=Depends(form)):
     limit(request,'connection_test',maximum=10)
     service=data.get('service')
     if service not in ('all','emby',*SERVICES,'radarr','sonarr','bazarr','tracearr','tdarr'):raise ValueError('Invalid service')
+    if service!='all' and 'url' in data:
+        from .connection_health import probe
+        from .connections import media_kind
+        from .security import decrypt
+        from fastapi.responses import JSONResponse
+        from urllib.parse import urlsplit
+        base=url_ok(data.get('url',''))
+        parsed=urlsplit(base)
+        if parsed.query or parsed.fragment:raise ValueError('Enter a server URL without query parameters')
+        if service in ('radarr','sonarr','bazarr'):
+            if parsed.path.rstrip('/') not in ('','/tools/'+service+'/app'):raise ValueError('Use the private server root URL or its Gatearr URL Base')
+            base=parsed.scheme+'://'+parsed.netloc
+        key=str(data.get('api_key','')).strip() or decrypt(config(request.state.db,service+'_api_key'))
+        if service!='tdarr' and not key:raise ValueError('API key required')
+        if service=='tracearr' and key.lower().startswith('bearer '):key=key[7:].strip()
+        values={'url':base,'key':key,'kind':str(data.get('media_server') or media_kind(request.state.db))}
+        state,detail=probe(service,values)
+        # Results are transient and never update the configured connection or its cache.
+        return JSONResponse({'state':state,'detail':__import__('app.i18n',fromlist=['translate']).translate(detail,request.state.locale),'diagnostics':values.get('diagnostics',{})})
     from .connection_health import checks
     checks(request.state.db,refresh=service if service!='all' else True)
     return redirect('/admin/integrations'+('?connection='+service+'#connection-'+service if service!='all' else ''))
@@ -290,6 +309,8 @@ def user_role(request:Request,local_id:int,data=Depends(form)):
     import json
     tools=sorted(set(data.getlist('tools')))
     if any(t not in ('radarr','sonarr','bazarr','tracearr','tdarr') for t in tools):raise ValueError('Invalid tool access')
+    from .tools_proxy import retained_tools
+    tools=retained_tools(db,json.loads(target.tool_access),tools)
     changed_tools=json.loads(target.tool_access)!=tools
     if target.admin==grant and not changed_tools:return redirect('/admin/users/'+str(local_id))
     target.tool_access=json.dumps(tools)

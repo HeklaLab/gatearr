@@ -18,9 +18,9 @@
    const link=event.target.closest('[data-group-tab]');
    if(!link||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
    event.preventDefault();selectTab(link.dataset.groupTab);
-   const url=new URL(location.href);url.searchParams.set('tab',link.dataset.groupTab);history.pushState(null,'',url);
+   const url=new URL(location.href);url.searchParams.set('tab',link.dataset.groupTab);history.pushState({gatearrGroupTab:true},'',url);
   });
-  window.addEventListener('popstate',()=>selectTab(new URL(location.href).searchParams.get('tab')||'emby'));
+  window.GatearrPage.listen(window,'popstate',()=>selectTab(new URL(location.href).searchParams.get('tab')||'emby'));
  }
 
  for(const time of document.querySelectorAll('time[data-timestamp]'))time.textContent=new Date(Number(time.dataset.timestamp)*1000).toLocaleString(document.documentElement.lang);
@@ -43,5 +43,5 @@
   const response=await fetch(`/admin/users/${workspace.dataset.permissionUser}/permissions/status?service=${workspace.dataset.service}`,{credentials:'same-origin'});if(!response.ok)return;
   const state=await response.json();const time=workspace.querySelector('time[data-timestamp]');if(time&&state.checked_at)time.textContent=new Date(state.checked_at*1000).toLocaleString(document.documentElement.lang);if(initial!==null&&initial!==state.hash)workspace.querySelector('.permission-refresh-notice').hidden=false;initial??=state.hash;
  }catch{/* Keep the current form on a transient network failure. */}}
- check();setInterval(check,60000);
+ check();const poll=setInterval(check,60000);window.GatearrPage.signal.addEventListener('abort',()=>clearInterval(poll),{once:true});
 })();

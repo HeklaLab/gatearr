@@ -10,7 +10,7 @@ function show(){
 }
 q('[data-review-prev]').addEventListener('click',()=>{index--;show();});q('[data-review-next]').addEventListener('click',()=>{index++;show();});q('[data-review-page]').addEventListener('change',e=>{index=Number(e.target.value);show();});
 q('[data-review-confirm]').addEventListener('click',()=>{if(!result||seen.size!==result.users.length)return;let token=active.querySelector('[name="review_token"]');if(!token){token=document.createElement('input');token.type='hidden';token.name='review_token';active.append(token);}token.value=result.review_token;dialog.close();bypass.add(active);active.requestSubmit(submitter);});
-document.addEventListener('submit',async event=>{
+window.GatearrPage.listen(document,'submit',async event=>{
  const form=event.target;if(!form.matches('[data-group-review]'))return;if(bypass.delete(form))return;
  event.preventDefault();event.stopImmediatePropagation();active=form;submitter=event.submitter;result=null;seen=new Set();index=0;
  q('[data-review-body]').hidden=true;q('[data-review-confirm]').disabled=true;q('[data-review-status]').hidden=false;q('[data-review-status]').textContent=dialog.querySelector('[data-review-status]').dataset.loading||'';

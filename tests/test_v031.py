@@ -95,10 +95,10 @@ def test_password_policy_disabled_but_bounded_and_admin_only(client):
 def test_navigation_account_and_compact_languages(client):
     setup(client)
     dashboard=client.get('/admin').text
-    assert 'class="admin-navigation"' not in dashboard and 'Applications &amp; API' in dashboard
+    assert 'admin-sidebar' in dashboard and 'Applications &amp; API' in dashboard
     page=client.get('/admin/integrations')
     assert page.status_code==200 and "script-src 'self'" in page.headers['content-security-policy']
-    assert 'admin-back' not in page.text and 'Back to admin' in page.text and 'Translations / Labels' in page.text
+    assert 'admin-back' not in page.text and 'admin-sidebar' in page.text and 'Translations / Labels' in page.text
     assert 'action="/admin/menu"' in page.text and 'action="/admin/connections/emby"' in page.text
     assert client.get('/admin/services',follow_redirects=False).headers['location']=='/admin/integrations'
     account=client.get('/account').text

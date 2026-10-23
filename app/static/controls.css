@@ -10,7 +10,7 @@ button.danger,.button.danger{background:transparent;border-color:#633342;color:#
 button.danger:hover,.button.danger:hover{background:#63334230;border-color:#a45d6e;color:#ffc2ce}
 button.is-saved{background:#123b31!important;border-color:#346f58!important;color:#b1ebcf!important}
 button:disabled,.button[aria-disabled=true]{opacity:.45;cursor:not-allowed}
-button:focus-visible,.button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+button:focus-visible,.button:focus-visible{outline:2px solid var(--accent-label,var(--accent));outline-offset:3px}
 .button-feedback{margin:0;width:13px;height:13px}
 .button-feedback.is-success{background:none;border:0;border-radius:0;box-shadow:none;color:inherit;width:auto;height:auto;line-height:20px;font-weight:500}
 input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=color]):not([type=file]):not([type=range]),select{height:var(--control-height);min-height:var(--control-height);border-radius:var(--control-radius);padding:0 12px;font-size:14px;line-height:20px}
@@ -45,7 +45,7 @@ body .studio-pages i{font-size:13px;margin:0}.admin-navigation a{height:44px;dis
 @media(max-width:600px){button,.button{height:auto;min-height:40px;padding:9px 14px;white-space:normal}body :is(.tabs,.admin-tabs,.studio-pages,.user-tabs){gap:20px}.group-create label{flex-basis:100%;min-width:0}.group-create button{width:100%}.builder-actions{align-items:stretch}.builder-actions>button,.builder-actions>.button{white-space:normal;height:auto;min-height:40px;padding:9px 14px}.user-profile-heading{flex-wrap:wrap}.view-as-user{max-width:100%;height:auto;min-height:32px;padding:6px 10px;white-space:normal}}
 @media(prefers-reduced-motion:reduce){button,.button{transition:none}}
 button.is-saving:disabled{opacity:1;cursor:wait}.button-feedback{order:-1}
-body :is(.tabs,.admin-tabs,.studio-pages,.user-tabs,.admin-navigation) a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+body :is(.tabs,.admin-tabs,.studio-pages,.user-tabs,.admin-navigation) a:focus-visible{outline:2px solid var(--accent-label,var(--accent));outline-offset:-2px}
 /* Constrain long controls instead of overflowing a narrow builder column. */
 .studio-palette button{height:auto;min-height:36px;padding:8px 10px;white-space:normal;overflow-wrap:anywhere;justify-content:flex-start;line-height:1.4}
 .studio-palette button i{flex:none}.studio-inspector,.studio-palette,.journey-structure{min-width:0}
@@ -63,7 +63,7 @@ body :is(.tabs,.admin-tabs,.studio-pages,.user-tabs,.admin-navigation) a:focus-v
 .studio-inspector .application-choice-header .check{margin:0;display:flex;width:18px;min-width:0}
 .studio-inspector .application-choice-header input{margin:0;width:16px;height:16px;min-height:16px}
 .studio-inspector .application-choice-toggle{display:flex;align-items:center;justify-content:flex-start;gap:8px;height:auto;min-height:28px;min-width:0;width:100%;border:0;border-radius:4px;padding:0;background:transparent;color:var(--text);text-align:start;white-space:normal;overflow-wrap:anywhere;font-size:13px;margin:0!important}
-.studio-inspector .application-choice-toggle:hover{color:var(--accent);background:transparent}
+.studio-inspector .application-choice-toggle:hover{color:var(--accent-label,var(--accent));background:transparent}
 .application-choice-toggle i{font-size:9px;color:var(--muted);transition:transform .15s;flex:none}.application-choice-toggle[aria-expanded=false] i{transform:rotate(-90deg)}
 .application-choice-name{font-size:13px;overflow-wrap:anywhere}
 .application-order{display:flex;gap:5px}.studio-inspector .application-order button{height:28px;min-height:28px;width:26px;padding:0;font-size:13px;margin:0!important}
@@ -71,7 +71,7 @@ body :is(.tabs,.admin-tabs,.studio-pages,.user-tabs,.admin-navigation) a:focus-v
 .studio-inspector .application-choice-fields{display:grid;gap:12px;border-top:1px solid var(--line);padding-top:14px;margin-top:12px;min-width:0}
 .studio-inspector .application-choice-fields label{display:grid;width:100%;gap:5px;margin:0;font-size:12px}
 .studio-inspector .application-choice-fields :is(input,select){width:100%;min-width:0;margin:0;height:40px;min-height:40px}
-.studio-inspector .application-choice-fields .application-guide-link{font-size:12px;color:var(--accent);margin:0;line-height:1.5;overflow-wrap:anywhere}
+.studio-inspector .application-choice-fields .application-guide-link{font-size:12px;color:var(--accent-label,var(--accent));margin:0;line-height:1.5;overflow-wrap:anywhere}
 .studio-inspector .application-choice :is(.application-choice-fields,.application-choice-summary)[hidden]{display:none}
 /* Step properties: distinct sections, full-width fields and spaced actions. */
 #journey-properties{min-width:0}#journey-properties>label{display:grid;gap:6px;margin:16px 0;min-width:0}#journey-properties>label :is(input,select,textarea){width:100%;max-width:100%;min-width:0;margin:0}

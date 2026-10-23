@@ -33,21 +33,23 @@ def editor(request,purpose,locale,subject=None,html=None,notice=''):
     html=clean(html)
     sample={'app_name':config(db,'app_name',settings.app_name),'username':'Alex','minutes':'30','title':'Fargo','season':'5','link':config(db,'public_url',settings.public_url)+('/reset?token=preview' if purpose=='reset' else '/library/open/preview' if purpose=='new_season' else '/verify-email?token=preview')}
     preview=document(interpolate(html,sample))
-    return render(request,'mail_editor.html',edit_locale=locale,mail_languages=i18n.languages(db,all=True),purpose=purpose,purposes=purposes(db),subject=subject,html=html,mail_preview=preview,notice=notice,edit_language_name=i18n.languages(db,all=True)[locale],source_stamp=i18n.source_hash(config(db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(db,purpose)))
+    return render(request,'mail_editor.html',edit_locale=locale,mail_languages=i18n.languages(db),purpose=purpose,purposes=purposes(db),subject=subject,html=html,mail_preview=preview,notice=notice,edit_language_name=i18n.languages(db)[locale],source_stamp=i18n.source_hash(config(db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(db,purpose)))
 
 @router.get('/admin/mail-editor')
 def page(request:Request):
     require_admin(request)
     purpose=request.query_params.get('purpose','invite')
     if purpose not in purposes(request.state.db):raise HTTPException(404,'Template not found')
-    return editor(request,purpose,language(request,request.query_params.get('mail_locale',i18n.default_language(request.state.db)),all=True))
+    locale=request.query_params.get('mail_locale',i18n.default_language(request.state.db))
+    if locale not in i18n.languages(request.state.db):return redirect('/admin/mail-editor?purpose='+purpose+'&mail_locale='+i18n.default_language(request.state.db))
+    return editor(request,purpose,locale)
 
 @router.post('/admin/mail-editor')
 def save(request:Request,data=Depends(form)):
     admin=require_admin(request)
     purpose=str(data.get('purpose','invite'))
     if purpose not in purposes(request.state.db):raise ValueError('Template not found')
-    locale=language(request,data.get('mail_locale',i18n.default_language(request.state.db)),all=True)
+    locale=language(request,data.get('mail_locale',i18n.default_language(request.state.db)),all=False)
     stamp=i18n.source_hash(config(request.state.db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(request.state.db,purpose))
     if data.get('source_hash') and data['source_hash']!=stamp:raise HTTPException(409,'The source text has changed. Reload the translation page.')
     subject=validate(str(data.get('subject','')),subject=True)

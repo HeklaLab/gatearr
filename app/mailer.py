@@ -13,10 +13,13 @@ DEFAULTS.update({
     'password_changed_subject':'${app_name} — password changed',
     'password_changed_body':'Hello ${username},\n\nAn administrator changed your account password. If you did not expect this change, contact your administrator.\n${link}'})
 DEFAULTS.update({'new_season_subject':'${app_name} — ${title}: a new season is available','new_season_body':'Hello ${username},\n\nSeason ${season} of ${title} is now available. Some episodes may still be arriving.\n${link}\n\n${app_name}'})
+INVITE_BODY_V040 = 'Hello ${username},\n\nWelcome to ${app_name}. Confirm your email to access your account:\n${link}\n\nThis link expires in ${minutes} minutes.\n\n${app_name}'
+DEFAULTS['invite_body'] = 'Hello ${username},\n\nWelcome to ${app_name}. Confirm your email to access your account:\n${link}\n\nThis link expires in ${minutes} minutes.\n\nOne portal, all your services.\nUse your existing Emby/Jellyfin password to sign in, change it yourself or recover access by email.\nFind guides to connect your media account on your phone, TV and other devices.\n\n${app_name}'
 DEFAULTS_BY_LOCALE = {"en": DEFAULTS}
 
 def config(db, key, default=""):
     row = db.get(Config, key)
+    if key=='invite_body' and row and row.value==INVITE_BODY_V040:return DEFAULTS['invite_body']
     return row.value if row else default
 
 def compose(db, recipient, purpose, values):

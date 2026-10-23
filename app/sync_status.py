@@ -17,7 +17,7 @@ ERRORS = {
 }
 
 def user_statuses(db, locale):
-    custom=overrides(db,locale)
+    custom={}  # Native administration status labels are not portal customization.
     tr = lambda text: translate(text,locale,overrides=custom)
     def stamp(value):
         return time.strftime('%Y-%m-%d %H:%M:%S UTC',time.gmtime(value)) if value is not None else '—'

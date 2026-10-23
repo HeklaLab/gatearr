@@ -59,6 +59,6 @@
  function restore(){canvas.innerHTML=history.at(-1);wire();if(canvas.firstElementChild)select(canvas.firstElementChild);sync(false);}
  form.querySelector('[data-mail-command=undo]').onclick=()=>{if(history.length>1){future.push(history.pop());restore();}};
  form.querySelector('[data-mail-command=redo]').onclick=()=>{if(future.length){history.push(future.pop());restore();}};
- document.addEventListener('gatearr:saved',event=>{if(event.detail.form!==form||!event.detail.success)return;baseline=event.detail.data.get('html');initialSubject=event.detail.data.get('subject');sync(false);if(source.value===baseline&&form.elements.subject.value===initialSubject)document.querySelector('#mail-editor-status').textContent=document.body.dataset.saved;});
+ window.GatearrPage.listen(document,'gatearr:saved',event=>{if(event.detail.form!==form||!event.detail.success)return;baseline=event.detail.data.get('html');initialSubject=event.detail.data.get('subject');sync(false);if(source.value===baseline&&form.elements.subject.value===initialSubject)document.querySelector('#mail-editor-status').textContent=document.body.dataset.saved;});
  form.elements.subject.addEventListener('input',()=>sync(false));form.addEventListener('submit',()=>sync(false));wire();sync();if(canvas.firstElementChild)select(canvas.firstElementChild);
 })();

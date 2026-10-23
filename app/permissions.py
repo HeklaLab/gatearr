@@ -308,7 +308,8 @@ def save_group(request:Request,gid:int,data=Depends(form)):
     if data.get('manage_tools')=='on':
         tools=sorted(set(data.getlist('tools')))
         if any(k not in ('radarr','sonarr','bazarr','tracearr','tdarr') for k in tools):raise ValueError('Invalid tool access')
-        settings['tools']=tools
+        from .tools_proxy import retained_tools
+        settings['tools']=retained_tools(db,json.loads(group.access_policy).get('tools',[]),tools)
     if data.get('manage_seerr_access')=='on':settings['seerr_access']=data.get('seerr_access')=='on'
     from .seerr_quotas import selected as quota_values
     quotas=quota_values(data)

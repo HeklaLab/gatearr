@@ -17,7 +17,7 @@ def review(request,data,group,users,policy,access,remotes,api):
         return JSONResponse({'required':False}) if data.get('review_only')=='on' else None
     from .permissions import encoded,normalize,label,READ_ONLY
     db=request.state.db
-    translations=i18n.overrides(db,request.state.locale)
+    translations={}  # Permission review is native administration UI.
     t=lambda message:i18n.translate(message,request.state.locale,overrides=translations)
     def display(value):
         if type(value) is bool:return t('Yes') if value else t('No')

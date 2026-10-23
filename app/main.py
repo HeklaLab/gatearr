@@ -235,9 +235,10 @@ async def context(request: Request, call_next):
         request.state.support=support
         if target:
             request.state.user=target
-            if request.url.path.startswith('/admin') or (request.method not in ('GET','HEAD','OPTIONS') and request.url.path not in ('/support/stop','/logout')):
+            if request.url.path.startswith('/admin') or (request.method not in ('GET','HEAD','OPTIONS') and request.url.path not in ('/support/stop','/logout','/language')):
                 return Response('Assistance mode: return to your account before changing Gatearr settings.',status_code=403)
         request.state.locale = i18n.resolve(request, request.state.user)
+        if support and request.cookies.get('gatearr_support_language') in i18n.languages(db):request.state.locale=request.cookies['gatearr_support_language']
         request.state.csp_nonce=secrets.token_urlsafe(24)
         request.state.rotated = False
         request.state.cookie_secure = settings.secure_cookie or urlsplit(config(db,"public_url",settings.public_url)).scheme=="https"
@@ -252,7 +253,7 @@ async def context(request: Request, call_next):
         response.headers["X-Frame-Options"] = "DENY"
         if request.state.cookie_secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         if getattr(request.state,'button_feedback',False):
             response.headers['Content-Security-Policy']=response.headers['Content-Security-Policy'].replace("script-src 'none'","script-src 'self'")
         if request.url.path.startswith(('/setup','/admin/setup')):
@@ -266,9 +267,9 @@ async def context(request: Request, call_next):
         if request.url.path in ("/reset","/verify-email"):response.headers["Referrer-Policy"]="strict-origin"
         if request.url.path=="/services/emby/open":response.headers["Referrer-Policy"]="no-referrer"
         if request.url.path.startswith('/tools/'):
-            response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'none'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+            response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; script-src 'none'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         if request.url.path in ('/tools/tracearr','/tools/tdarr'):
-            tool=request.url.path.rsplit('/',1)[-1];external=config(db,tool+'_public_url')
+            tool=request.url.path.rsplit('/',1)[-1];external=config(db,tool+'_public_url') if tool=='tracearr' else ''
             if external:response.headers['Content-Security-Policy']=response.headers['Content-Security-Policy'].replace("frame-src 'self'","frame-src 'self' "+urlsplit(external).scheme+'://'+urlsplit(external).netloc)
         if request.url.path=="/services/seerr/open":
             from .seerr_login import public_url
@@ -310,7 +311,7 @@ async def form(request: Request):
         "/forgot": ("email",),
         "/reset": ("token", "password", "confirm"),
         "/verify-email": ("token",),
-        "/admin/settings": ("app_name", "public_url", "login_text"),
+        "/admin/settings": ("app_name", "public_url"),
         "/admin/smtp": ("smtp_host", "smtp_port", "smtp_mode", "smtp_from"),
         "/admin/mail-templates": ("reset_subject", "reset_body", "verify_subject", "verify_body"),
         "/admin/menu": ("label", "url", "position"),
@@ -423,8 +424,11 @@ def render(request, template, **kwargs):
     for key in DEFAULTS:
         values[key] = mail_template(db,*key.rsplit("_",1),mail_locale)
     from .guides import access_href
+    admin_context=request.url.path.startswith(('/admin','/setup','/tools')) and not kwargs.get('visual_preview',False)
+    def public_translator(message,**params):
+        return i18n.translate(message,locale,overrides=custom_translations,base_overrides=base_translations,source_locale=source_locale,**params)
     def translator(message,**params):
-        result=i18n.translate(message,locale,overrides=custom_translations,base_overrides=base_translations,source_locale=source_locale,**params)
+        result=i18n.translate(message,locale,overrides={} if admin_context else custom_translations,base_overrides={} if admin_context else base_translations,source_locale=source_locale,**params)
         if media_name=='Jellyfin' and message not in custom_translations:
             result=result.replace('Emby','Jellyfin')
             if message=='EMBY':result='JELLYFIN'
@@ -449,12 +453,12 @@ def render(request, template, **kwargs):
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
         "captcha_assets":template in ("login.html","forgot.html") and __import__("app.captcha",fromlist=["enabled"]).enabled(db,"forgot" if template=="forgot.html" else "login"),"tracearr_available":tracearr_configured(db),"library_preference":lambda target:library_preference(db,target),"csp_nonce":getattr(request.state,"csp_nonce",""),"captcha_enabled":lambda purpose:__import__("app.captcha",fromlist=["enabled"]).enabled(db,purpose),"default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"mail_purposes":__import__("app.email_editor",fromlist=["purposes"]).purposes(db),"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
-        "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"tool_names":("radarr","sonarr","bazarr","tracearr","tdarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
+        "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"editable_tools":__import__("app.tools_proxy",fromlist=["editable_tools"]).editable_tools(db),"tool_names":("radarr","sonarr","bazarr","tracearr","tdarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "language_flag":i18n.language_flag,"default_brand_logo_url":default_brand_logo_url,"theme_logo_url":theme_logo_url,"browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(values.get('logo_url')) or not logo_url),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
         "asset_version":str(max(p.stat().st_mtime_ns for p in Path("app/static").rglob("*") if p.is_file() and p.suffix in (".css",".js",".json"))), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
-        "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,
+        "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,"_public":public_translator,
         "avatar_url":lambda target:__import__("app.avatars",fromlist=["url"]).url(db,target),"wizard_active":request.url.path.startswith(("/setup","/admin/setup")),"notification_services":__import__("app.preferences",fromlist=["available_notifications"]).available_notifications(db,request.state.user),"account_label_defaults": i18n.ACCOUNT_LABEL_DEFAULTS, "account_labels": {key: translator(i18n.ACCOUNT_LABEL_KEYS[key]) for key in i18n.ACCOUNT_LABEL_KEYS},
         "seerr_notification_mode": config(db, "seerr_notification_mode", "unmanaged"),
         "seerr_access":access_href(db,"seerr") if seerr_public else "",
@@ -833,7 +837,7 @@ def admin_settings(request: Request, data=Depends(form)):
     from starlette.datastructures import FormData
     logo=icon_value(db,FormData([*[(key,value) for key,value in data.multi_items() if key!='icon_url'],('icon_url','' if data.get('remove_logo')=='on' else data.get('logo_url',config(db,'logo_url','')))]))
     if data.get('remove_logo')=='on':logo=''
-    values = {'login_text':str(data['login_text'])[:2000],'default_locale':i18n.default_language(db),'app_name':name,'logo_url':logo,'browser_title':title,'brand_display':display,'public_url':public}
+    values = {'default_locale':i18n.default_language(db),'app_name':name,'logo_url':logo,'browser_title':title,'brand_display':display,'public_url':public}
 
     for key, value in values.items():
         set_config(db, key, value)
@@ -987,7 +991,7 @@ def change_language(request: Request, data=Depends(form)):
     language = data["locale"]
     if language not in i18n.languages(request.state.db):
         raise ValueError('Invalid language')
-    if request.state.user:
+    if request.state.user and not getattr(request.state,'support',None):
         request.state.user.locale = language
         request.state.user.preferences_version+=1
         request.state.db.commit()
@@ -997,7 +1001,7 @@ def change_language(request: Request, data=Depends(form)):
     if parsed.scheme or parsed.netloc or not target.startswith("/") or target.startswith("//") or "\\" in target or any(c in target for c in "\r\n"):
         target = "/"
     response = redirect(target)
-    response.set_cookie("gatearr_language", language, max_age=31536000, secure=request.state.cookie_secure, samesite="lax", httponly=True)
+    response.set_cookie("gatearr_support_language" if getattr(request.state,"support",None) else "gatearr_language", language, max_age=31536000, secure=request.state.cookie_secure, samesite="lax", httponly=True)
     return response
 
 from .admin_features import router as features_router

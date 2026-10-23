@@ -1,5 +1,24 @@
 [
   {
+    "version": "0.4.1",
+    "date": "2026-10-23",
+    "changes": [
+      "Fixed administration sidebar, shared sliding capsule tabs and dynamic page navigation with a stationary header.",
+      "Structured user profiles, full-width user/group permission sections and immediate language selection from a compact list with flags.",
+      "Dynamic user search and pagination (10, 20, 50, 100 or all), reorganized group settings and full-width password policy.",
+      "Guided dropdowns, consistent image upload controls and logo resizing/cropping with fit, zoom and original/3:1/square formats.",
+      "Improved text, links, status badges, capsules and bundled logos across all six theme variants, especially Electric Lime light.",
+      "Complete device breadcrumbs and compact guide steps; portal and access-guide previews grow to their content without nested scrolling.",
+      "Test entered connection settings before saving, with separate HTTP/API diagnostics, URL Base and Tracearr token/server-ID guidance.",
+      "Protected Tdarr WebUI proxy with scoped native cookies, asset paths and WebSocket routing; actual compatibility still depends on the installed Tdarr version.",
+      "Customizable labels limited to public user journeys; native admin translations remain fixed, the edit language is visible and repeated subtitles are grouped.",
+      "Email editing limited to enabled languages; improved default invitations describe shared access, password recovery and device guides while preserving custom templates.",
+      "Existing tool grants retained while new grants are disabled for unconfigured services; assistance language changes remain session-local.",
+      "Centered CAPTCHA forms, corrected quota/control alignment and accessible page-heading focus.",
+      "Default Emby/Jellyfin and Seerr widgets stay under their matching applications, with Tracearr on a separate row; existing customized portals are preserved."
+    ]
+  },
+  {
     "version": "0.4.0",
     "date": "2026-10-23",
     "changes": [

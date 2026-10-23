@@ -11,3 +11,43 @@ body:has(.studio) .shell{display:block;max-width:1800px;width:100%;box-sizing:bo
 
 /* Match the compact shared action controls. */
 .studio-buttons button{min-height:32px;height:auto;padding:7px 12px;font-weight:400}.studio-palette button{padding:8px 10px;font-weight:400}.studio-pages a{padding:9px 14px;border-radius:6px;font-size:13px;font-weight:400}.journey-card .journey-card-title{font-weight:500}
+
+.journey-structure .breadcrumbs .journey-back{flex-basis:100%;width:100%;padding:10px 14px;margin-bottom:10px;text-align:start;font-size:12px}.journey-back::before{content:"← ";}
+
+.journey-structure .breadcrumbs a:not(.journey-back),.journey-current{display:inline-flex;align-items:center;margin:0;padding:6px 8px;font-size:12px;border-radius:9px}.journey-current{color:var(--text);background:var(--bg);border:1px solid var(--line);font-weight:600}
+
+/* One compact treatment for device choices and guide steps. */
+.journey-structure .breadcrumbs{align-items:center}
+.journey-structure .breadcrumbs :is(button,a,span.journey-current):not(.journey-back){display:inline-flex;align-items:center;justify-content:center;height:36px;min-height:36px;margin:0;padding:0 10px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-weight:500;line-height:1.4;box-sizing:border-box}
+.journey-structure .breadcrumbs .journey-current{background:var(--bg);color:var(--text)}
+#journey-list{margin-top:14px}
+.journey-structure .journey-card{margin:0;padding:15px 10px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;cursor:grab}
+.journey-structure .journey-card[aria-current=true]{border:0;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-radius:9px}
+.journey-structure .journey-card-title{margin:0 0 11px;font-size:13px;line-height:1.5}
+.journey-structure .journey-card-actions{display:flex;align-items:center;flex-wrap:nowrap;gap:10px;margin:0}
+.journey-reorder{display:inline-flex;flex:none;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.journey-card .journey-reorder button{display:inline-flex;align-items:center;justify-content:center;width:33px;min-height:32px;height:32px;padding:0;border:0;border-radius:0;background:transparent;color:var(--text);font-size:17px;margin:0}
+.journey-card .journey-reorder button+button{border-inline-start:1px solid var(--line)}
+.journey-card .journey-reorder button:disabled{opacity:.3;cursor:default}
+.journey-card .journey-reorder button:not(:disabled):hover{background:var(--bg)}
+.journey-card .journey-card-actions>:is(a,button){display:inline-flex;align-items:center;justify-content:center;min-height:34px;height:34px;width:auto;margin:0;padding:6px 12px;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--text);white-space:nowrap}
+.journey-workspace{border-color:var(--line)}
+.journey-structure{background:var(--surface);color:var(--text)}
+.journey-workspace .studio-canvas{background:var(--bg)}
+.journey-structure .journey-reorder button+button{margin:0}
+.journey-structure .journey-card .journey-card-actions>:is(a,button){height:34px;min-height:34px;margin:0;border-radius:9px;padding:6px 12px}
+.journey-structure .journey-card .journey-reorder button{height:32px;min-height:32px;width:33px;margin:0;padding:0;border-radius:0;font-size:17px}
+/* Compact editor rows: selection is a quiet marker, not a filled card. */
+.journey-structure .journey-card,.journey-structure .journey-card[aria-current=true]{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:16px 0;margin:0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}
+.journey-structure .journey-card[aria-current=true]::before{content:"";position:absolute;inset-inline-start:-12px;top:18px;bottom:18px;width:3px;border-radius:3px;background:var(--accent)}
+.journey-structure .journey-card .journey-card-title{margin:0;padding:0;text-align:start;font-size:12px;line-height:1.5;min-width:0;overflow-wrap:anywhere;color:var(--text)}
+.journey-structure .journey-card[aria-current=true] .journey-card-title{color:var(--accent-label,var(--accent))}
+.journey-structure .journey-card-actions{gap:8px}
+.journey-structure .journey-card .journey-card-actions>:is(a,button){font-size:11px;padding:5px 9px;height:32px;min-height:32px;border-radius:8px}
+.journey-structure .journey-reorder{border-radius:8px}
+.journey-structure .journey-card .journey-reorder button{width:27px;height:30px;min-height:30px;font-size:15px}
+@media(max-width:360px){.journey-structure .journey-card{gap:8px}.journey-structure .journey-card-actions{gap:5px}}
+
+/* One page scrollbar for the portal builder, preview and editing panels. */
+.studio-workspace>.studio-palette,.studio-workspace>.studio-inspector{max-height:none;overflow:visible}
+.studio-workspace>.studio-canvas{overflow:visible}

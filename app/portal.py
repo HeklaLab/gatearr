@@ -168,10 +168,12 @@ def initial_layout(db):
     blocks.append(dict(id='main-applications',kind='applications',region='main',order=20,span=12,columns=len(applications),applications=applications,title='',body=''))
     services=[('emby','widget_media',['movies','series'])]
     if configured(db,'seerr'):services.append(('seerr','widget_seerr',['movies_left','series_left']))
-    if configured(db,'tracearr'):services.append(('tracearr','widget_tracearr',['watch_time','favorite']))
+    # Match the media/request application columns; activity has its own row.
     blocks.append(dict(id='service-widgets',kind='columns',region='main',order=30,span=12,columns=len(services),title='',body=''))
     for index,(service,kind,metrics) in enumerate(services):
         blocks.append(dict(id=service+'-statistics',kind=kind,region='main',order=31+index,span=12,parent='service-widgets',slot=index,metrics=metrics,show_logo=False,title='',body=''))
+    if configured(db,'tracearr'):
+        blocks.append(dict(id='tracearr-statistics',kind='widget_tracearr',region='main',order=40,span=12,metrics=['watch_time','favorite'],show_logo=False,title='',body=''))
     tools=[tool for tool in ('radarr','sonarr','bazarr','tracearr','tdarr') if configured(db,tool) and (tool not in ('tracearr','tdarr') or config(db,tool+'_interface_enabled')=='true')]
     if tools:blocks.append(dict(id='admin-applications',kind='applications',region='main',order=50,span=12,columns=min(6,len(tools)),applications=tools,visibility='admins',title='',body=''))
     blocks.append(dict(id='my-account',kind='applications',region='main',order=60,span=12,columns=1,applications=['account'],title='',body=''))

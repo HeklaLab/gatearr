@@ -12,8 +12,21 @@ from .db import SessionLocal
 from .mailer import config
 from .security import url_ok,origin,encrypt,decrypt,digest
 from .main import form,require_admin,require_user,redirect,render,set_config
-router=APIRouter();PROXY_TOOLS=('radarr','sonarr','bazarr');TOOLS=(*PROXY_TOOLS,'tracearr','tdarr')
+router=APIRouter();PROXY_TOOLS=('radarr','sonarr','bazarr','tdarr');TOOLS=(*PROXY_TOOLS,'tracearr')
 HOP={'connection','keep-alive','proxy-authenticate','proxy-authorization','te','trailer','transfer-encoding','upgrade','host','content-length','cookie','authorization','x-api-key','x-emby-token','forwarded','x-forwarded-for','x-forwarded-host','x-forwarded-proto'}
+
+
+def tdarr_headers(incoming):
+    """Only the native credentials scoped by this proxy may reach Tdarr."""
+    from http.cookies import SimpleCookie
+    result={}
+    if incoming.get('authorization'):result['authorization']=incoming['authorization']
+    cookies=SimpleCookie();cookies.load(incoming.get('cookie',''))
+    namespace='gatearr_tdarr_native_'
+    native='; '.join(name[len(namespace):]+'='+m.coded_value for name,m in cookies.items() if name.startswith(namespace) and len(name)>len(namespace))
+    if native:result['cookie']=native
+    return result
+
 
 def allowed_tools(db,user):
     if not user:return []
@@ -22,7 +35,7 @@ def allowed_tools(db,user):
 
 def configure_tools(request,data):
     require_admin(request);db=request.state.db;prepared={}
-    for tool in PROXY_TOOLS:
+    for tool in ('radarr','sonarr','bazarr'):
         active=data.get(tool+'_enabled')=='on'
         entered=str(data.get(tool+'_url','')).strip()
         if not active:
@@ -72,11 +85,11 @@ def save_tools(request:Request,data=Depends(form)):
 def open_tool(request:Request,tool:str):
     user=require_user(request);db=request.state.db
     if tool not in allowed_tools(db,user):raise HTTPException(403,'Tool access denied')
-    external=config(db,tool+'_public_url') if tool in ('tracearr','tdarr') else ''
-    if tool in ('tracearr','tdarr') and not external:raise HTTPException(409,'Configure the public interface address first')
+    external=config(db,tool+'_public_url') if tool=='tracearr' else ''
+    if tool=='tracearr' and not external:raise HTTPException(409,'Configure the public interface address first')
     return render(request,'tool.html',tool=tool,tool_external=external)
 
-def prefix(tool):return '/tools/'+tool+'/app'
+def prefix(tool):return '/tools/'+tool+'/app'+('/tdarr' if tool=='tdarr' else '')
 
 def target_for_host(db,request):
     # Kept as an internal dispatch name for compatibility; hostnames never select a tool.
@@ -139,12 +152,15 @@ async def handle(request,tool):
     body=await bounded_body(request,32*1024*1024)
     # Preserve the raw escaped path/query. The fixed upstream cannot be replaced by //host or redirects.
     if not safe_path(request,tool):return Response('Invalid path',400)
-    url=base.rstrip('/')+request.scope['raw_path'].decode('ascii')
+    upstream_path=request.scope['raw_path'].decode('ascii')
+    if tool=='tdarr':upstream_path=upstream_path[len(prefix(tool)):] or '/'
+    url=base.rstrip('/')+upstream_path
     if request.url.query:url+='?'+request.url.query
     headers={k:v for k,v in request.headers.items() if k.lower() not in HOP and not k.lower().startswith(('x-forwarded-','sec-'))}
     # Replace the lowercase browser header: mixed-case duplicates are combined by HTTPX.
     headers['accept-encoding']='identity'
-    headers['X-Api-Key']=key
+    if tool!='tdarr':headers['X-Api-Key']=key
+    else:headers.update(tdarr_headers(request.headers))
     client=httpx.AsyncClient(timeout=httpx.Timeout(60,connect=10),trust_env=False,follow_redirects=False)
     try:
         req=client.build_request(request.method,url,headers=headers,content=body)
@@ -152,23 +168,55 @@ async def handle(request,tool):
     except httpx.HTTPError:
         await client.aclose();return Response('Tool unavailable',502)
     output={k:v for k,v in upstream.headers.items() if k.lower() not in HOP|{'set-cookie','content-security-policy','x-frame-options'}}
+    native_cookies=[]
+    if tool=='tdarr':
+        from http.cookies import SimpleCookie
+        for raw in upstream.headers.get_list('set-cookie'):
+            cookies=SimpleCookie();cookies.load(raw)
+            for name,morsel in cookies.items():
+                if name.startswith('gatearr_'):continue
+                scoped=SimpleCookie();scoped['gatearr_tdarr_native_'+name]=morsel.value
+                local=scoped['gatearr_tdarr_native_'+name]
+                for attr in ('expires','max-age','secure','httponly','samesite'):
+                    if morsel[attr]:local[attr]=morsel[attr]
+                local['path']=prefix(tool)+'/'
+                if portal.startswith('https://'):local['secure']=True
+                native_cookies.append(local.OutputString())
+    def with_cookies(response):
+        for cookie in native_cookies:response.headers.append('set-cookie',cookie)
+        return response
     location=output.get('location')
     if location:
         parsed=urlsplit(urljoin(str(upstream.request.url),location))
         root=parsed.scheme+'://'+parsed.netloc
-        if origin(root)!=origin(base) or not (parsed.path==prefix(tool) or parsed.path.startswith(prefix(tool)+'/')):
+        if origin(root)!=origin(base) or (tool!='tdarr' and not (parsed.path==prefix(tool) or parsed.path.startswith(prefix(tool)+'/'))):
             await upstream.aclose();await client.aclose();return Response('External redirect refused or upstream URL Base is incorrect',502)
-        output['location']=portal.rstrip('/')+parsed.path+('?' + parsed.query if parsed.query else '')
+        output['location']=portal.rstrip('/')+(prefix(tool) if tool=='tdarr' else '')+parsed.path+('?' + parsed.query if parsed.query else '')
     output.update({'Cache-Control':'no-store','Referrer-Policy':'same-origin','X-Content-Type-Options':'nosniff','Content-Security-Policy':"frame-ancestors "+"'self'"})
     from .audit import record
     record(actor,subject,'tool.'+tool+'.'+request.method,upstream.status_code)
+    if tool=='tdarr' and 'text/html' in upstream.headers.get('content-type','') and request.method=='GET':
+        import re
+        raw=bytearray()
+        try:
+            async for chunk in upstream.aiter_bytes():
+                raw.extend(chunk)
+                if len(raw)>4*1024*1024:return Response('Tdarr page is too large',502)
+            html=raw.decode('utf-8')
+            base_path=prefix(tool)+'/'
+            html=re.sub(r'(<head[^>]*>)',lambda m:m[0]+'<base href="'+base_path+'">',html,count=1,flags=re.I)
+            html=re.sub(r'((?:src|href|action)=[\"\'])/(?!/|tools/tdarr/app/)',lambda m:m[1]+base_path,html,flags=re.I)
+            output.pop('content-length',None);output.pop('content-encoding',None)
+            return with_cookies(Response(html,status_code=upstream.status_code,headers=output))
+        finally:await upstream.aclose();await client.aclose()
+
     async def stream():
         try:
             # Forward wire bytes and Content-Encoding together, including formats
             # HTTPX cannot decode (e.g. Brotli or Zstandard without optional extras).
             async for chunk in upstream.aiter_raw():yield chunk
         finally:await upstream.aclose();await client.aclose()
-    return StreamingResponse(stream(),status_code=upstream.status_code,headers=output)
+    return with_cookies(StreamingResponse(stream(),status_code=upstream.status_code,headers=output))
 
 async def websocket_proxy(socket):
     import asyncio
@@ -178,11 +226,13 @@ async def websocket_proxy(socket):
         if not tool or origin(socket.headers.get('origin',''))!=origin(config(db,'public_url')) or not authorize(db,socket,tool):
             await socket.close(code=1008);return
         base=config(db,tool+'_url');key=decrypt(config(db,tool+'_api_key'));public=config(db,'public_url')
-    parsed=urlsplit(base);url=('wss' if parsed.scheme=='https' else 'ws')+'://'+parsed.netloc+parsed.path.rstrip('/')+socket.scope['raw_path'].decode('ascii')
+    parsed=urlsplit(base);path=socket.scope['raw_path'].decode('ascii')
+    if tool=='tdarr':path=path[len(prefix(tool)):] or '/'
+    url=('wss' if parsed.scheme=='https' else 'ws')+'://'+parsed.netloc+parsed.path.rstrip('/')+path
     if socket.url.query:url+='?'+socket.url.query
     if not safe_path(socket,tool):await socket.close(code=1008);return
     try:
-        async with connect(url,additional_headers={'X-Api-Key':key},origin=public,proxy=None,open_timeout=10,max_size=4*1024*1024) as upstream:
+        async with connect(url,additional_headers={'X-Api-Key':key} if tool!='tdarr' else tdarr_headers(socket.headers),origin=public,proxy=None,open_timeout=10,max_size=4*1024*1024) as upstream:
             await socket.accept()
             async def browser():
                 while True:
@@ -208,3 +258,14 @@ async def websocket_proxy(socket):
     finally:
         try:await socket.close()
         except RuntimeError:pass
+
+
+def editable_tools(db):
+    from .connection_health import configured
+    return {tool for tool in TOOLS if configured(db,tool) and (tool not in ('tracearr','tdarr') or config(db,tool+'_interface_enabled','true')=='true')}
+
+
+def retained_tools(db,previous,submitted):
+    available=editable_tools(db);previous=set(previous);submitted=set(submitted)
+    if submitted-available-previous:raise ValueError('Configure this tool in Applications & API before granting access')
+    return sorted((submitted&available)|(previous-available))
