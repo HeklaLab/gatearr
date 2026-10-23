@@ -90,9 +90,7 @@ Sharing a media server with family or friends can turn its owner into the help d
 | Need | What Gatearr provides |
 | --- | --- |
 | Forgotten passwords | Email-based self-service password recovery, verification and invitations for accounts on the connected media server. SMTP and an account email are required. |
-| Repeated account configuration | User groups managing libraries, Emby permissions, Seerr permissions/quotas and Gatearr/admin-tool access. Before adding users, Gatearr compares their current native permissions, libraries and application access with the group. Only differences are displayed, one user at a time for bulk additions. Confirmations expire and are rejected if the underlying rights or group change.
-
-Each user belongs to at most one group. |
+| Repeated account configuration | User groups managing libraries, Emby permissions, Seerr permissions/quotas and Gatearr/admin-tool access. Each user belongs to at most one group. |
 | Permission management | Edit supported media policy fields: streams, downloads, subtitles, remote access and more. Read-back indicators distinguish verified, pending, different and failed values. |
 | Helping users connect | Visual **Access guides** with nested device choices, illustrated steps and store/download links. Starter Emby guides cover browser, Windows, Mac, Linux, Android, iPhone and Smart TV. |
 | A portal that looks like your own | Drag-and-drop **Login screen**, **Portal** and **Footer** builders, live previews, application rows, rich text, uploaded logos/images, menus, colors, gradients, button/hover styles and editable light/dark presets. |
@@ -264,6 +262,8 @@ Emby browser login verifies the captured user token before handoff. Jellyfin web
 User and group editors separate media-server permissions, Seerr permissions and admin tools into tabs. Native controls replace JSON fields for supported schedules, devices, folders, ratings and tags. Gatearr refreshes observed media-server and Seerr permissions every five minutes and rejects stale saves. Public media browser addresses are configured only in **Applications & API**.
 
 Review/edit the fields actually returned by the media server: streams, downloads, subtitles, remote access and other policy settings. Authentication providers and server-maintained counters remain read-only. Sensitive administrator/disabled changes require explicit confirmation; the last active Gatearr admin is protected.
+
+Before adding users, Gatearr compares their current native permissions, libraries and application access with the group. Only differences are displayed, one user at a time for bulk additions. Confirmations expire and are rejected if the underlying rights or group change.
 
 Each user belongs to at most one group. Group membership locks individual library, permission and application-access editing; edit the owning group instead. Removing membership restores captured original values for settings previously managed by the group. Existing multi-group configurations are migrated as described in [UPGRADING.md](UPGRADING.md).
 
