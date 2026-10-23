@@ -15,10 +15,9 @@ If something is broken, confusing or missing, please open an issue. Include vers
 **Requires an existing Emby/Jellyfin server and Docker Compose v2.** Seerr, Tracearr and the administration tools are optional. SMTP enables invitations and self-service password recovery.
 
 1. Download [gatearr-docker.zip for v0.4.1](https://github.com/HeklaLab/gatearr/releases/download/v0.4.1/gatearr-docker.zip) and extract it.
-2. Copy `.env.example` to `.env`, review the [installation prerequisites](#installation-prerequisites), then run:
+2. Review the [installation prerequisites](#installation-prerequisites), then run from the extracted folder:
 
    ```sh
-   cp .env.example .env
    docker compose config --quiet
    docker compose pull
    docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
@@ -245,10 +244,9 @@ This checks the running UID/GID's access without replacing secrets or modifying 
 
 ## Start with Docker
 
-Download the release's `gatearr-docker.zip`, extract it and copy `.env.example` to `.env`:
+Download the release's `gatearr-docker.zip`, extract it and run these commands from the extracted folder. The default configuration is ready to start; complete your installation in the web wizard:
 
 ```sh
-cp .env.example .env
 docker compose config --quiet
 docker compose pull
 docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
@@ -259,18 +257,17 @@ Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.4.1` for a controlled 
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 
-The session/encryption secret is generated once in `/data/bootstrap.json` when `SECRET_KEY` is empty. Retain it. API keys are entered in the wizard/API connections and stored encrypted, never supplied through `.env`. No installation token is required.
+The session/encryption secret is generated once in `/data/bootstrap.json` when `SECRET_KEY` is empty. Retain it. API keys are entered in the wizard/API connections and stored encrypted. No installation token is required.
 
 ### Windows / Docker Desktop
 
 ```powershell
 cd C:\docker-test\gatearr
-Copy-Item .env.windows.example .env
 docker compose pull
 docker compose up -d --wait
 ```
 
-The Windows example uses port 8088. Open `http://localhost:8088/setup`. For Emby on the same PC use `http://host.docker.internal:8096/emby` as the API URL. Browser/app URLs must be reachable by the actual users; another device cannot use your PC's `localhost`.
+Open `http://localhost:8000/setup` and complete the web wizard. For Emby on the same PC use `http://host.docker.internal:8096/emby` as the API URL. Browser/app URLs must be reachable by the actual users; another device cannot use your PC's `localhost`.
 
 ### First-run wizard
 
