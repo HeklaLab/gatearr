@@ -1,12 +1,37 @@
-# Gatearr — public beta
+# Gatearr — Emby & Jellyfin account portal
 
-**A self-hosted front door for your media server: account self-service, user groups, permissions, Access guides and a portal you can make your own.**
+**Your media server. One front door.**
+
+A free, open-source, self-hosted account portal for **Emby and Jellyfin**. Give your users one place to access their media services, manage their accounts, reset forgotten passwords and follow device connection guides. Manage user groups, library permissions and optional Seerr requests from an interface you can make your own.
 
 **0.4.0 public beta** brings theme presets, compact personal widgets, a multilingual installer and locally bundled Captcha. Gatearr entered public beta with v0.3.2. Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
 
 [Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.4.0) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
 
 If something is broken, confusing or missing, please open an issue. Include versions, deployment details and reproduction steps; remove secrets and personal information from logs/screenshots. This is an early beta: back up persistent data and test permission changes with a limited account before applying them broadly.
+
+## Quick start
+
+**Requires an existing Emby/Jellyfin server and Docker Compose v2.** Seerr, Tracearr and the administration tools are optional. SMTP enables invitations and self-service password recovery.
+
+1. Download [gatearr-docker.zip for v0.4.0](https://github.com/HeklaLab/gatearr/releases/download/v0.4.0/gatearr-docker.zip) and extract it.
+2. Copy `.env.example` to `.env`, review the [installation prerequisites](#installation-prerequisites), then run:
+
+   ```sh
+   cp .env.example .env
+   docker compose config --quiet
+   docker compose pull
+   docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
+   docker compose up -d --wait
+   ```
+
+3. Open [http://localhost:8000/setup](http://localhost:8000/setup) on the Docker host and complete the wizard with your media-server API address/key and an existing administrator account. Choose your portal name, language and theme; add optional services and email delivery when ready.
+
+Complete setup privately. For access from other devices or the internet, configure `PUBLIC_URL`, your existing HTTPS reverse proxy and the [documented security boundaries](SECURITY_REVIEW.md). Keep the persistent `/data` volume, including `bootstrap.json`.
+
+**Docker:** `ghcr.io/heklalab/gatearr:0.4.0` · **Architectures:** AMD64 / ARM64 · **License:** MIT
+
+[Windows instructions](#windows--docker-desktop) · [Full Docker instructions](#start-with-docker) · [Upgrade an existing installation](UPGRADING.md) · [Community on Reddit](https://www.reddit.com/r/gatearr/)
 
 ## Interface preview — v0.4.0
 
