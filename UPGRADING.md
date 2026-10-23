@@ -1,3 +1,15 @@
+## 0.4.0
+
+Back up the persistent database and bootstrap.json before upgrading. Migration 0020 adds widget caches, personal notifications and captcha accounting without replacing users or portal content. Existing embedded Seerr counters in saved layouts are converted into audience-specific widget blocks.
+
+Cap is bundled in the Docker image and protects login/recovery by default. No new environment secrets, cloud accounts or services are required. For a direct Python installation, install Node.js 24 LTS and optionally set `CAP_NODE` to its executable. A missing captcha worker fails closed; administrators can configure each form in Security → Captcha.
+
+Existing dark colors are retained. Apply/publish a preset deliberately to replace both variant palettes, or edit each variant separately. User choice is visible only when the administrator permits it.
+
+Tracearr needs public API v2 identity/history support. When it monitors several servers of the same type, configure the corresponding server UUID. Tdarr is interface-only; Tracearr/Tdarr native interfaces retain their own authentication and browser frame policies.
+
+New-season notifications require Tracearr and user consent; SMTP plus a verified address are also required for email. First sync establishes a baseline without emailing historical additions. Restore the pre-upgrade backup when rolling back to 0.3.4; that release cannot render the new widget types.
+
 # Upgrading to 0.3.4 — public beta
 
 Back up `/data`, including its encryption key. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.3.4` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
@@ -129,3 +141,12 @@ Migration `0013` adds audit events, theme/tool preferences, assistance and tool-
 Admin navigation is grouped into Branding, Users and Services/How to. Existing URLs remain usable. Existing footer items still render centered until a new column layout is published. Existing custom palettes are retained. New admin tools and individual tool grants are disabled/empty by default; setup completion is not reset.
 
 Optional tool embedding needs separate public hostnames routed through the existing reverse proxy and private upstream authentication configured as documented. No new Caddy container is installed. Re-sign into Gatearr to create the temporary user sessions used by automatic media links and assistance.
+
+## Image policy in 0.4.0
+
+PNG/SVG uploads allow up to 5 MiB. External image URL entry is removed, image references are restricted to uploads and bundled assets, and the portal no longer loads remote images. Replace any earlier remote logo or image using the upload control; no remote images are downloaded automatically. Existing destination/application URLs are unchanged.
+
+
+### 0.4.0 interface follow-up
+
+Migration 0021 adds a private native-user photo cache. It also preserves former season-email opt-outs while removing the separate end-user portal-announcement preference: portal widgets are controlled by administrators. Existing portal drafts/publications and existing theme preset identifiers remain unchanged. The display name of `boreal` is now Blue Boréal. The new default portal is created only when finishing a fresh installation without a saved layout. Old Seerr/tools setup URLs resume the consolidated Applications stage.

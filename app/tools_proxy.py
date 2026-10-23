@@ -2,7 +2,7 @@
 Only configured upstreams are reachable; no request supplies a target URL or API key.
 """
 import json,time
-from urllib.parse import urlsplit,urljoin
+from urllib.parse import urlsplit,urljoin,unquote
 import httpx
 from fastapi import APIRouter,Request,Depends,HTTPException
 from fastapi.responses import Response,RedirectResponse,StreamingResponse
@@ -12,17 +12,17 @@ from .db import SessionLocal
 from .mailer import config
 from .security import url_ok,origin,encrypt,decrypt,digest
 from .main import form,require_admin,require_user,redirect,render,set_config
-router=APIRouter();TOOLS=('radarr','sonarr','bazarr')
+router=APIRouter();PROXY_TOOLS=('radarr','sonarr','bazarr');TOOLS=(*PROXY_TOOLS,'tracearr','tdarr')
 HOP={'connection','keep-alive','proxy-authenticate','proxy-authorization','te','trailer','transfer-encoding','upgrade','host','content-length','cookie','authorization','x-api-key','x-emby-token','forwarded','x-forwarded-for','x-forwarded-host','x-forwarded-proto'}
 
 def allowed_tools(db,user):
     if not user:return []
     grants=json.loads(user.tool_access) if user else []
-    return [key for key in TOOLS if key in grants and config(db,key+'_enabled')=='true']
+    return [key for key in TOOLS if key in grants and config(db,key+'_enabled')=='true' and (key not in ('tracearr','tdarr') or config(db,key+'_interface_enabled','true')=='true') and (key not in ('tracearr','tdarr') or user.admin)]
 
 def configure_tools(request,data):
     require_admin(request);db=request.state.db;prepared={}
-    for tool in TOOLS:
+    for tool in PROXY_TOOLS:
         active=data.get(tool+'_enabled')=='on'
         entered=str(data.get(tool+'_url','')).strip()
         if not active:
@@ -72,14 +72,16 @@ def save_tools(request:Request,data=Depends(form)):
 def open_tool(request:Request,tool:str):
     user=require_user(request);db=request.state.db
     if tool not in allowed_tools(db,user):raise HTTPException(403,'Tool access denied')
-    return render(request,'tool.html',tool=tool)
+    external=config(db,tool+'_public_url') if tool in ('tracearr','tdarr') else ''
+    if tool in ('tracearr','tdarr') and not external:raise HTTPException(409,'Configure the public interface address first')
+    return render(request,'tool.html',tool=tool,tool_external=external)
 
 def prefix(tool):return '/tools/'+tool+'/app'
 
 def target_for_host(db,request):
     # Kept as an internal dispatch name for compatibility; hostnames never select a tool.
     path=request.url.path
-    return next((tool for tool in TOOLS if path==prefix(tool) or path.startswith(prefix(tool)+'/')),None)
+    return next((tool for tool in PROXY_TOOLS if path==prefix(tool) or path.startswith(prefix(tool)+'/')),None)
 
 def effective(db,session):
     user=db.get(User,session.user_id) if session else None
@@ -94,8 +96,17 @@ def effective(db,session):
 def authorize(db,request,tool):
     raw=request.cookies.get('gatearr_session','')
     session=db.get(Session,digest(raw)) if raw else None
+    # A native admin UI cannot be made read-only by Gatearr's assistance mode.
+    if session and db.get(SupportSession,session.digest):return None
     user=effective(db,session)
     if not user or tool not in allowed_tools(db,user):return None
+    from .main import emby,invalidate
+    from .emby import EmbyError
+    # Proxy requests bypass the portal middleware; enforce native revocation here too.
+    try:remote=emby.user(user.emby_id)
+    except EmbyError:return None
+    if remote.get('Policy',{}).get('IsDisabled') or remote.get('HasPassword') is False:
+        user.active=False;invalidate(db,user);return None
     return type('ProxyAccess',(),{'session_digest':session.digest,'user_id':user.id})()
 
 async def bounded_body(request,maximum):
@@ -104,6 +115,19 @@ async def bounded_body(request,maximum):
         if len(body)+len(chunk)>maximum:raise HTTPException(413,'Request too large')
         body.extend(chunk)
     return bytes(body)
+
+def safe_path(request,tool):
+    # Reject ambiguous encodings before any upstream receives its injected API key.
+    try:path=request.scope['raw_path'].decode('ascii')
+    except (UnicodeError,KeyError):return False
+    for _ in range(8):
+        if not (path==prefix(tool) or path.startswith(prefix(tool)+'/')):return False
+        if '\\' in path or any(ord(c)<32 or ord(c)==127 for c in path):return False
+        if any(part in ('.','..') for part in path.split('/')):return False
+        decoded=unquote(path)
+        if decoded==path:return True
+        path=decoded
+    return False
 
 async def handle(request,tool):
     with SessionLocal() as db:
@@ -114,7 +138,7 @@ async def handle(request,tool):
         base=config(db,tool+'_url');key=decrypt(config(db,tool+'_api_key'));actor=db.get(Session,grant.session_digest).user_id;subject=grant.user_id
     body=await bounded_body(request,32*1024*1024)
     # Preserve the raw escaped path/query. The fixed upstream cannot be replaced by //host or redirects.
-    if request.url.path.startswith('//') or '\\' in request.url.path:return Response('Invalid path',400)
+    if not safe_path(request,tool):return Response('Invalid path',400)
     url=base.rstrip('/')+request.scope['raw_path'].decode('ascii')
     if request.url.query:url+='?'+request.url.query
     headers={k:v for k,v in request.headers.items() if k.lower() not in HOP and not k.lower().startswith(('x-forwarded-','sec-'))}
@@ -156,7 +180,7 @@ async def websocket_proxy(socket):
         base=config(db,tool+'_url');key=decrypt(config(db,tool+'_api_key'));public=config(db,'public_url')
     parsed=urlsplit(base);url=('wss' if parsed.scheme=='https' else 'ws')+'://'+parsed.netloc+parsed.path.rstrip('/')+socket.scope['raw_path'].decode('ascii')
     if socket.url.query:url+='?'+socket.url.query
-    if socket.url.path.startswith('//') or '\\' in socket.url.path:await socket.close(code=1008);return
+    if not safe_path(socket,tool):await socket.close(code=1008);return
     try:
         async with connect(url,additional_headers={'X-Api-Key':key},origin=public,proxy=None,open_timeout=10,max_size=4*1024*1024) as upstream:
             await socket.accept()

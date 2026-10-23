@@ -85,7 +85,7 @@ def describe_form(request,data):
     if path.endswith('/role'):details.append('Gatearr administrator: '+str(data.get('admin')=='on')+'; tools: '+(', '.join(data.getlist('tools')) or 'none'))
     for key in ('smtp_password','api_key','password'):
         if data.get(key):details.append(key.replace('_',' ')+': [hidden]')
-    for tool in ('radarr','sonarr','bazarr'):
+    for tool in ('radarr','sonarr','bazarr','tracearr','tdarr'):
         if tool+'_url' in data:
             details.append(tool+': '+('enabled' if data.get(tool+'_enabled')=='on' else 'disabled')+'; private connection edited')
     changed=[key.replace('_',' ') for key in data if key.endswith('_api_key') and data.get(key)]

@@ -46,7 +46,8 @@ def sources(db):
     from .permissions import label
     for policy in db.scalars(select(PolicyState)):
         for key in json.loads(policy.observed):add('policy-label:'+key,label(key),'Media-server permissions',maximum=200)
-    for purpose in ('invite','verify','reset','email_changed','password_changed'):
+    from .email_editor import purposes
+    for purpose in purposes(db):
         for part in ('subject','body','html'):
             source=html_source(db,purpose) if part=='html' else config(db,purpose+'_'+part,DEFAULTS[purpose+'_'+part])
             add('mail:'+purpose+':'+part,source,'Email · '+purpose,'html' if part=='html' else 'subject' if part=='subject' else 'mail',50000 if part=='html' else 300 if part=='subject' else 10000)

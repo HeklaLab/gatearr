@@ -10,7 +10,7 @@ from .security import url_ok
 from . import i18n
 
 REGIONS = ('login', 'header', 'sidebar', 'main', 'footer')
-KINDS = ('welcome', 'text', 'image', 'button', 'menu', 'services', 'account', 'guides', 'spacer', 'columns', 'login_form', 'logo', 'divider', 'application', 'applications')
+KINDS = ('welcome', 'text', 'image', 'button', 'menu', 'services', 'account', 'guides', 'spacer', 'columns', 'login_form', 'logo', 'divider', 'application', 'applications','widget_media','widget_seerr','widget_tracearr','widget_library')
 DEFAULT = {'nav_position': 'top', 'sidebar_position': 'left', 'theme': {'accent': '#159eff', 'button_hover':'#45cdf4', 'bg': '#edf4ff', 'surface': '#ffffff', 'text': '#12234a', 'muted': '#526789', 'ink':'#051c40'}, 'blocks': [{'id': 'welcome', 'kind': 'welcome', 'region': 'main', 'order': 10, 'span': 12, 'title': 'Welcome, {username}.', 'body': 'All your services, one place.', 'alt': ''}, {'id': 'services', 'kind': 'services', 'region': 'main', 'order': 20, 'span': 12, 'menu_key': 'main', 'include_emby': True, 'title': '', 'body': '', 'alt': ''}, {'id': 'account', 'kind': 'account', 'region': 'main', 'order': 30, 'span': 12, 'title': 'My account', 'body': 'Manage your details and password.', 'alt': ''}]}
 
 def load(db, draft=False):
@@ -45,11 +45,14 @@ def validate(layout):
         from .page_design import asset_url,link_url,validate_style
         validate_style(block.get('style',{}))
         if block['kind']=='spacer' and (type(block.get('size',32)) is not int or not 0<=block.get('size',32)<=2000):raise ValueError('Invalid spacing size')
+        if block['kind'].startswith('widget_'):
+            from .widgets import validate as validate_widget
+            validate_widget(block)
         if block['kind']=='applications':
             subtitles=block.get('subtitles',{})
             if not isinstance(subtitles,dict) or len(subtitles)>100 or any(not isinstance(k,str) or not isinstance(v,str) or len(v)>300 for k,v in subtitles.items()):raise ValueError('Invalid application subtitles')
             selected=block.get('applications',[])
-            if not isinstance(selected,list) or len(selected)>100 or any(not isinstance(k,str) or not re.fullmatch(r'(?:access:[a-z0-9_-]{1,80}|menu:[0-9]+|account|radarr|sonarr|bazarr)',k) for k in selected) or len(set(selected))!=len(selected):raise ValueError('Invalid application selection')
+            if not isinstance(selected,list) or len(selected)>100 or any(not isinstance(k,str) or not re.fullmatch(r'(?:access:[a-z0-9_-]{1,80}|menu:[0-9]+|account|radarr|sonarr|bazarr|tracearr|tdarr)',k) for k in selected) or len(set(selected))!=len(selected):raise ValueError('Invalid application selection')
             if len(selected)>block.get('columns',3):raise ValueError('Select no more applications than the configured number')
             if block.get('columns',3) not in (1,2,3,4,5,6) or block['span']!=12 or block.get('parent') or block['region']!='main':raise ValueError('Applications use a full row in the main content')
         if block['kind']=='image':asset_url(block.get('url',''))
@@ -88,19 +91,29 @@ def localized(block,name,locale,db=None):
 
 def for_display(layout,locale,user=None,db=None,editor=False):
     layout=deepcopy(layout);regions={key:[] for key in REGIONS};indexed={}
+    from .widgets import choose,display as widget_display,TYPES
+    visible_widgets=choose(db,layout['blocks'],user,editor) if db is not None else set()
     for block in sorted(layout['blocks'],key=lambda block:(block['order'],block['id'])):
+        if block['kind'] in TYPES and block['id'] not in visible_widgets:continue
+        if block['kind']=='image' and block.get('url')=='/static/services/emby.png' and db is not None:
+            from .service_assets import default_icon
+            from .connections import media_kind
+            block['url']=default_icon('emby',media_kind(db))
         if block['id']=='account' and block['kind']=='account' and block.get('title')=='My account' and block.get('body')=='Manage your details and password.' and any(b['kind']=='services' for b in layout['blocks']):continue
-        if block['kind']=='application' and block.get('service_key') in ('radarr','sonarr','bazarr') and db is not None:
+        if block['kind']=='application' and block.get('service_key') in ('radarr','sonarr','bazarr','tracearr','tdarr') and db is not None:
             from .tools_proxy import allowed_tools
             if block['service_key'] not in allowed_tools(db,user):continue
         visibility=block.get('visibility','everyone')
-        if visibility=='admins' and (not user or not user.admin):continue
-        if visibility=='members' and (not user or user.admin):continue
+        if not editor and visibility=='admins' and (not user or not user.admin):continue
+        if not editor and visibility=='members' and (not user or user.admin):continue
         block['_scope']={'login':'login-block','footer':'footer-block'}.get(layout.get('page'),'block')
         for field in ('title','body','alt'):block[field]=localized(block,field,locale,db).replace('{username}',user.name if user else '')
         if block.get('rich'):
             from .footer import clean_html
             block['body']=clean_html(block['body'])
+        if block['kind'] in TYPES:
+            block['widget']=widget_display(db,user,block,editor)
+            if not block['widget']:continue
         block['slots']=[[] for _ in range(block.get('columns',2))] if block['kind']=='columns' else []
         indexed[block['id']]=block
     from .applications import catalog
@@ -109,12 +122,6 @@ def for_display(layout,locale,user=None,db=None,editor=False):
         if b['kind']=='applications':
             b['cards']=[dict(available[key],subtitle=i18n.content(db,'block:'+b['id']+':application-subtitle:'+key,b.get('subtitles',{}).get(key,{'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}.get(key,'Open application')),locale)) for key in b.get('applications',[]) if key in available]
             b['visible_columns']=min(b.get('columns',3),max(1,len(b['cards'])))
-    if db is not None and user and not editor and not getattr(user,'_preview',False) and any(any(a['key']=='access:seerr' for a in b.get('cards',[])) for b in indexed.values()):
-        from .seerr_permissions import summary
-        statistics=summary(db,user)
-        for b in indexed.values():
-            for a in b.get('cards',[]):
-                if a['key']=='access:seerr':a['statistics']=statistics
     for block in indexed.values():
         if block.get('parent'):
             parent=indexed.get(block['parent'])
@@ -128,6 +135,9 @@ def version(db):
 def save(db, draft, expected, publish=False):
     for block in draft["blocks"]:i18n.normalize_fields(db,block,"block:"+block["id"],("title","body","alt"))
     validate(draft)
+    from .image_sources import require_image
+    for block in draft['blocks']:
+        if block['kind']=='image':block['url']=require_image(block['url'],db)
     # Compare-and-swap: two administrators cannot silently overwrite the same draft.
     from sqlalchemy.dialects.sqlite import insert
     db.execute(insert(Config).values(key='portal_version', value='0').on_conflict_do_nothing())
@@ -148,3 +158,33 @@ def block_from_form(data):
         **{field:str(data[field]) for field in ('title','body','alt','title_fr','title_en','body_fr','body_en','alt_fr','alt_en','url') if field in data},
         'menu_key': str(data.get('menu_key','main')), 'new_tab': data.get('new_tab') == 'on', 'include_emby': data.get('include_emby') == 'on',
     }
+
+def initial_layout(db):
+    """Fresh-install layout only. Never replace an administrator's saved design."""
+    from .connection_health import configured
+    value=deepcopy(DEFAULT);blocks=[deepcopy(DEFAULT['blocks'][0])]
+    blocks[0]['body']='Your services, one place.'
+    applications=['access:emby']+(['access:seerr'] if configured(db,'seerr') else [])
+    blocks.append(dict(id='main-applications',kind='applications',region='main',order=20,span=12,columns=len(applications),applications=applications,title='',body=''))
+    services=[('emby','widget_media',['movies','series'])]
+    if configured(db,'seerr'):services.append(('seerr','widget_seerr',['movies_left','series_left']))
+    if configured(db,'tracearr'):services.append(('tracearr','widget_tracearr',['watch_time','favorite']))
+    blocks.append(dict(id='service-widgets',kind='columns',region='main',order=30,span=12,columns=len(services),title='',body=''))
+    for index,(service,kind,metrics) in enumerate(services):
+        blocks.append(dict(id=service+'-statistics',kind=kind,region='main',order=31+index,span=12,parent='service-widgets',slot=index,metrics=metrics,show_logo=False,title='',body=''))
+    tools=[tool for tool in ('radarr','sonarr','bazarr','tracearr','tdarr') if configured(db,tool) and (tool not in ('tracearr','tdarr') or config(db,tool+'_interface_enabled')=='true')]
+    if tools:blocks.append(dict(id='admin-applications',kind='applications',region='main',order=50,span=12,columns=min(6,len(tools)),applications=tools,visibility='admins',title='',body=''))
+    blocks.append(dict(id='my-account',kind='applications',region='main',order=60,span=12,columns=1,applications=['account'],title='',body=''))
+    value['blocks']=blocks
+    return validate(value)
+
+def initialize(db,owner=None):
+    if config(db,'portal_published') or config(db,'portal_draft'):return False
+    from .main import set_config
+    value=initial_layout(db)
+    for key in ('portal_draft','portal_published'):set_config(db,key,json.dumps(value))
+    set_config(db,'portal_version','1')
+    if owner:
+        tools=[key for b in value['blocks'] if b.get('visibility')=='admins' for key in b.get('applications',[])]
+        owner.tool_access=json.dumps(sorted(set(json.loads(owner.tool_access or '[]'))|set(tools)))
+    db.commit();return True

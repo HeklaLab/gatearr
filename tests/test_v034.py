@@ -56,7 +56,7 @@ def test_updates_only_expand_installed_release_and_do_not_duplicate_github_notes
 
 def test_email_image_width_survives_save_reload_and_multipart_render(client):
     setup(client)
-    content='<img src="https://example.com/banner.png" width="180" style="width:180px;max-width:100%;height:auto" alt="Banner"><p><a href="${link}">Reset</a></p>'
+    content='<img src="http://testserver/static/gatearr-logo.png" width="180" style="width:180px;max-width:100%;height:auto" alt="Banner"><p><a href="${link}">Reset</a></p>'
     assert post(client,'/admin/mail-editor',{'purpose':'reset','mail_locale':'en','subject':'Reset ${app_name}','html':content},'/admin/mail-editor').status_code==303
     page=client.get('/admin/mail-editor?purpose=reset').text
     assert 'mail-template-selector' in page

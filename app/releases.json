@@ -1,5 +1,59 @@
 [
   {
+    "version": "0.4.0",
+    "date": "2026-10-23",
+    "changes": [
+      "Three editable theme presets: Blue Boréal, Electric Lime and Neon Rose, each with light/dark variants and an animated personal appearance capsule.",
+      "Tracearr personal statistics, explicit server/account matching, native interface access, and admin-only Tdarr interface access.",
+      "Independent compact media, Seerr, Tracearr and Library updates blocks with optional app logos and audience priorities.",
+      "Personal request availability and new-season announcements, optional Tracearr-dependent season email template and notification preferences.",
+      "Locally bundled Cap protection for sign-in and password recovery, with per-form controls and aggregate statistics in Security → Captcha.",
+      "Unified Applications & API overview, expandable service settings and read-only diagnostics, separate from saving.",
+      "Existing compact controls and red/green status indicators are retained across light and dark themes.",
+      "Preview color presets immediately with identical navigation geometry and improved theme/translation spacing.",
+      "Save supported settings, email templates and translations without reloading the page.",
+      "Align email-template actions, compact appearance-policy controls, and use native widget logos with disabled dependency states.",
+      "User-scoped data, server-bound Tracearr identities, incremental library baselines and send-time notification authorization checks.",
+      "Cap Core and solver assets run locally inside the Gatearr container, without a dashboard, Redis or cloud CAPTCHA account.",
+      "Allow PNG/SVG uploads up to 5 MiB and restrict image sources to uploads and bundled assets across editors.",
+      "Enforce Tracearr mail dependencies through editing and translation routes.",
+      "Align widget columns with application cards on desktop and mobile.",
+      "Expose the new-season email template in the main email menu when Tracearr is enabled.",
+      "Keep captcha-required alerts in place and display a visible local checkmark.",
+      "Five-stage multilingual installation with logo upload, initial theme selection and separate server/API connection tests.",
+      "Animated capsule navigation, native Emby/Jellyfin profile pictures and consolidated email-only account preferences.",
+      "Conditional fresh-install portal defaults, guarded group rename/deletion and a per-user native permission comparison before joining groups.",
+      "Compact language management with flags and inline settings; refreshed administration mosaic, email tabs and theme-aware default logos."
+    ],
+    "categories": {
+      "New features": [
+        "Three editable theme presets: Blue Boréal, Electric Lime and Neon Rose, each with light/dark variants and an animated personal appearance capsule.",
+        "Tracearr personal statistics, explicit server/account matching, native interface access, and admin-only Tdarr interface access.",
+        "Independent compact media, Seerr, Tracearr and Library updates blocks with optional app logos and audience priorities.",
+        "Personal request availability and new-season announcements, optional Tracearr-dependent season email template and notification preferences.",
+        "Locally bundled Cap protection for sign-in and password recovery, with per-form controls and aggregate statistics in Security → Captcha."
+      ],
+      "Interface adjustments": [
+        "Unified Applications & API overview, expandable service settings and read-only diagnostics, separate from saving.",
+        "Existing compact controls and red/green status indicators are retained across light and dark themes.",
+        "Preview color presets immediately with identical navigation geometry and improved theme/translation spacing.",
+        "Save supported settings, email templates and translations without reloading the page.",
+        "Align email-template actions, compact appearance-policy controls, and use native widget logos with disabled dependency states."
+      ],
+      "Improvements": [
+        "User-scoped data, server-bound Tracearr identities, incremental library baselines and send-time notification authorization checks.",
+        "Cap Core and solver assets run locally inside the Gatearr container, without a dashboard, Redis or cloud CAPTCHA account.",
+        "Allow PNG/SVG uploads up to 5 MiB and restrict image sources to uploads and bundled assets across editors.",
+        "Enforce Tracearr mail dependencies through editing and translation routes."
+      ],
+      "Bug fixes": [
+        "Align widget columns with application cards on desktop and mobile.",
+        "Expose the new-season email template in the main email menu when Tracearr is enabled.",
+        "Keep captcha-required alerts in place and display a visible local checkmark."
+      ]
+    }
+  },
+  {
     "version": "0.3.4",
     "date": "2026-10-22",
     "changes": [

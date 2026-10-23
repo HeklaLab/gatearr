@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block content %}
-<span class="eyebrow">GATEARR · {{ _('VERSION') }}</span><h1>{{ _('Updates and changelog') }}</h1>
+{% include 'admin_eyebrow.html' %}<h1>{{ _('Updates and changelog') }}</h1>
 <div class="updates-overview">
 <section class="card update-installation"><div class="section-heading"><h2>Gatearr {{ app_version }}</h2><span class="installed-version sync-green">● {{ _('Current version') }}</span></div>
 {% if build_revision %}<p class="hint">{{ _('Build') }} {{ build_revision[:12] }}</p>{% endif %}

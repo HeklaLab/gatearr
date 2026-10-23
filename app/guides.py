@@ -91,8 +91,9 @@ def validated(data):
         step['id']=str(data.get(prefix+'id','')) or secrets.token_hex(8)
         if not re.fullmatch(r'[a-zA-Z0-9_-]{1,40}',step['id']) or any(old['id']==step['id'] for old in value['steps']):raise ValueError('Invalid step identifier')
         step['position'] = int(data.get(prefix+'position', str((index+1)*10)))
-        for field in ('link_url','image_url'):
-            step[field] = url_ok(step.get(field,''), optional=True)
+        step['link_url']=url_ok(step.get('link_url',''),optional=True)
+        from .image_sources import require_image
+        step['image_url']=require_image(step.get('image_url',''),optional=True)
         value['steps'].append(step)
     if len(value['steps']) > 30:
         raise ValueError('A guide supports up to 30 steps')
@@ -139,7 +140,7 @@ def save_service(request: Request, data=Depends(form)):
     name = str(data.get('name','')).strip()
     if not re.fullmatch(r'[a-z0-9_-]{1,40}',key) or not name or len(name)>100:
         raise ValueError('Invalid service')
-    if key in ('radarr','sonarr','bazarr'):raise ValueError('How to is unavailable for this application')
+    if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise ValueError('How to is unavailable for this application')
     row = db.get(AccessService,key) or AccessService(key=key)
     row.name = name
     row.browser_url = url_ok(str(data.get('browser_url','')),optional=True)
@@ -170,7 +171,7 @@ def create_guide(request: Request, data=Depends(form)):
     require_admin(request)
     db = request.state.db
     key = str(data.get('service_key',''))
-    if key in ('radarr','sonarr','bazarr'):raise ValueError('How to is unavailable for this application')
+    if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise ValueError('How to is unavailable for this application')
     if not db.get(AccessService,key):
         raise ValueError('Invalid service')
     value = validated(data)

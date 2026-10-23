@@ -38,8 +38,9 @@ class EmbyClient:
             raise EmbyError("Emby indisponible ou accès refusé") from exc
 
     def authenticate(self, name, password):
+        if not password.strip():raise EmbyError("Password required")
         result = self.request("POST", "/Users/AuthenticateByName", json={"Username": name, "Pw": password})
-        if not isinstance(result, dict) or not result.get("User", {}).get("Id") or not result.get("AccessToken"):
+        if not isinstance(result, dict) or not result.get("User", {}).get("Id") or not result.get("AccessToken") or result.get("User", {}).get("HasPassword") is False:
             raise EmbyError("Réponse Emby invalide")
         return result
 

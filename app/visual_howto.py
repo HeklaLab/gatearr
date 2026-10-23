@@ -18,7 +18,7 @@ def decode(data):
 
 def howto_editor(request,key):
     require_admin(request)
-    if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
+    if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise HTTPException(400,'How to is unavailable for this application')
     db=request.state.db;service=access.service_or_404(db,key)
     rows=list(db.scalars(select(Guide).where(Guide.service_key==key)))
     return render(request,'visual_howto.html',howto_data={'type':'choices','key':key,'name':service.name,'version':service.access_version,'nodes':[{**node,'icon':access.category_icon(node)} for node in access.load(service,True)],'guides':[{'id':r.id,'title':json.loads(r.draft).get('title',''),'published':bool(r.published)} for r in rows],'server_url':service.server_url,'root':json.loads(config(db,'howto_root_draft_'+key,'{}')),'browser_url':service.browser_url},service=service)
@@ -31,7 +31,7 @@ def guide_editor(request,guide_id):
 @router.post('/admin/visual-howto/{key}/{action}')
 def choices(request:Request,key:str,action:str,data=Depends(form)):
     require_admin(request)
-    if key in ('radarr','sonarr','bazarr'):raise HTTPException(400,'How to is unavailable for this application')
+    if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise HTTPException(400,'How to is unavailable for this application')
     db=request.state.db;service=access.service_or_404(db,key);value=decode(data)
     if action=='new-guide':
         title=str(value.get('title','New guide')).strip()[:200]
@@ -82,7 +82,10 @@ def validated_article(db,value):
         if not isinstance(step,dict):raise ValueError('Invalid step')
         for key in ('id','title','body','link_label','link_url','image_url'):flat['step_'+str(i)+'_'+key]=step.get(key,'')
         flat['step_'+str(i)+'_position']=(i+1)*10
-        # The existing validator accepts only HTTP URLs; local images are restored below.
+        # Validate persisted image references against uploaded assets.
+        if step.get('image_url'):
+            from .image_sources import require_image
+            require_image(step['image_url'],db)
         if step.get('image_url','').startswith('/media/icons/'):
             asset_url(step['image_url'],db);flat['step_'+str(i)+'_image_url']=''
     article=guides.validated(flat)

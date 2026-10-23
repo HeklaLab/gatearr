@@ -128,6 +128,9 @@ def emby_user(request: Request, local_id: int):
     from .models import PolicyState
     from .emby import EmbyError
     import json
+    from .avatars import observe as observe_photo
+    try:observe_photo(request.state.db,user,emby.user(user.emby_id));request.state.db.commit()
+    except EmbyError:pass
     tab=request.query_params.get('tab','account')
     if tab not in ('account','emby','seerr','access'):tab='account'
     cached=request.state.db.get(PolicyState,user.id)
@@ -205,9 +208,9 @@ def integrations(request: Request):
     owners = {user.id: user for user in db.scalars(select(User))}
     from .connection_health import checks
     items = list(db.scalars(select(MenuItem).order_by(MenuItem.position)))
-    native = {'emby', 'jellyfin', 'seerr', 'radarr', 'sonarr', 'bazarr'}
+    native = {'emby', 'jellyfin', 'seerr', 'radarr', 'sonarr', 'bazarr', 'tracearr', 'tdarr'}
     custom_items = [item for item in items if (item.access_service or '').lower() not in native and item.label.lower() not in native]
-    return render(request,'integrations.html',jobs=jobs,owners=owners,emby_connection_url=config(db,'emby_url'),emby_key_saved=bool(config(db,'emby_api_key')),connection_checks=checks(db),items=items,custom_items=custom_items)
+    return render(request,'integrations.html',jobs=jobs,owners=owners,emby_connection_url=config(db,'emby_url'),emby_key_saved=bool(config(db,'emby_api_key')),connection_checks=checks(db),integration_order=('emby','seerr','radarr','sonarr','bazarr','tracearr','tdarr'),items=items,custom_items=custom_items)
 
 @router.post('/admin/integrations')
 def integrations_save(request: Request, data=Depends(form)):
@@ -248,24 +251,18 @@ def retry_integrations(request: Request, data=Depends(form)):
 
 @router.post('/admin/connections/emby')
 def save_emby_connection(request: Request, data=Depends(form)):
-    require_admin(request)
-    db=request.state.db
-    from .onboarding import connect_media
-    connect_media(db,data)
-    from .connection_health import invalidate
-    invalidate(db,'emby')
-    db.commit()
-    return redirect('/admin/integrations')
+    from .integration_ui import save
+    return save(request,'emby',data)
 
 @router.post('/admin/connections/test')
 def test_connection(request: Request, data=Depends(form)):
     require_admin(request)
     limit(request,'connection_test',maximum=10)
     service=data.get('service')
-    if service not in ('emby',*SERVICES,'radarr','sonarr','bazarr'):raise ValueError('Invalid service')
+    if service not in ('all','emby',*SERVICES,'radarr','sonarr','bazarr','tracearr','tdarr'):raise ValueError('Invalid service')
     from .connection_health import checks
-    checks(request.state.db,refresh=service)
-    return redirect('/admin/integrations')
+    checks(request.state.db,refresh=service if service!='all' else True)
+    return redirect('/admin/integrations'+('?connection='+service+'#connection-'+service if service!='all' else ''))
 
 
 # Earlier account-label settings were migrated to the single translation center.
@@ -292,7 +289,7 @@ def user_role(request:Request,local_id:int,data=Depends(form)):
     if grant and (not target.active or target.emby_missing):raise HTTPException(400,'An active media account is required')
     import json
     tools=sorted(set(data.getlist('tools')))
-    if any(t not in ('radarr','sonarr','bazarr') for t in tools):raise ValueError('Invalid tool access')
+    if any(t not in ('radarr','sonarr','bazarr','tracearr','tdarr') for t in tools):raise ValueError('Invalid tool access')
     changed_tools=json.loads(target.tool_access)!=tools
     if target.admin==grant and not changed_tools:return redirect('/admin/users/'+str(local_id))
     target.tool_access=json.dumps(tools)

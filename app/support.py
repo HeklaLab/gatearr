@@ -67,6 +67,8 @@ def open_media(request:Request):
         return render(request,'message.html',message='Automatic browser login is not supported by this Jellyfin web client. Open the media service and sign in.')
     base=base.rstrip('/')
     page=base if base.endswith('/web/index.html') else base+'/index.html' if base.endswith('/web') else base+'/web/index.html'
+    if verified.get('Policy',{}).get('IsAdministrator'):
+        response=redirect(page);response.headers['Referrer-Policy']='no-referrer';return response
     url=page+'?'+urlencode({'serverId':value['server'],'userId':user.emby_id,'accessToken':value['token'],'e':'1'})
     response=redirect(url);response.headers['Referrer-Policy']='no-referrer';return response
 

@@ -66,6 +66,9 @@ def sync_users(db):
         row.emby_missing = False
         row.emby_seen_at = sync_time
         row.name = item["Name"]
+        db.flush()
+        from .avatars import observe as observe_photo
+        observe_photo(db,row,item)
         active = not row.portal_disabled and not item.get("Policy", {}).get("IsDisabled", False)
         if row.active and not active:
             row.version += 1
@@ -96,6 +99,8 @@ def maintenance():
             except (EmbyError, IntegrityError):
                 db.rollback()
                 log.warning("Scheduled Emby sync failed")
+        from .captcha import cleanup as captcha_cleanup
+        captcha_cleanup(db)
         queue_all(db, force=True)
 
 def deliver_mail():
@@ -105,6 +110,13 @@ def deliver_mail():
             try:
                 payload = json.loads(decrypt(job.payload))
                 if payload.get('notification'):
+                    if payload.get('library_event'):
+                        from .models import LibraryEvent,LibraryPreference
+                        from .library_updates import event_accessible,source_fingerprint
+                        from .tracearr import configured
+                        owner=db.get(User,payload.get('user_id'));pref=db.get(LibraryPreference,payload.get('user_id'));event=db.get(LibraryEvent,payload['library_event'])
+                        if not owner or not owner.active or not owner.email or owner.email!=payload['recipient'] or not pref or not pref.seasons or not pref.email or not configured(db) or not event or event.watched or event.source!=source_fingerprint(db) or not event_accessible(owner,event):
+                            db.delete(job);db.commit();continue
                     if job.expires>now():send(db,payload['recipient'],payload['purpose'],payload['values'])
                     db.delete(job);db.commit();continue
                 token = db.get(Token, digest(payload["token"]))
@@ -147,6 +159,8 @@ async def scheduled():
         await run_in_threadpool(refresh_permissions)
         from .usernames import run_pending as username_pending
         await run_in_threadpool(username_pending)
+        from .library_updates import run_due as library_due
+        await run_in_threadpool(library_due)
         from .versioning import refresh_due
         await run_in_threadpool(refresh_due)
         if now() >= next_sync:
@@ -172,6 +186,8 @@ async def lifespan(app):
         await task
     except asyncio.CancelledError:
         pass
+    from .captcha import shutdown as stop_captcha
+    stop_captcha()
 
 from .release import VERSION, BUILD_REVISION
 
@@ -222,6 +238,7 @@ async def context(request: Request, call_next):
             if request.url.path.startswith('/admin') or (request.method not in ('GET','HEAD','OPTIONS') and request.url.path not in ('/support/stop','/logout')):
                 return Response('Assistance mode: return to your account before changing Gatearr settings.',status_code=403)
         request.state.locale = i18n.resolve(request, request.state.user)
+        request.state.csp_nonce=secrets.token_urlsafe(24)
         request.state.rotated = False
         request.state.cookie_secure = settings.secure_cookie or urlsplit(config(db,"public_url",settings.public_url)).scheme=="https"
         response = await call_next(request)
@@ -235,12 +252,24 @@ async def context(request: Request, call_next):
         response.headers["X-Frame-Options"] = "DENY"
         if request.state.cookie_secure:
             response.headers["Strict-Transport-Security"] = "max-age=31536000"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http:; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         if getattr(request.state,'button_feedback',False):
             response.headers['Content-Security-Policy']=response.headers['Content-Security-Policy'].replace("script-src 'none'","script-src 'self'")
+        if request.url.path.startswith(('/setup','/admin/setup')):
+            response.headers['Content-Security-Policy']=response.headers['Content-Security-Policy'].replace("img-src 'self'","img-src 'self' blob:")
+        if request.url.path in ('/login','/forgot'):
+            response.headers['Content-Security-Policy']=response.headers['Content-Security-Policy'].replace("img-src 'self'","img-src 'self' data:")
+            response.headers['Content-Security-Policy']=response.headers['Content-Security-Policy'].replace("script-src 'none'","script-src 'self'").replace("script-src 'self'","script-src 'self' 'wasm-unsafe-eval' 'nonce-"+request.state.csp_nonce+"'")+"; worker-src 'self' blob:; frame-src 'self'"
+        if request.url.path=='/captcha/frame':
+            response.headers['X-Frame-Options']='SAMEORIGIN'
+            response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self' 'unsafe-eval' 'nonce-"+request.state.csp_nonce+"'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'self'; base-uri 'none'; form-action 'none'"
+        if request.url.path in ("/reset","/verify-email"):response.headers["Referrer-Policy"]="strict-origin"
         if request.url.path=="/services/emby/open":response.headers["Referrer-Policy"]="no-referrer"
         if request.url.path.startswith('/tools/'):
             response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; script-src 'none'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        if request.url.path in ('/tools/tracearr','/tools/tdarr'):
+            tool=request.url.path.rsplit('/',1)[-1];external=config(db,tool+'_public_url')
+            if external:response.headers['Content-Security-Policy']=response.headers['Content-Security-Policy'].replace("frame-src 'self'","frame-src 'self' "+urlsplit(external).scheme+'://'+urlsplit(external).netloc)
         if request.url.path=="/services/seerr/open":
             from .seerr_login import public_url
             target=public_url(db)
@@ -260,11 +289,11 @@ async def context(request: Request, call_next):
 
 async def form(request: Request):
     # Starlette bounds multipart fields; also limit body size for urlencoded forms.
-    accepts_icon=request.url.path.startswith("/admin/access/") or request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer","/admin/assets","/admin/settings")
+    accepts_icon=request.url.path in ("/setup","/account/photo") or bool(re.fullmatch(r"/admin/users/[0-9]+/photo",request.url.path)) or request.url.path.startswith(("/admin/access/","/admin/connections/")) or request.url.path in ("/admin/menu","/admin/guides/service","/admin/footer","/admin/assets","/admin/settings")
     chunks, length = [], 0
     async for chunk in request.stream():
         length += len(chunk)
-        if length > (2*1024*1024+65536 if accepts_icon else 262144 if request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/','/admin/groups/')) or request.url.path.endswith('/permissions/category') else 65536):
+        if length > (5*1024*1024+65536 if accepts_icon else 262144 if request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/','/admin/groups/')) or request.url.path.endswith('/permissions/category') else 65536):
             raise HTTPException(413, 'Form too large')
         chunks.append(chunk)
     # Preserve the bounded body for Starlette's form parser after streaming it once.
@@ -281,7 +310,7 @@ async def form(request: Request):
         "/forgot": ("email",),
         "/reset": ("token", "password", "confirm"),
         "/verify-email": ("token",),
-        "/admin/settings": ("app_name", "public_url", "login_text", "logo_url"),
+        "/admin/settings": ("app_name", "public_url", "login_text"),
         "/admin/smtp": ("smtp_host", "smtp_port", "smtp_mode", "smtp_from"),
         "/admin/mail-templates": ("reset_subject", "reset_body", "verify_subject", "verify_body"),
         "/admin/menu": ("label", "url", "position"),
@@ -333,6 +362,8 @@ def limit(request, action, identity="", maximum=5, window=900):
         }))
     db.commit()
     if any(db.get(RateBucket, key).count > maximum for key in keys):
+        from .captcha import record
+        record(db,action if action in ('login','forgot') else 'captcha','blocked')
         raise HTTPException(429, 'Too many attempts. Try again in a few minutes.', headers={"Retry-After": str(window)})
 
 def require_user(request):
@@ -344,6 +375,15 @@ def require_admin(request):
     user = require_user(request)
     if not user.admin or not user.emby_id:
         raise HTTPException(403, 'Administrator access required')
+    if not getattr(request.state,'admin_native_checked',False):
+        try:remote=emby.user(user.emby_id)
+        except EmbyError:raise HTTPException(503,'Media server verification unavailable. Try again later.')
+        if remote.get('Policy',{}).get('IsDisabled') or remote.get('HasPassword') is False:
+            user.active=False
+            invalidate(request.state.db,user)
+            request.state.user=None
+            raise HTTPException(403,'Native account access revoked')
+        request.state.admin_native_checked=True
     return user
 
 templates.env.filters['bitand']=lambda value,bit:int(value)&int(bit)
@@ -353,6 +393,8 @@ def render(request, template, **kwargs):
     media_service=db.get(AccessService,'emby')
     kwargs.setdefault('media_browser_url',media_service.browser_url if media_service else '')
     request.state.button_feedback=not kwargs.get("visual_preview",False)
+    if request.url.path.startswith(('/setup','/admin/setup')) and request.query_params.get('locale') in i18n.CATALOGS:
+        request.state.locale=request.query_params['locale']
     locale = request.state.locale
     custom_translations = i18n.overrides(db,locale)
     source_locale=i18n.default_language(db)
@@ -396,24 +438,29 @@ def render(request, template, **kwargs):
     branded_name = i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale)
     raw_title=config(db,'browser_title','')
     browser_title=i18n.content(db,'branding:browser_title',raw_title,locale).replace('${app_name}',branded_name) if raw_title else branded_name+' '+translator('· Your space')
-    logo_url=values.get('logo_url') or ('/static/gatearr-logo.png' if values.get('app_name',settings.app_name)=='Gatearr' else '')
+    from .themes import load as load_themes, logo_url as theme_logo_url
+    selected_theme=load_themes(db,template=='themes.html')
+    default_brand_logo_url=theme_logo_url(setup_values.get('preset',selected_theme['preset']))
+    logo_url=values.get('logo_url') or (default_brand_logo_url if values.get('app_name',settings.app_name)=='Gatearr' else '')
     brand_display=values.get('brand_display','auto')
+    from .widgets import preference as library_preference
+    from .tracearr import configured as tracearr_configured
     from .themes import load as load_themes
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
-        "default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
-        "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"tool_names":("radarr","sonarr","bazarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
+        "captcha_assets":template in ("login.html","forgot.html") and __import__("app.captcha",fromlist=["enabled"]).enabled(db,"forgot" if template=="forgot.html" else "login"),"tracearr_available":tracearr_configured(db),"library_preference":lambda target:library_preference(db,target),"csp_nonce":getattr(request.state,"csp_nonce",""),"captcha_enabled":lambda purpose:__import__("app.captcha",fromlist=["enabled"]).enabled(db,purpose),"default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"mail_purposes":__import__("app.email_editor",fromlist=["purposes"]).purposes(db),"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
+        "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"tool_names":("radarr","sonarr","bazarr","tracearr","tdarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(values.get('logo_url')) or not logo_url),
+        "language_flag":i18n.language_flag,"default_brand_logo_url":default_brand_logo_url,"theme_logo_url":theme_logo_url,"browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(values.get('logo_url')) or not logo_url),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
         "asset_version":str(max(p.stat().st_mtime_ns for p in Path("app/static").rglob("*") if p.is_file() and p.suffix in (".css",".js",".json"))), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
         "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,
-        "account_label_defaults": i18n.ACCOUNT_LABEL_DEFAULTS, "account_labels": {key: translator(i18n.ACCOUNT_LABEL_KEYS[key]) for key in i18n.ACCOUNT_LABEL_KEYS},
+        "avatar_url":lambda target:__import__("app.avatars",fromlist=["url"]).url(db,target),"wizard_active":request.url.path.startswith(("/setup","/admin/setup")),"notification_services":__import__("app.preferences",fromlist=["available_notifications"]).available_notifications(db,request.state.user),"account_label_defaults": i18n.ACCOUNT_LABEL_DEFAULTS, "account_labels": {key: translator(i18n.ACCOUNT_LABEL_KEYS[key]) for key in i18n.ACCOUNT_LABEL_KEYS},
         "seerr_notification_mode": config(db, "seerr_notification_mode", "unmanaged"),
         "seerr_access":access_href(db,"seerr") if seerr_public else "",
         "seerr_in_menu":any(item.access_service=="seerr" or item.label.casefold()=="seerr" or (seerr_public and item.url.rstrip("/")==seerr_public.rstrip("/")) for entries in menus.values() for item in entries),
         "ui_catalog":{key:translator(key) for key in i18n.CATALOGS["en"]},"default_service_icon":lambda key:__import__("app.service_assets",fromlist=["default_icon"]).default_icon(key,media_name.lower()),"font_icon_class":__import__("app.icons",fromlist=["icon_class"]).icon_class, "service_font":lambda key:(db.get(AccessService,key).icon if db.get(AccessService,key) else "link"), "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: __import__("app.service_assets",fromlist=["service_icon"]).service_icon(db,key,media_name.lower()), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
-        "footer_regions":portal.for_display(global_footer_design,locale,request.state.user,db) if (global_footer_design:=footer_layout.get("design")) else None,"layout": layout, "regions": portal.for_display(layout, locale, None if kwargs.get("anonymous_preview") else request.state.user,db,editor=bool(kwargs.get("visual_preview"))), "menus": menus, "mail_locale": mail_locale,
+        "footer_regions":portal.for_display(global_footer_design,locale,request.state.user,db) if (global_footer_design:=footer_layout.get("design")) else None,"layout": layout, "regions": portal.for_display(layout, locale, None if kwargs.get("anonymous_preview") else request.state.user,db,editor=bool(kwargs.get("visual_preview"))) if template in ("home.html","login.html","footer_preview.html") else {}, "menus": menus, "mail_locale": mail_locale,
         "content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
 
 def setup_error(request,message,status):
@@ -433,7 +480,7 @@ def setup_error(request,message,status):
     elif path=='/setup':response=render(request,'setup.html',setup_values=values,setup_error=message)
     else:
         from .onboarding import page
-        response=page(request,path.rsplit('/',1)[-1])
+        response=page(request,'applications' if path.startswith('/admin/setup/applications/') else 'smtp' if path=='/admin/setup/smtp/test' else path.rsplit('/',1)[-1])
         # page() shares the same safe values through render().
         if response.status_code==200:response=render(request,'onboarding.html',**request.state.setup_context,setup_error=message,setup_values=values)
     response.status_code=status
@@ -538,7 +585,10 @@ def login(request: Request, data=Depends(form)):
     if len(name) > 320 or len(password) > 256:
         raise HTTPException(400, 'Credentials too long')
     limit(request, "login", name, maximum=10)
+    from .captcha import verify as verify_captcha
+    verify_captcha(request,data,'login')
     db = request.state.db
+    if not password.strip():raise HTTPException(401,'Invalid credentials')
     if not db.get(Config,"setup_complete"):
         raise HTTPException(403, 'Complete the initial setup first')
     email_user = db.scalar(select(User).where(func.lower(User.email) == name.lower())) if '@' in name else None
@@ -551,11 +601,13 @@ def login(request: Request, data=Depends(form)):
             login_name = emby.user(email_user.emby_id)['Name']
         result = emby.authenticate(login_name, password)
     except EmbyError:
+        from .captcha import record
+        record(db,'login','login_failed')
         raise HTTPException(401, 'Invalid credentials or Emby unavailable')
     remote = result["User"]
     if email_user and remote['Id'] != email_user.emby_id:
         raise HTTPException(401, 'Invalid credentials')
-    if remote.get("Policy", {}).get("IsDisabled"):
+    if remote.get("HasPassword") is False or remote.get("Policy", {}).get("IsDisabled"):
         raise HTTPException(401, 'Invalid credentials')
     user = db.scalar(select(User).where(User.emby_id == remote["Id"]))
     if config(db,'onboarding_required')=='true' and (not user or not user.admin):
@@ -595,6 +647,9 @@ def logout(request: Request, data=Depends(form)):
 @app.get("/account")
 def account(request: Request):
     user = require_user(request)
+    from .avatars import observe as observe_photo
+    try:observe_photo(request.state.db,user,emby.user(user.emby_id));request.state.db.commit()
+    except EmbyError:pass
     items = list(request.state.db.scalars(select(MenuItem).order_by(MenuItem.position, MenuItem.id)))
     return render(request, "account.html", items=items)
 
@@ -689,6 +744,8 @@ def forgot_page(request: Request):
 def forgot(request: Request, data=Depends(form)):
     supplied = str(data.get("email", "")).strip().lower()[:320]
     limit(request, "reset_request", supplied)
+    from .captcha import verify as verify_captcha
+    verify_captcha(request,data,'forgot')
     db = request.state.db
     user = db.scalar(select(User).where(User.email == supplied, User.active.is_(True)))
     if user and user.emby_id:
@@ -714,7 +771,7 @@ def reset_password(request: Request, data=Depends(form)):
     if data["password"] != data.get("confirm"):
         raise ValueError('Passwords do not match')
     remote = emby.user(user.emby_id)
-    if remote.get("Policy", {}).get("IsDisabled"):
+    if remote.get("HasPassword") is False or remote.get("Policy", {}).get("IsDisabled"):
         raise HTTPException(403, 'Account disabled')
     # Burn before network mutation: replay and concurrent redemption cannot change it twice.
     consume(db, token)
@@ -802,17 +859,18 @@ def admin_smtp(request: Request, data=Depends(form)):
     diagnostic=db.get(Config,"smtp_connection_diagnostics")
     if diagnostic:db.delete(diagnostic)
     db.commit()
-    return redirect("/admin/emails")
+    return redirect("/admin/emails?tab=smtp")
 
 @app.post("/admin/mail-templates")
 def mail_templates(request: Request, data=Depends(form)):
     require_admin(request)
-    values = {"app_name": "Gatearr", "username": 'User', "link": "https://example.com/reset", "minutes": "30"}
+    values = {"app_name": "Gatearr", "username": 'User', "link": "https://example.com/reset", "minutes": "30", "title":"Series", "season":"5"}
     mail_locale = data.get("mail_locale", request.state.locale)
     if mail_locale not in i18n.languages(request.state.db):
         raise ValueError('Invalid language')
     for key in DEFAULTS:
         if key not in data:continue
+        if key.startswith('new_season_') and not __import__('app.tracearr',fromlist=['configured']).configured(request.state.db):raise HTTPException(409,'Enable Tracearr first')
         value = str(data[key])
         if len(value) > 10000 or (key.endswith("subject") and ("\n" in value or "\r" in value)):
             raise ValueError('Template too long or invalid subject')
@@ -837,7 +895,7 @@ def smtp_connection_test(request:Request,data=Depends(form)):
     from .connection_health import smtp_probe
     set_config(request.state.db,'smtp_connection_diagnostics',json.dumps(smtp_probe(request.state.db)))
     request.state.db.commit()
-    return redirect('/admin/emails#smtp')
+    return redirect('/admin/emails?tab=smtp#smtp')
 
 @app.post("/admin/smtp-test")
 def smtp_test(request: Request, data=Depends(form)):
@@ -951,6 +1009,8 @@ app.include_router(guides_router)
 from .access import router as access_router
 app.include_router(access_router)
 
+from .avatars import router as avatars_router
+app.include_router(avatars_router)
 from .preferences import router as preferences_router
 app.include_router(preferences_router)
 
@@ -1012,3 +1072,12 @@ app.include_router(seerr_quotas_router)
 
 from .personalization import router as personalization_router
 app.include_router(personalization_router)
+
+from .captcha import router as captcha_router
+app.include_router(captcha_router)
+
+from .integration_ui import router as integration_ui_router
+app.include_router(integration_ui_router)
+
+from .library_updates import router as library_updates_router
+app.include_router(library_updates_router)

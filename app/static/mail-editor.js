@@ -9,15 +9,15 @@
  const host=document.querySelector('.mail-editor-host');host.before(layout);layout.append(palette,stage,props);stage.append(canvas,preview);host.remove();
  canvas.innerHTML=source.value;canvas.hidden=false;canvas.contentEditable='false';canvas.classList.add('mail-block-canvas');canvas.dataset.empty=t('Drop a block here');document.querySelector('#html-fallback').hidden=true;
  for(const n of [...canvas.childNodes])if(n.nodeType===3){if(n.textContent.trim()){const p=make('p');n.replaceWith(p);p.append(n);}else n.remove();}
- let drag=null,selected=null,mode='edit',history=[],future=[],baseline=null;const initialSubject=form.elements.subject.value;
+ let drag=null,selected=null,mode='edit',history=[],future=[],baseline=null;let initialSubject=form.elements.subject.value;
  const button=(text,fn,icon)=>{const b=make('button',text);b.type='button';b.className=text==='Delete'?'danger':'secondary';if(icon){const i=make('i');i.className='fa-solid fa-'+icon;i.setAttribute('aria-hidden','true');b.prepend(i);}b.onclick=fn;return b;};
  function serialize(){const clone=canvas.cloneNode(true);for(const b of clone.children){for(const key of ['draggable','tabindex','data-selected','aria-label'])b.removeAttribute(key);b.classList.remove('mail-block','mail-drop-target');if(!b.className)b.removeAttribute('class');}return clone.innerHTML;}
  function setView(view){mode=view;canvas.hidden=view!=='edit';preview.hidden=view!=='preview';for(const b of form.querySelectorAll('[data-mail-view]'))b.setAttribute('aria-pressed',String(b.dataset.mailView===view));}
  function sync(record=true){
   source.value=serialize();baseline??=source.value;const dirty=source.value!==baseline||form.elements.subject.value!==initialSubject;document.querySelector('#mail-editor-status').textContent=t(dirty?'Unsaved changes':'Draft ready');const saved=document.querySelector('.mail-saved-status');if(saved)saved.hidden=dirty;if(record&&history.at(-1)!==source.value){history.push(source.value);if(history.length>60)history.shift();future=[];}
   form.querySelector('[data-mail-command=undo]').disabled=history.length<2;form.querySelector('[data-mail-command=redo]').disabled=!future.length;
-  const values={app_name:form.dataset.appName,username:'Alex',link:form.dataset.publicUrl+(form.elements.purpose.value==='reset'?'/reset?token=preview':'/verify-email?token=preview'),minutes:'30'},doc=make('div');doc.innerHTML=source.value;
-  const replace=s=>s.replace(/\$\{(app_name|username|link|minutes)\}/g,(_,k)=>values[k]);for(const e of doc.querySelectorAll('*'))for(const a of [...e.attributes])e.setAttribute(a.name,replace(a.value));
+  const values={app_name:form.dataset.appName,username:'Alex',link:form.dataset.publicUrl+(form.elements.purpose.value==='reset'?'/reset?token=preview':form.elements.purpose.value==='new_season'?'/library/open/preview':'/verify-email?token=preview'),minutes:'30',title:'Fargo',season:'5'},doc=make('div');doc.innerHTML=source.value;
+  const replace=s=>s.replace(/\$\{(app_name|username|link|minutes|title|season)\}/g,(_,k)=>values[k]);for(const e of doc.querySelectorAll('*'))for(const a of [...e.attributes])e.setAttribute(a.name,replace(a.value));
   const walker=document.createTreeWalker(doc,NodeFilter.SHOW_TEXT);while(walker.nextNode())walker.currentNode.textContent=replace(walker.currentNode.textContent);
   preview.srcdoc='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:24px;background:white;color:#222;font:15px/1.6 Arial"><div style="max-width:640px;margin:auto">'+doc.innerHTML+'</div></body></html>';
  }
@@ -29,7 +29,7 @@
   const tools=make('div');tools.className='studio-buttons';tools.append(button('Move up ↑',()=>{if(b.previousElementSibling)canvas.insertBefore(b,b.previousElementSibling);sync();}),button('Move down ↓',()=>{if(b.nextElementSibling)canvas.insertBefore(b.nextElementSibling,b);sync();}),button('Duplicate',()=>{const c=b.cloneNode(true);b.after(c);wire();select(c);sync();}),button('Delete',()=>{const next=b.nextElementSibling||b.previousElementSibling;b.remove();selected=null;wire();if(next)select(next);else props.replaceChildren(make('h2','Block settings'),make('p','Select a block to configure it.'));sync();}));props.append(tools);
   const type=kind(b);
   if(type==='image'){
-   field('Image description',b.alt,v=>b.alt=v);field('Image URL',b.getAttribute('src'),(v,i)=>{const ok=!v||valid(v);i.setCustomValidity(ok?'':form.dataset.invalidUrl);if(ok){if(v)b.src=v;else b.removeAttribute('src');}},'url');
+   field('Image description',b.alt,v=>b.alt=v);
    const width=field('Image width (px)',b.getAttribute('width')||parseInt(b.style.width,10)||600,(v,i)=>{const n=Number(v),ok=Number.isInteger(n)&&n>=1&&n<=1200;i.setCustomValidity(ok?'':t('Image width (px)'));if(ok){b.width=n;b.style.width=n+'px';b.style.height='auto';b.removeAttribute('height');b.style.maxWidth='100%';}},'number');width.min='1';width.max='1200';
    const l=make('label','Upload image'),i=make('input');i.type='file';i.accept='image/png,image/svg+xml';i.onchange=async()=>{if(!i.files[0])return;const data=new FormData();data.set('csrf',form.elements.csrf.value);data.set('icon_file',i.files[0]);try{const r=await fetch('/admin/assets',{method:'POST',body:data,headers:{Accept:'application/json'}});if(!r.ok)throw Error();b.src=new URL((await r.json()).url,form.dataset.publicUrl).href;sync();select(b);}catch{i.setCustomValidity(t('Image upload failed.'));i.reportValidity();}};l.append(i);props.append(l);
   }else if(type==='divider'){props.append(make('p','Divider'));}
@@ -59,5 +59,6 @@
  function restore(){canvas.innerHTML=history.at(-1);wire();if(canvas.firstElementChild)select(canvas.firstElementChild);sync(false);}
  form.querySelector('[data-mail-command=undo]').onclick=()=>{if(history.length>1){future.push(history.pop());restore();}};
  form.querySelector('[data-mail-command=redo]').onclick=()=>{if(future.length){history.push(future.pop());restore();}};
+ document.addEventListener('gatearr:saved',event=>{if(event.detail.form!==form||!event.detail.success)return;baseline=event.detail.data.get('html');initialSubject=event.detail.data.get('subject');sync(false);if(source.value===baseline&&form.elements.subject.value===initialSubject)document.querySelector('#mail-editor-status').textContent=document.body.dataset.saved;});
  form.elements.subject.addEventListener('input',()=>sync(false));form.addEventListener('submit',()=>sync(false));wire();sync();if(canvas.firstElementChild)select(canvas.firstElementChild);
 })();

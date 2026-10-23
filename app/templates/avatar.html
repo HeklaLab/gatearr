@@ -1,0 +1,1 @@
+{% macro picture(person,size='small') %}<span class="user-avatar avatar-{{ size }}" aria-label="{{ person.name }}"><span aria-hidden="true">{{ person.name[:1]|upper }}</span>{% if avatar_url(person) %}<img src="{{ avatar_url(person) }}" alt="" loading="lazy" data-user-avatar>{% endif %}</span>{% endmacro %}

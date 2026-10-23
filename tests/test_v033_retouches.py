@@ -1,3 +1,4 @@
+from test_portal import reviewed_post
 import json,re
 from copy import deepcopy
 from sqlalchemy import select
@@ -47,7 +48,7 @@ def test_groups_use_typed_controls_and_verify_native_schedules(client,policy_api
     assert 'name="editor_format" value="human"' in page and 'Structured value (JSON)' not in page
     assert 'Living room TV' in page and 'data-schedules="value_AccessSchedules"' in page
     payload={'version':0,'editor_format':'human','members':[uid],'permission':['AccessSchedules','BlockedTags','EnabledDevices','MaxParentalRating'],'value_AccessSchedules_row':['0'],'value_AccessSchedules_0_day':'Weekday','value_AccessSchedules_0_start':'17:30','value_AccessSchedules_0_end':'22:00','value_BlockedTags':'Horror\nAdult','value_EnabledDevices':['living-room'],'value_MaxParentalRating':'7'}
-    assert post(client,path,payload,path).status_code==303
+    assert reviewed_post(client,path,payload,path).status_code==303
     with SessionLocal() as db:
         row=db.get(PolicyState,uid);expected=json.loads(row.desired)
         assert expected['AccessSchedules']==[{'DayOfWeek':'Weekday','StartHour':17.5,'EndHour':22.0}]
@@ -74,13 +75,13 @@ def test_group_unavailable_metadata_preserves_existing_policy(client,policy_api)
     gid=int(path.rsplit('/',1)[1])
     with SessionLocal() as db:
         group=db.get(PermissionGroup,gid);group.policy='{"EnabledDevices":["existing-device"]}';db.commit()
-    assert post(client,path,{'version':0,'editor_format':'human','members':[uid]},path).status_code==303
+    assert reviewed_post(client,path,{'version':0,'editor_format':'human','members':[uid]},path).status_code==303
     with SessionLocal() as db:assert json.loads(db.get(PermissionGroup,gid).policy)['EnabledDevices']==['existing-device']
 
 
 def test_email_builder_reloads_existing_content_and_preserves_email_styles(client):
     setup(client)
-    source='<h2>Your account</h2><img src="https://example.com/image.png" width="400" alt="Family" style="display:block;margin-left:auto;margin-right:auto"><a href="${link}" style="display:table;padding:10px 18px;border-radius:6px;background-color:#159eff">Confirm</a>'
+    source='<h2>Your account</h2><img src="http://testserver/static/gatearr-logo.png" width="400" alt="Family" style="display:block;margin-left:auto;margin-right:auto"><a href="${link}" style="display:table;padding:10px 18px;border-radius:6px;background-color:#159eff">Confirm</a>'
     assert post(client,'/admin/mail-editor',{'purpose':'invite','mail_locale':'en','subject':'Welcome ${username}','html':source},'/admin/mail-editor').status_code==303
     page=client.get('/admin/mail-editor').text
     assert 'class="studio mail-studio"' in page and 'class="mail-workspace"' not in page
@@ -129,11 +130,13 @@ def test_group_permission_tabs_keep_all_settings_and_selected_tab(client,policy_
     uid,store,writes,api=policy_api
     for policy in store.values():policy['EnableRemoteAccess']=False
     path=post(client,'/admin/groups',{'name':'Tabbed group'},'/admin/groups').headers['location']
-    for tab in ('members','emby','seerr','access'):
+    for tab in ('emby','seerr','access'):
         page=client.get(path+'?tab='+tab).text
         assert f'data-group-tab="{tab}" aria-current="page"' in page
         assert f'data-group-panel="{tab}" >' in page
-    response=post(client,path,{'version':0,'editor_format':'human','active_tab':'seerr','members':[uid],'permission':['EnableRemoteAccess'],'value_EnableRemoteAccess':'on','manage_seerr_access':'on','seerr_access':'on','manage_tools':'on','tools':['radarr']},path)
+    assert page.index('group-lifecycle-compact')<page.index('data-group-tabs')<page.index('group-members')
+    assert 'data-group-tab="members"' not in page
+    response=reviewed_post(client,path,{'version':0,'editor_format':'human','active_tab':'seerr','members':[uid],'permission':['EnableRemoteAccess'],'value_EnableRemoteAccess':'on','manage_seerr_access':'on','seerr_access':'on','manage_tools':'on','tools':['radarr']},path)
     assert response.status_code==303,response.text
     assert response.headers['location']==path+'?saved=1&tab=seerr'
     with SessionLocal() as db:

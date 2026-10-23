@@ -23,7 +23,8 @@ def test_languages_public_account_and_errors(client):
     assert i18n.translate('Branding','en') in page and i18n.translate('Emails','en') in page
     page=client.get('/admin/emails').text
     assert 'SMTP server' in page and 'Email templates' in page
-    assert 'No TLS (test network)' in page
+    assert 'action="/admin/smtp"' not in page
+    assert 'No TLS (test network)' in client.get('/admin/emails?tab=smtp').text
     assert 'Votre portail' not in page
     error=client.post('/logout',data={'csrf':'bad'})
     assert error.status_code == 403 and 'Form expired' in error.text

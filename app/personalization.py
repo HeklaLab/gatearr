@@ -15,8 +15,8 @@ def reset(request:Request,data=Depends(form)):
     if data.get('confirm')!='on' or data.get('confirmation')!='RESET':raise HTTPException(400,'Type RESET and confirm the content reset')
     next_id=(db.scalar(select(func.max(Guide.id))) or 0)+1
     leases={key:int(config(db,key,'0'))+1 for key in ('portal_version','login_version','footer_version','themes_version','menu_version')}
-    from .email_editor import PURPOSES
-    mail_keys={purpose+'_'+part for purpose in PURPOSES for part in ('html','body','subject')}
+    from .email_editor import PURPOSES,ALL_PURPOSES
+    mail_keys={purpose+'_'+part for purpose in {**PURPOSES,**ALL_PURPOSES} for part in ('html','body','subject')}
     for row in list(db.scalars(select(Config))):
         if row.key.startswith(PREFIXES) or row.key in KEYS|mail_keys:db.delete(row)
     # Legacy application links may still hold the only public address.
@@ -26,7 +26,7 @@ def reset(request:Request,data=Depends(form)):
         if legacy and legacy.url:service.browser_url=legacy.url
     db.execute(delete(ContentTranslation));db.execute(delete(Guide));db.execute(delete(MenuItem))
     for service in list(db.scalars(select(AccessService))):
-        if service.key not in ('emby','seerr','radarr','sonarr','bazarr'):db.delete(service);continue
+        if service.key not in ('emby','seerr','radarr','sonarr','bazarr','tracearr','tdarr'):db.delete(service);continue
         service.name=service.key.capitalize() if service.key!='seerr' else 'Seerr'
         service.icon='link';service.icon_url='';service.entry_mode='structured' if service.key=='emby' else 'direct'
         service.access_draft=service.access_published=None;service.access_version+=1

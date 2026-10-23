@@ -14,7 +14,7 @@ from .connections import emby_connection,media_kind
 
 def configured(db,service):
     if service=='emby':return bool(config(db,'emby_url') and config(db,'emby_api_key'))
-    return config(db,service+'_enabled')=='true' and bool(config(db,service+'_url') and config(db,service+'_api_key'))
+    return config(db,service+'_enabled')=='true' and bool(config(db,service+'_url') and (service=='tdarr' or config(db,service+'_api_key')))
 
 
 def probe(service,values):
@@ -22,17 +22,38 @@ def probe(service,values):
     diagnostics=values.setdefault('diagnostics',{});diagnostics.update(host=urlsplit(base).hostname,reachable=False,api_valid=False,tls=urlsplit(base).scheme=='https');started=time.perf_counter()
     headers={'X-Emby-Token':key} if service=='emby' else {'X-Api-Key':key}
     if service=='emby' and values['kind']=='jellyfin':headers={'Authorization':'MediaBrowser Client="Gatearr", Device="Portal", DeviceId="gatearr-portal", Version="1.0", Token="'+key+'"'}
+    if service=='tracearr':headers={'Authorization':'Bearer '+key}
     path='/System/Info' if service=='emby' else '/api/v1/user?take=1&skip=0' if service=='seerr' else '/tools/'+service+'/app'+('/api/system/status' if service=='bazarr' else '/api/v3/system/status')
+    if service=='tracearr':path='/api/v2/public/servers'
+    if service=='tdarr':path='/';headers={}
     try:
+        # Independent unauthenticated HTTP probe, then the authenticated API probe.
+        server_started=time.perf_counter()
+        try:
+            with httpx.Client(timeout=5,trust_env=False,follow_redirects=False) as server_client:
+                with server_client.stream('GET',base.rstrip('/')+'/') as server:
+                    server_status=server.status_code
+            diagnostics.update(reachable=True,server_http_status=server_status,server_response_ms=round((time.perf_counter()-server_started)*1000,1))
+        except httpx.RequestError:
+            diagnostics.update(server_response_ms=round((time.perf_counter()-server_started)*1000,1))
+        if service=='tdarr':
+            diagnostics['interface_only']=True
+            diagnostics['api_valid']=False
+            diagnostics['interface_valid']=diagnostics['reachable'] and 200<=diagnostics.get('server_http_status',0)<400
+            return ('connected','Interface reachable; embedding must be verified in the browser') if diagnostics['interface_valid'] else ('error','Server unreachable')
+        api_started=time.perf_counter()
         with httpx.Client(timeout=5,trust_env=False,follow_redirects=False) as client:response=client.get(base+path,headers=headers)
+        diagnostics.update(api_http_status=response.status_code,api_response_ms=round((time.perf_counter()-api_started)*1000,1))
         diagnostics.update(reachable=True,http_status=response.status_code,response_ms=round((time.perf_counter()-started)*1000,1))
         try:diagnostics['resolved_ips']=sorted({item[4][0] for item in socket.getaddrinfo(diagnostics['host'],None,type=socket.SOCK_STREAM)})[:4]
         except OSError:diagnostics['resolved_ips']=[]
         if response.status_code in (401,403):return 'error','Authentication rejected'
         if response.status_code!=200:return 'error','Server returned HTTP '+str(response.status_code)
         body=response.json()
-        valid=isinstance(body,dict) and (bool(body.get('Id')) if service=='emby' else isinstance(body.get('results'),list) if service=='seerr' else bool(body))
+        valid=isinstance(body,dict) and (bool(body.get('Id')) if service=='emby' else isinstance(body.get('results'),list) if service=='seerr' else isinstance(body.get('data'),list) if service=='tracearr' else bool(body))
         diagnostics['api_valid']=valid
+        version=body.get('Version') or body.get('version') or body.get('tracearr_version')
+        if isinstance(version,str) and len(version)<80:diagnostics['version']=version
         return ('connected','Authenticated API connection verified') if valid else ('error','Unexpected API response')
     except httpx.TimeoutException:return 'error','Connection timed out'
     except httpx.RequestError:return 'error','Server unreachable'
@@ -42,7 +63,7 @@ def probe(service,values):
 
 def checks(db,refresh=False):
     current=int(time.time());pending={};result={}
-    for service in ('emby','seerr','radarr','sonarr','bazarr'):
+    for service in ('emby','seerr','radarr','sonarr','bazarr','tracearr','tdarr'):
         row=db.get(ConnectionCheck,service)
         if not configured(db,service):
             result[service]={'state':'unconfigured','detail':'Connection not configured','checked_at':None};continue
@@ -79,14 +100,19 @@ def read_diagnostics(db,key):
     except (ValueError,TypeError):return {}
 
 
-def smtp_probe(db):
-    host=config(db,'smtp_host');mode=config(db,'smtp_mode','starttls')
+def smtp_probe(db,values=None):
+    def setting(key,default=""):
+        if values is not None and key in values:
+            value=values[key]
+            return __import__("app.security",fromlist=["encrypt"]).encrypt(value) if key=="smtp_password" and value else value
+        return config(db,key,default)
+    host=setting('smtp_host');mode=setting('smtp_mode','starttls')
     result={'host':host,'reachable':False,'tls':False,'authenticated':False,'checked_at':time.strftime('%Y-%m-%d %H:%M:%S UTC',time.gmtime()),'state':'error','detail':'SMTP connection failed'}
     started=time.perf_counter()
     try:
         if not host:result['detail']='SMTP not configured';return result
-        if mode=='plain' and config(db,'smtp_username'):result['detail']='SMTP authentication requires TLS';return result
-        port=int(config(db,'smtp_port','587'));result['port']=port
+        if mode=='plain' and setting('smtp_username'):result['detail']='SMTP authentication requires TLS';return result
+        port=int(setting('smtp_port','587'));result['port']=port
         result['resolved_ips']=sorted({item[4][0] for item in socket.getaddrinfo(host,port,type=socket.SOCK_STREAM)})[:4]
         connection=smtplib.SMTP_SSL(host,port,timeout=5,context=ssl.create_default_context()) if mode=='ssl' else smtplib.SMTP(host,port,timeout=5)
         with connection as smtp:
@@ -94,8 +120,8 @@ def smtp_probe(db):
             if code!=250:result['detail']='SMTP greeting rejected';return result
             if mode=='starttls':smtp.starttls(context=ssl.create_default_context());smtp.ehlo()
             result['tls']=mode in ('ssl','starttls')
-            username=config(db,'smtp_username');result['authentication_required']=bool(username)
-            if username:smtp.login(username,decrypt(config(db,'smtp_password')));result['authenticated']=True
+            username=setting('smtp_username');result['authentication_required']=bool(username)
+            if username:smtp.login(username,decrypt(setting('smtp_password')));result['authenticated']=True
             result.update(state='connected',detail='SMTP connection verified')
     except smtplib.SMTPAuthenticationError:result['detail']='Authentication rejected'
     except (ssl.SSLError,smtplib.SMTPNotSupportedError):result['detail']='SMTP TLS negotiation failed'

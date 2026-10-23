@@ -44,7 +44,7 @@ def test_sections_are_separate_and_completed_setup_is_hidden(client):
     assert '/admin/setup' not in index
     assert client.get('/admin/setup',follow_redirects=False).headers['location']=='/admin/integrations'
     assert client.get('/admin/setup/media',follow_redirects=False).headers['location']=='/admin/integrations'
-    branding=client.get('/admin/branding').text;emails=client.get('/admin/emails').text
+    branding=client.get('/admin/branding').text;emails=client.get('/admin/emails?tab=smtp').text
     assert 'action="/admin/settings"' in branding and 'action="/admin/smtp"' not in branding
     assert 'action="/admin/smtp"' in emails and 'action="/admin/settings"' not in emails
     assert 'action="/admin/menu"' in client.get('/admin/services').text
@@ -116,6 +116,9 @@ def test_connection_health_is_authenticated_cached_and_sanitized(client,monkeypa
     def handler(req):
         calls.append(str(req.url))
         if req.url.host=='seerr.test':return httpx.Response(403,text='remote-private-token')
+        if req.url.path.endswith('/'):
+            assert 'X-Emby-Token' not in req.headers
+            return httpx.Response(200,text='server')
         assert req.headers['X-Emby-Token']=='test-api-key'
         return httpx.Response(200,json={'Id':'server'})
     real=httpx.Client

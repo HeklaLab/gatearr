@@ -21,6 +21,7 @@ def seerr_allowed(db,user):
 
 def apply_access(db,user,group):
     baseline=db.get(GroupBaseline,user.id)
+    if not baseline and not group:return
     if not baseline:
         baseline=GroupBaseline(user_id=user.id,values=json.dumps(access_values(user)));db.add(baseline)
     values=json.loads(baseline.values);values.update(json.loads(group.access_policy) if group else {})

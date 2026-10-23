@@ -1,0 +1,6 @@
+<details class="integration-options"><summary>{{ _('Automatic Seerr login') }}</summary><p>{{ _('Sign in once to Gatearr, then open Seerr without entering your password again. Requires the dedicated login route on your existing reverse proxy.') }}</p><form method="post" action="/admin/seerr-login"><input type="hidden" name="csrf" value="{{ csrf }}"><label>{{ _('Public Seerr URL') }}<input type="url" name="public_url" value="{{ cfg.get('seerr_public_url','') }}" placeholder="https://requests.example.com"></label><label class="check"><input type="checkbox" name="enabled" {% if cfg.get('seerr_portal_login')=='true' %}checked{% endif %}>{{ _('Enable automatic Seerr login') }}</label><button>{{ _('Save') }}</button></form><p>{{ _('On the existing Seerr reverse proxy, forward /gatearr-login to Gatearr, preserving the original Host header. All other requests continue to Seerr. Users must sign in to Gatearr again after activation.') }}</p><pre class="release-notes">handle /gatearr-login {
+    reverse_proxy gatearr:8000
+}
+handle {
+    reverse_proxy seerr:5055
+}</pre><p class="hint">{{ _('No password or API key is included in application links. Only existing Seerr accounts matched by media user ID are accepted.') }}</p></details>

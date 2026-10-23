@@ -1,0 +1,5 @@
+capjs-core 0.1.6 (Apache-2.0), unmodified source; instrumentation level 1 (no optional obfuscator/esbuild runtime)
+cap-widget 0.1.58 (Apache-2.0)
+@cap.js/wasm 0.0.8
+cap-widget frame adapter: instrumentation runs in a sandboxed opaque-origin /captcha/frame, whose own CSP allows the eval probes; the parent page does not allow JavaScript eval.
+pako 2.1.0 inflate fallback is bundled locally.

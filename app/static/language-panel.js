@@ -1,0 +1,1 @@
+(()=>{const button=document.querySelector('[data-language-add]'),form=document.getElementById('add-language');if(!button||!form)return;form.hidden=true;button.setAttribute('aria-expanded','false');button.addEventListener('click',()=>{form.hidden=!form.hidden;button.setAttribute('aria-expanded',String(!form.hidden));if(!form.hidden)form.querySelector('select').focus();});})();

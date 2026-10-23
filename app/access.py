@@ -31,7 +31,9 @@ def validate(db,service,nodes,publish=False):
         if not str(node.get('title','')).strip():raise ValueError('Title required')
         if not isinstance(node.get('title',''),str) or len(node.get('title',''))>200:raise ValueError('Guide text is too long')
         image=node.get('icon_url','')
-        if image and not re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(?:png|svg)',image):url_ok(image)
+        if image:
+            from .image_sources import require_image
+            require_image(image,db)
         if node.get('icon'):
             from .icons import font_icon
             font_icon(node['icon'])
