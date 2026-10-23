@@ -33,55 +33,86 @@ Complete setup privately. For access from other devices or the internet, configu
 
 [Windows instructions](#windows--docker-desktop) · [Full Docker instructions](#start-with-docker) · [Upgrade an existing installation](UPGRADING.md) · [Community on Reddit](https://www.reddit.com/r/gatearr/)
 
-## Interface preview — v0.4.0
+## Interface preview — v0.4.1
 
-Screenshots retained from 0.4.0; administration navigation and editors have since been refined in 0.4.1. Captured from an isolated demo with fictional accounts, local addresses and simulated services. These are not design mockups.
+Real screenshots of Gatearr 0.4.1 running locally with the **Blue Boréal** theme and the original Gatearr logo. The reset demo uses fictional people, sample libraries and simulated integrations; no production accounts or credentials appear below.
 
-### Your applications and personal widgets
+### Your portal
 
-Application links sit above compact library and request widgets. Available blocks depend on connected services; administrators choose the content, logos and audiences.
+The default portal keeps media and request widgets below their matching applications, with viewing activity on its own row.
 
-![Gatearr 0.4.0 portal with aligned media and Seerr widgets](screenshots/gatearr-home-v040.png)
+![Gatearr 0.4.1 default Blue Boréal portal](screenshots/gatearr-home-v041.jpg)
 
-### Three presets, light and dark
+### Administration and people
 
-Blue Boréal, Electric Lime and Neon Rose share the same layout. Preview colors and matching default logos immediately, customize both palettes, then publish. Custom uploaded logos keep priority.
+A fixed sidebar and shared capsule tabs lead to live user search, structured profiles and group permissions.
 
-![Gatearr 0.4.0 theme presets with live Electric Lime colors and matching logo](screenshots/gatearr-themes-v040.png)
+![Gatearr 0.4.1 administration](screenshots/gatearr-admin-v041.jpg)
+
+![Gatearr 0.4.1 users with fictional accounts](screenshots/gatearr-users-v041.jpg)
+
+![Gatearr 0.4.1 structured user profile](screenshots/gatearr-user-profile-v041.jpg)
 
 ### Visual portal builder
 
-Add flat widgets, application rows, columns, text and images; inspect responsive previews and edit colors without changing the shared interface layout.
+Build responsive pages with application rows, independent widgets, columns, text and images. The preview follows its content without nested scrolling.
 
-![Gatearr 0.4.0 Portal builder with native widget logos and compact color controls](screenshots/gatearr-builder-v040.png)
+![Gatearr 0.4.1 portal builder](screenshots/gatearr-builder-v041.jpg)
 
-### Applications and connection diagnostics
+### Applications and appearance
 
-A single overview lists Emby/Jellyfin, Seerr, Radarr, Sonarr, Bazarr, Tracearr and Tdarr, with separate server and API results.
+Service status and connection settings share one overview. Blue Boréal is shown here; Electric Lime and Neon Rose remain available as alternate presets.
 
-![Gatearr 0.4.0 Applications and API overview](screenshots/gatearr-integrations-v040.png)
+![Gatearr 0.4.1 application connection overview](screenshots/gatearr-integrations-v041.jpg)
 
-### Administration and account settings
+![Gatearr 0.4.1 appearance settings with Blue Boréal selected](screenshots/gatearr-themes-v041.jpg)
 
-The capsule header, account dropdown and compact administration mosaic keep common actions accessible. Account email preferences appear only when their dependencies are available.
+### Groups and translations
 
-![Gatearr 0.4.0 administration mosaic](screenshots/gatearr-admin-v040.png)
+Review native permissions and library differences before assigning a group. Enabled languages are displayed with flags and a clear editing language.
 
-![Gatearr 0.4.0 account settings and profile picture](screenshots/gatearr-account-v040.png)
+![Gatearr 0.4.1 group permission review](screenshots/gatearr-group-review-v041.jpg)
+
+![Gatearr 0.4.1 translation center](screenshots/gatearr-languages-v041.jpg)
 
 ### First installation
 
-Choose a portal identity, one of 21 languages and an initial preset before connecting your media server.
+The setup assistant configures portal identity, language, initial theme and media-server access.
 
-![Gatearr 0.4.0 first installation with logo upload, language and theme selection](screenshots/gatearr-setup-v040.png)
+![Gatearr 0.4.1 first installation](screenshots/gatearr-setup-v041.jpg)
 
-### Languages and group permissions
+<details>
+<summary>More screenshots: mobile portal, account, guides, emails and sign-in</summary>
 
-Flagged language rows provide translation and inline settings. Group assignments show current native permission differences before confirmation, with one-user-at-a-time pagination for bulk additions.
+### Mobile portal
 
-![Gatearr 0.4.0 compact language management](screenshots/gatearr-languages-v040.png)
+![Gatearr 0.4.1 mobile Blue Boréal portal](screenshots/gatearr-home-mobile-v041.jpg)
 
-![Gatearr 0.4.0 paginated native permission comparison before group assignment](screenshots/gatearr-group-review-v040.png)
+### Account and user groups
+
+![Gatearr 0.4.1 account settings](screenshots/gatearr-account-v041.jpg)
+
+![Gatearr 0.4.1 user groups](screenshots/gatearr-groups-v041.jpg)
+
+### Device guides and their editor
+
+![Gatearr 0.4.1 device picker](screenshots/gatearr-devices-v041.jpg)
+
+![Gatearr 0.4.1 Smart TV connection guide](screenshots/gatearr-guide-v041.jpg)
+
+![Gatearr 0.4.1 guide builder with complete device breadcrumbs](screenshots/gatearr-guide-editor-v041.jpg)
+
+### Invitation template
+
+![Gatearr 0.4.1 invitation email editor](screenshots/gatearr-emails-v041.jpg)
+
+### Sign-in and account recovery
+
+![Gatearr 0.4.1 sign-in page](screenshots/gatearr-login-v041.jpg)
+
+![Gatearr 0.4.1 password recovery](screenshots/gatearr-password-reset-v041.jpg)
+
+</details>
 
 ## What's new in 0.4.1
 
@@ -93,7 +124,7 @@ Flagged language rows provide translation and inline settings. Group assignments
 - **Personalization:** edit public-facing labels while administration keeps its bundled translations; email editing offers enabled languages only. Updated default invitations introduce common access, password recovery and device guides.
 - **Fixes:** default widget/application alignment with Tracearr enabled, centered CAPTCHAs, assistance-language handling and disabled new grants for unconfigured tools. Existing custom portals, logos and email templates remain intact.
 
-See [release notes](RELEASE_NOTES.md) and [upgrade instructions](UPGRADING.md). Screenshots below retain the 0.4.0 examples.
+See [release notes](RELEASE_NOTES.md) and [upgrade instructions](UPGRADING.md). The gallery above shows the refreshed 0.4.1 demo.
 
 ## Features introduced in 0.4.0
 

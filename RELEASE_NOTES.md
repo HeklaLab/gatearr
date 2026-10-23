@@ -34,4 +34,4 @@ Back up `/data`, including its encryption key, before updating. There are no add
 
 Automated tests use simulated native services. Browser checks cover the functional demo, desktop/mobile builders, device navigation, language switching and theme readability. The release workflow additionally gates publication on the complete test suite, Docker startup and the HTTP/SMTP smoke, then publishes AMD64 and ARM64 images. Compatibility with the user's actual Tdarr instance still needs deployment-specific verification.
 
-Existing 0.4.0 screenshots are retained in the README; no screenshots were replaced for this release.
+The refreshed [README gallery](https://github.com/HeklaLab/gatearr#interface-preview--v041) shows the functional 0.4.1 demo in Blue Boréal, with the original Gatearr logo and fictional sample accounts.
