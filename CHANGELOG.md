@@ -1,3 +1,34 @@
+# 0.4.2 — 25 October 2026
+
+## Interface and navigation
+
+- Refresh the portal and administration with a shared diffuse landscape, palette-derived glass surfaces, consistent rounded controls and animated ON/OFF switches. Improve contrast and responsive layouts across Blue Boréal, Electric Lime and Neon Rose in light and dark appearances.
+- Reorganize the administration landing page into a compact card directory. Smooth sidebar selection and submenu expansion without stretched panels or page jumps; preserve the header and keyboard focus during dynamic navigation.
+- Simplify the account menu onto one glass surface, distinguish the active language from a subtle hover state, and reuse the existing muted red for Sign out.
+- Save supported preferences dynamically with animated feedback and preserved scroll, including subtitle choices and Bazarr configuration.
+
+## Portal and builders
+
+- Integrate Emby/Jellyfin library counts and Seerr request quotas directly into their application cards, replacing the two standalone widgets. Portal builder offers optional card information, enabled in default presets, while retaining existing settings and audiences.
+- Make application purposes clearer: Access media and Request new movies & series appear below application names, before statistics. Large cropped service artwork adds depth without hiding content.
+- Offer exact or promotional media counts, rounded down to tens or hundreds, including optional episode counts. Explain Seerr quotas with real periods, limits, remaining counts and aligned progress bars, including unlimited/unavailable states.
+- Fix Portal builder layouts after dynamic navigation by preserving stylesheet order. Adapt tools and editing panels to the builder's available width, keep labels readable, and group application switches and reorder controls consistently.
+- Add matching Choose another device buttons above and below every access guide.
+
+## Bazarr subtitle preferences
+
+- Let authorized users select subtitle languages from My account for one administrator-selected shared Bazarr language profile. This permission is independent of access to the Bazarr interface and is available only after complete integration setup.
+- Set individual or group language limits, with a selected/allowed counter and add/remove controls. Already-configured languages remain selectable and count toward personal capacity without duplicate profile updates or warnings.
+- Choose free replacement, a configurable lock in days, or an indefinite lock with administrative unlocking. Enforce locks on the server. Removing a personal choice does not remove shared Bazarr languages or downloaded subtitles; availability still depends on each library title.
+- Preserve existing profile options and languages, detect concurrent changes, and verify the native API readback.
+
+## Administration and fixes
+
+- Add administrator-only SMTP history under Activity log, with shortcuts at the bottom of Emails and the mail editor. Record recipient, subject, purpose, SMTP acceptance and safe failure details without retaining message bodies, private links or SMTP credentials. SMTP acceptance does not prove delivery to the recipient's inbox.
+- Manage language by user or group, falling back to Gatearr's default when a group has no active language. Apply the effective language to the interface, emails and Seerr synchronization without overwriting personal preferences.
+- Refresh published theme colors and backgrounds together, including during navigation. Improve mobile user rows and prevent persistent mouse-focus outlines on page titles while retaining keyboard focus indicators.
+- Fix Tdarr runtime resources, CSS paths, APIs and WebSockets through the protected proxy, with retry feedback for incomplete loading. An isolated native Tdarr 3.01.00 server was exercised through signup, dashboard and WebSocket traffic; deployment-specific compatibility still requires verification.
+
 # 0.4.1 — 23 October 2026
 
 - Remove nested scrolling from portal-builder side panels and size its preview to the full page content.

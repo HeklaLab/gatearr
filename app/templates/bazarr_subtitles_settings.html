@@ -1,0 +1,14 @@
+<section id="bazarr-subtitle-settings" data-save-region class="bazarr-subtitle-settings" data-bazarr-settings data-load-error="{{ _('Unable to load Bazarr profiles. Check the connection and try again.') }}" data-no-profiles="{{ _('No Bazarr language profiles are available.') }}" data-select-profile="{{ _('Select a profile') }}">
+<h3>{{ _('Subtitle languages') }}</h3>
+<p class="hint">{{ _('Authorized users can add subtitle languages to one shared Bazarr profile. This applies to every movie and series using that profile.') }}</p>
+{% if cfg.get('bazarr_enabled')=='true' %}
+<form method="post" action="/admin/bazarr/subtitles" data-dynamic="true">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<label class="check"><input type="checkbox" name="enabled" {% if cfg.get('bazarr_subtitles_enabled')=='true' %}checked{% endif %}>{{ _('Offer the option for users to add a language in Bazarr') }}</label>
+<div class="bazarr-profile-picker"><label>{{ _('Shared language profile') }}<select name="profile_id" data-bazarr-profile><option value="">{{ _('Select a profile') }}</option>{% if cfg.get('bazarr_subtitles_profile') %}<option value="{{ cfg.get('bazarr_subtitles_profile') }}" selected>{{ cfg.get('bazarr_subtitles_profile_name',cfg.get('bazarr_subtitles_profile')) }}</option>{% endif %}</select></label><button type="button" class="secondary" data-bazarr-load>{{ _('Load Bazarr profiles') }}</button></div>
+<div class="subtitle-lock-policy"><label>{{ _('Subtitle language replacement') }}<select name="lock_mode" data-subtitle-policy>{% for value,label in [('free','Free changes within the quota'),('days','Lock each added language for a number of days'),('permanent','Lock until an administrator intervenes')] %}<option value="{{ value }}" {% if cfg.get('bazarr_subtitle_lock_mode','free')==value %}selected{% endif %}>{{ _(label) }}</option>{% endfor %}</select></label><label data-subtitle-lock-days {% if cfg.get('bazarr_subtitle_lock_mode','free')!='days' %}hidden{% endif %}>{{ _('Lock duration (days)') }}<input type="number" name="lock_days" value="{{ cfg.get('bazarr_subtitle_lock_days','30') }}" min="1" max="3650" required></label></div><p class="hint">{{ _('Locked languages keep their quota slot. Administrators can unlock a language from the user profile.') }}</p><p role="status" data-bazarr-status class="hint" aria-live="polite"></p>
+<p class="hint">{{ _('Grant the subtitle-language permission in a user or group profile. This does not grant access to the Bazarr interface.') }}</p>
+<button>{{ _('Save subtitle options') }}</button>
+</form>
+{% else %}<p class="hint">{{ _('Configure and enable Bazarr in Applications & API first.') }}</p>{% endif %}
+</section>

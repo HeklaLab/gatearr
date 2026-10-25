@@ -15,6 +15,11 @@ class User(Base):
     portal_disabled: Mapped[bool] = mapped_column(Boolean,default=False,server_default="0")
     disable_status: Mapped[str] = mapped_column(Text,default="{}",server_default="{}")
     theme_preference: Mapped[str] = mapped_column(String(10), default="auto", server_default="auto")
+    bazarr_subtitle_limit: Mapped[int] = mapped_column(Integer,default=3,server_default="3")
+    bazarr_subtitle_languages: Mapped[str] = mapped_column(Text,default="[]",server_default="[]")
+    bazarr_subtitle_locks: Mapped[str] = mapped_column(Text,default="{}",server_default="{}")
+    bazarr_subtitle_version: Mapped[int] = mapped_column(Integer,default=0,server_default="0")
+    bazarr_subtitles: Mapped[bool] = mapped_column(Boolean,default=False,server_default="0")
     tool_access: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
     password_hash: Mapped[str | None] = mapped_column(Text)
     version: Mapped[int] = mapped_column(Integer, default=0)
@@ -74,6 +79,17 @@ class MailJob(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     next_attempt: Mapped[int] = mapped_column(Integer, index=True)
     expires: Mapped[int] = mapped_column(Integer)
+
+class MailDelivery(Base):
+    __tablename__ = "mail_deliveries"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    at: Mapped[int] = mapped_column(Integer,index=True)
+    recipient: Mapped[str] = mapped_column(String(320))
+    subject: Mapped[str] = mapped_column(String(1000))
+    purpose: Mapped[str] = mapped_column(String(60))
+    context: Mapped[str] = mapped_column(String(30))
+    state: Mapped[str] = mapped_column(String(20))
+    error: Mapped[str] = mapped_column(String(40),default='')
 
 class IntegrationJob(Base):
     __tablename__ = "integration_jobs"
@@ -143,6 +159,7 @@ class PermissionGroup(Base):
     version: Mapped[int] = mapped_column(Integer,default=0)
 
     access_policy: Mapped[str] = mapped_column(Text,default='{}',server_default='{}')
+    locale: Mapped[str | None] = mapped_column(String(10))
 
 class GroupMember(Base):
     __tablename__='group_members'

@@ -10,7 +10,7 @@ from .emby import emby,_ADMIN,EmbyError
 from .integrations import SyncError,request
 from . import tracearr
 TYPES=('widget_media','widget_seerr','widget_tracearr','widget_library')
-METRICS={'widget_media':{'movies':'Movies','series':'Series'},'widget_seerr':{'movies_left':'Movies left','series_left':'Seasons left','pending':'Awaiting approval','processing':'Processing','available':'Available','approved':'Approved','renewal':'Quota window (days)'},'widget_tracearr':{'watch_time':'Watch time','plays':'Sessions','favorite':'Most watched series','direct':'Direct play','transcoded':'Transcoded','bandwidth':'Estimated traffic','activity':'Daily activity','comparison':'Change from previous period'},'widget_library':{}}
+METRICS={'widget_media':{'movies':'Movies','series':'Series','episodes':'Episodes'},'widget_seerr':{'movies_left':'Movies left','series_left':'Seasons left','pending':'Awaiting approval','processing':'Processing','available':'Available','approved':'Approved','renewal':'Quota window (days)'},'widget_tracearr':{'watch_time':'Watch time','plays':'Sessions','favorite':'Most watched series','direct':'Direct play','transcoded':'Transcoded','bandwidth':'Estimated traffic','activity':'Daily activity','comparison':'Change from previous period'},'widget_library':{}}
 
 def preference(db,user):
     row=db.get(LibraryPreference,user.id)
@@ -23,9 +23,11 @@ def available(db,kind):
 
 def validate(block):
     kind=block['kind'];metrics=block.get('metrics',list(METRICS[kind])[:2]);groups=block.get('groups',[])
-    if not isinstance(metrics,list) or any(m not in METRICS[kind] for m in metrics) or len(set(metrics))!=len(metrics):raise ValueError('Invalid widget metrics')
+    if not isinstance(metrics,list) or any(not isinstance(m,str) or m not in METRICS[kind] for m in metrics) or len(set(metrics))!=len(metrics):raise ValueError('Invalid widget metrics')
     if not isinstance(groups,list) or len(groups)>100 or any(type(g) is not int or g<=0 for g in groups):raise ValueError('Invalid widget audience')
     if type(block.get('show_logo',False)) is not bool:raise ValueError('Invalid widget logo setting')
+    if block.get('count_mode','exact') not in ('exact','promotion'):raise ValueError('Invalid count display')
+    if type(block.get('round_to',100)) is not int or block.get('round_to',100) not in (10,100):raise ValueError('Invalid rounding step')
     if block.get('period','week') not in ('week','month','30days'):raise ValueError('Invalid widget period')
     if type(block.get('priority',0)) is not int or not 0<=block.get('priority',0)<=100:raise ValueError('Invalid widget priority')
     ids=block.get('libraries',[])
@@ -63,16 +65,34 @@ def items(user,types,fields='',parent=None):
         if not page['Items'] or params['StartIndex']>=page.get('TotalRecordCount',params['StartIndex']):return result
     raise EmbyError('Media pagination limit')
 
+def media_count(value,block):
+    if block.get('count_mode')!='promotion':return value
+    step=block.get('round_to',100);rounded=value//step*step
+    # '+' means strictly more than the displayed floor, never a false claim.
+    return format(rounded if rounded else value,',').replace(',','\u202f')+('+' if rounded and value>rounded else '')
+
 def media_metrics(db,user,block):
     # The native user-scoped query applies library and content restrictions.
     # Never sum views: they can overlap, and legacy admin selections are obsolete.
     counts={}
-    for key,kind in [('movies','Movie'),('series','Series')]:
+    for key,kind in [('movies','Movie'),('series','Series'),('episodes','Episode')]:
         if key not in block.get('metrics',['movies','series']):continue
         p=emby.request('GET','/Users/'+user.emby_id+'/Items',token=_ADMIN,params={'Recursive':'true','IncludeItemTypes':kind,'Limit':0})
         if not isinstance(p,dict) or type(p.get('TotalRecordCount')) is not int or p['TotalRecordCount']<0:raise EmbyError('Invalid media count')
         counts[key]=p['TotalRecordCount']
-    return {'metrics':[{'label':METRICS[block['kind']][k],'value':v} for k,v in counts.items()]}
+    return {'metrics':[{'label':METRICS[block['kind']][k],'value':media_count(v,block)} for k,v in counts.items()]}
+
+def quota_metric(key,quota,days=None,unrestricted=False):
+    label='Movie requests remaining' if key=='movies_left' else 'Season requests remaining'
+    if unrestricted or quota.get('limit')==0:return {'label':label,'value':'∞','context':'Unlimited requests'}
+    limit=quota.get('limit');remaining=quota.get('remaining')
+    if type(limit) is not int or limit<=0 or type(remaining) is not int or not 0<=remaining<=limit:
+        return {'label':label,'value':'—','context':'Quota unavailable'}
+    days=quota.get('days',days)
+    result={'label':label,'value':remaining,'limit':limit,'remaining':remaining,'percent':round(100*remaining/limit,2)}
+    if type(days) is int and days>0:result.update(context='Over {days} days',context_values={'days':days})
+    else:result['context']='Current quota period'
+    return result
 
 def seerr_metrics(db,user,block):
     from .group_access import seerr_allowed
@@ -80,12 +100,22 @@ def seerr_metrics(db,user,block):
     if not seerr_allowed(db,user):return None
     result=[]
     with connection(db,user) as (client,uid):
-        flags=read_permissions(client,uid);can_manage=bool(flags&2 or flags&16);quota=None
+        flags=read_permissions(client,uid);can_manage=bool(flags&2 or flags&16);quota=None;settings=None
+        def load_quota():
+            value=request(client,'GET',f'api/v1/user/{uid}/quota')
+            if not isinstance(value,dict):raise SyncError('invalid_response')
+            return value
         for key in block.get('metrics',['movies_left','series_left']):
             if key=='renewal':
-                quota=quota or request(client,'GET',f'api/v1/user/{uid}/quota');q=quota.get('movie',{});value=q.get('days','—')
+                quota=quota or load_quota();q=quota.get('movie',{});value=q.get('days','—') if isinstance(q,dict) else '—'
             elif key in ('movies_left','series_left'):
-                quota=quota or request(client,'GET',f'api/v1/user/{uid}/quota');q=quota.get('movie' if key=='movies_left' else 'tv',{});value='∞' if q.get('limit')==0 else q.get('remaining','—')
+                quota=quota or load_quota();q=quota.get('movie' if key=='movies_left' else 'tv',{})
+                if not isinstance(q,dict):q={}
+                if 'days' not in q and settings is None and not can_manage and q.get('limit')!=0:
+                    try:settings=request(client,'GET',f'api/v1/user/{uid}/settings/main')
+                    except SyncError:settings={}
+                    if not isinstance(settings,dict):settings={}
+                result.append(quota_metric(key,q,(settings or {}).get('movieQuotaDays' if key=='movies_left' else 'tvQuotaDays'),can_manage));continue
             else:
                 if key=='pending' and not can_manage:continue
                 params={'take':1,'skip':0,'filter':key}
@@ -139,7 +169,10 @@ def display(db,user,block,editor=False):
     if editor:
         sample={'widget_media':[('Movies',1302),('Series',284)],'widget_seerr':[('Movies left','3 / 5'),('Seasons left','2 / 3')],'widget_tracearr':[('Watch time','12 h 40'),('Most watched series','Severance')],'widget_library':[]}
         start,end=tracearr_period(block.get('period','week'))
-        return {'period_start':start.date().isoformat(),'period_end':end.date().isoformat(),'metrics':[{'label':k,'value':v} for k,v in sample[block['kind']]],'events':[{'title':'The Batman','detail':'Your request is now available.','href':'#','kind':'request'}] if block['kind']=='widget_library' else [],'preview':True}
+        metrics=[{'label':k,'value':v} for k,v in sample[block['kind']]]
+        if block['kind']=='widget_media':metrics=[{'label':METRICS['widget_media'][k],'value':media_count(v,block)} for k,v in [('movies',2604),('series',284),('episodes',14239)] if k in block.get('metrics',['movies','series'])]
+        if block['kind']=='widget_seerr':metrics=[quota_metric(k,{'limit':7 if k=='movies_left' else 3,'remaining':5 if k=='movies_left' else 2,'days':7}) if k in ('movies_left','series_left') else {'label':METRICS['widget_seerr'][k],'value':7} for k in block.get('metrics',['movies_left','series_left'])]
+        return {'period_start':start.date().isoformat(),'period_end':end.date().isoformat(),'metrics':metrics,'events':[{'title':'The Batman','detail':'Your request is now available.','href':'#','kind':'request'}] if block['kind']=='widget_library' else [],'preview':True}
     if not user or not user.active or user.emby_missing:return None
     try:
         policy=emby.user(user.emby_id).get('Policy',{})
@@ -167,7 +200,7 @@ def builder_data(db):
     connected=lambda key:health.get(key,{}).get('state')=='connected'
     enabled={'widget_media':connected('emby'),'widget_seerr':available(db,'widget_seerr') and connected('seerr'),'widget_tracearr':available(db,'widget_tracearr') and connected('tracearr')}
     enabled['widget_library']=enabled['widget_seerr'] or enabled['widget_tracearr']
-    return {'types':list(TYPES),'enabled':enabled,'icons':{k:default_icon({'widget_media':'emby','widget_seerr':'seerr','widget_tracearr':'tracearr','widget_library':'emby'}[k],media_kind(db)) for k in TYPES},'metrics':METRICS,'groups':[{'id':g.id,'name':g.name} for g in db.scalars(select(PermissionGroup))],'tracearr':tracearr.configured(db),'seerr':__import__('app.seerr_permissions',fromlist=['configured']).configured(db)}
+    return {'types':[kind for kind in TYPES if kind not in ('widget_media','widget_seerr')],'enabled':enabled,'icons':{k:default_icon({'widget_media':'emby','widget_seerr':'seerr','widget_tracearr':'tracearr','widget_library':'emby'}[k],media_kind(db)) for k in TYPES},'metrics':METRICS,'groups':[{'id':g.id,'name':g.name} for g in db.scalars(select(PermissionGroup))],'tracearr':tracearr.configured(db),'seerr':__import__('app.seerr_permissions',fromlist=['configured']).configured(db)}
 
 def conflicts(blocks):
     widgets=[b for b in blocks if b['kind'] in TYPES]

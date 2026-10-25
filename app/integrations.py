@@ -7,6 +7,7 @@ import httpx
 from sqlalchemy import select, update
 from sqlalchemy.dialects.sqlite import insert
 from .models import User, IntegrationJob
+from .i18n import user_language
 from .db import SessionLocal
 from .connections import media_kind
 from .mailer import config
@@ -56,19 +57,19 @@ def sync_seerr(db, user):
         fields = ("username", "locale", "discoverRegion", "streamingRegion", "originalLanguage", "movieQuotaLimit", "movieQuotaDays", "tvQuotaLimit", "tvQuotaDays", "watchlistSyncMovies", "watchlistSyncTv")
         body = {key: original[key] for key in fields if key in original}
         body["email"] = user.email
-        body["locale"] = user.locale
+        body["locale"] = user_language(db,user)
         result = request(client, "POST", path, json=body)
         if result.get("email", "").lower() != user.email.lower():
             raise SyncError('verification_failed')
         verified = request(client, "GET", path)
-        if verified.get("email", "").lower() != user.email.lower() or verified.get("locale") != user.locale:
+        if verified.get("email", "").lower() != user.email.lower() or verified.get("locale") != user_language(db,user):
             raise SyncError('verification_failed')
         sync_seerr_notifications(db,client,user,"api/v1/user/"+str(user_id)+"/settings/notifications")
 
 def sync_digest(db,user,service):
     mode=config(db,'seerr_notification_mode','unmanaged')
     preference=True if mode=='forced' else user.seerr_notifications if mode=='optional' else None
-    return digest(json.dumps([user.email,user.locale,preference,user.preferences_version,mode]))
+    return digest(json.dumps([user.email,user_language(db,user),preference,user.preferences_version,mode]))
 
 
 def sync_seerr_notifications(db,client,user,path):

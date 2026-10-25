@@ -40,7 +40,7 @@ def test_builder_logos_and_disabled_dependencies_follow_media_server(client,monk
     with SessionLocal() as db:
         main.set_config(db,'media_server','jellyfin');db.commit()
         data=widgets.builder_data(db)
-        assert set(data['types'])==set(widgets.TYPES)
+        assert set(data['types'])=={'widget_tracearr','widget_library'}
         assert data['icons']['widget_media']=='/static/services/jellyfin.png'
         assert data['icons']['widget_seerr']=='/static/services/seerr.png'
         assert data['icons']['widget_tracearr']=='/static/services/tracearr.png'

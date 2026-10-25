@@ -195,7 +195,8 @@ async def handle(request,tool):
     output.update({'Cache-Control':'no-store','Referrer-Policy':'same-origin','X-Content-Type-Options':'nosniff','Content-Security-Policy':"frame-ancestors "+"'self'"})
     from .audit import record
     record(actor,subject,'tool.'+tool+'.'+request.method,upstream.status_code)
-    if tool=='tdarr' and 'text/html' in upstream.headers.get('content-type','') and request.method=='GET':
+    content_type=upstream.headers.get('content-type','')
+    if tool=='tdarr' and any(kind in content_type for kind in ('text/html','text/css')) and request.method=='GET':
         import re
         raw=bytearray()
         try:
@@ -204,8 +205,16 @@ async def handle(request,tool):
                 if len(raw)>4*1024*1024:return Response('Tdarr page is too large',502)
             html=raw.decode('utf-8')
             base_path=prefix(tool)+'/'
-            html=re.sub(r'(<head[^>]*>)',lambda m:m[0]+'<base href="'+base_path+'">',html,count=1,flags=re.I)
-            html=re.sub(r'((?:src|href|action)=[\"\'])/(?!/|tools/tdarr/app/)',lambda m:m[1]+base_path,html,flags=re.I)
+            if 'text/css' in content_type:
+                html=re.sub(r'(url\(\s*[\"\']?)/(?!/|tools/tdarr/app/)',lambda m:m[1]+base_path,html,flags=re.I)
+                html=re.sub(r'(@import\s+[\"\'])/(?!/|tools/tdarr/app/)',lambda m:m[1]+base_path,html,flags=re.I)
+            else:
+                html=re.sub(r'<base\b[^>]*>','',html,flags=re.I)
+                html=re.sub(r'((?:src|href|action)=[\"\'])/(?!/|tools/tdarr/app/)',lambda m:m[1]+base_path,html,flags=re.I)
+                # Execute before native bundles, without rewriting their JavaScript.
+                bridge='<base href="'+base_path+'"><script src="/static/tdarr-proxy.js" data-proxy-base="'+base_path+'"></script>'
+                html,inserted=re.subn(r'(<head[^>]*>)',lambda m:m[0]+bridge,html,count=1,flags=re.I)
+                if not inserted:html=bridge+html
             output.pop('content-length',None);output.pop('content-encoding',None)
             return with_cookies(Response(html,status_code=upstream.status_code,headers=output))
         finally:await upstream.aclose();await client.aclose()

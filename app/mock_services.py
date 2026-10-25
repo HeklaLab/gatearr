@@ -112,3 +112,7 @@ def requests_summary(request:Request):
     public(request,'seerr')
     counts={'processing':4,'pending':2,'approved':3,'available':2}
     return {'pageInfo':{'results':counts.get(request.query_params.get('filter'),0)},'results':[]}
+
+# Fictitious subtitle profiles are available only in this explicit demo server.
+from .mock_bazarr import router as bazarr_demo_router
+app.include_router(bazarr_demo_router)

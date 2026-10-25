@@ -238,7 +238,7 @@ async def context(request: Request, call_next):
             if request.url.path.startswith('/admin') or (request.method not in ('GET','HEAD','OPTIONS') and request.url.path not in ('/support/stop','/logout','/language')):
                 return Response('Assistance mode: return to your account before changing Gatearr settings.',status_code=403)
         request.state.locale = i18n.resolve(request, request.state.user)
-        if support and request.cookies.get('gatearr_support_language') in i18n.languages(db):request.state.locale=request.cookies['gatearr_support_language']
+        if support and i18n.language_policy(db)=='user' and request.cookies.get('gatearr_support_language') in i18n.languages(db):request.state.locale=request.cookies['gatearr_support_language']
         request.state.csp_nonce=secrets.token_urlsafe(24)
         request.state.rotated = False
         request.state.cookie_secure = settings.secure_cookie or urlsplit(config(db,"public_url",settings.public_url)).scheme=="https"
@@ -453,9 +453,9 @@ def render(request, template, **kwargs):
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
         "captcha_assets":template in ("login.html","forgot.html") and __import__("app.captcha",fromlist=["enabled"]).enabled(db,"forgot" if template=="forgot.html" else "login"),"tracearr_available":tracearr_configured(db),"library_preference":lambda target:library_preference(db,target),"csp_nonce":getattr(request.state,"csp_nonce",""),"captcha_enabled":lambda purpose:__import__("app.captcha",fromlist=["enabled"]).enabled(db,purpose),"default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"mail_purposes":__import__("app.email_editor",fromlist=["purposes"]).purposes(db),"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
-        "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"editable_tools":__import__("app.tools_proxy",fromlist=["editable_tools"]).editable_tools(db),"tool_names":("radarr","sonarr","bazarr","tracearr","tdarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
+        "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"subtitle_admin_locks":lambda target:__import__("app.bazarr_subtitles",fromlist=["admin_lock_context"]).admin_lock_context(db,target),"editable_tools":__import__("app.tools_proxy",fromlist=["editable_tools"]).editable_tools(db),"tool_names":("radarr","sonarr","bazarr","tracearr","tdarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "language_flag":i18n.language_flag,"default_brand_logo_url":default_brand_logo_url,"theme_logo_url":theme_logo_url,"browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(values.get('logo_url')) or not logo_url),
+        "language_flag":i18n.language_flag,"language_policy":i18n.language_policy(db),"effective_language":lambda target:i18n.user_language(db,target),"default_brand_logo_url":default_brand_logo_url,"theme_logo_url":theme_logo_url,"browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(values.get('logo_url')) or not logo_url),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
         "asset_version":str(max(p.stat().st_mtime_ns for p in Path("app/static").rglob("*") if p.is_file() and p.suffix in (".css",".js",".json"))), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
         "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,"_public":public_translator,
@@ -622,7 +622,7 @@ def login(request: Request, data=Depends(form)):
     if user.portal_disabled:raise HTTPException(401, "Invalid credentials")
     user.name, user.active, user.emby_missing = remote["Name"], True, False
     db.commit()
-    if request.cookies.get("gatearr_language") in i18n.languages(db):
+    if i18n.language_policy(db)=="user" and request.cookies.get("gatearr_language") in i18n.languages(db):
         user.locale = request.cookies["gatearr_language"]
         db.commit()
     request.state.audit_actor=user
@@ -655,7 +655,8 @@ def account(request: Request):
     try:observe_photo(request.state.db,user,emby.user(user.emby_id));request.state.db.commit()
     except EmbyError:pass
     items = list(request.state.db.scalars(select(MenuItem).order_by(MenuItem.position, MenuItem.id)))
-    return render(request, "account.html", items=items)
+    from .bazarr_subtitles import account_context
+    return render(request, "account.html", items=items,bazarr_subtitles=account_context(request.state.db,user))
 
 @app.post("/account/password")
 def change_password(request: Request, data=Depends(form)):
@@ -684,7 +685,7 @@ def issue_token(db, user, purpose, email=None):
 def mail_token(db, user, purpose, raw, recipient):
     base = config(db, "public_url", settings.public_url)
     link = base + ("/reset?" if purpose == "reset" else "/verify-email?") + urlencode({"token": raw})
-    mail_language=user.locale if user.locale in i18n.languages(db) else i18n.default_language(db)
+    mail_language=i18n.user_language(db,user)
     send(db, recipient, purpose, {"app_name": i18n.content(db,"branding:app_name",config(db,"app_name",settings.app_name),mail_language), "username": user.name, "link": link, "minutes": "30", "_locale": mail_language})
 
 @app.post("/account/email")
@@ -907,7 +908,7 @@ def smtp_test(request: Request, data=Depends(form)):
     limit(request, "smtp_test", str(user.id))
     if not user.email:raise HTTPException(400, "Verify your email in My account before sending a test")
     try:
-        send(request.state.db, user.email, "verify", {"app_name": settings.app_name, "username": user.name, "link": config(request.state.db, "public_url", settings.public_url), "minutes": "30", "_locale": user.locale})
+        send(request.state.db, user.email, "verify", {"app_name": settings.app_name, "username": user.name, "link": config(request.state.db, "public_url", settings.public_url), "minutes": "30", "_locale": i18n.user_language(request.state.db,user), "_mail_context":"smtp_test"})
     except Exception:
         log.warning("SMTP test failed")
         raise HTTPException(503, 'SMTP failed. Check host, TLS, credentials and sender.')
@@ -969,11 +970,11 @@ def admin_email(request: Request, data=Depends(form)):
         raise HTTPException(404, 'Emby account not found')
     # Imported emails still require proof of mailbox ownership.
     email = email_ok(data["email"])
-    language=data.get("locale",user.locale)
+    language=data.get("locale",user.locale) if i18n.language_policy(db)=="user" else i18n.user_language(db,user)
     if language not in i18n.languages(db):raise ValueError('Invalid language')
     if not user.active:raise ValueError('Account disabled')
     limit(request,"admin_invitation",str(user.id),maximum=5)
-    user.locale=language
+    if i18n.language_policy(db)=="user":user.locale=language
     user.preferences_version+=1
     db.commit()
     queue_user(db,user,force=True)
@@ -988,6 +989,7 @@ def admin_email(request: Request, data=Depends(form)):
 
 @app.post("/language")
 def change_language(request: Request, data=Depends(form)):
+    if request.state.user:i18n.require_personal_language(request.state.db)
     language = data["locale"]
     if language not in i18n.languages(request.state.db):
         raise ValueError('Invalid language')
@@ -1037,6 +1039,8 @@ app.include_router(permissions_router)
 
 from .audit import router as audit_router
 app.include_router(audit_router)
+from .mail_log import router as mail_log_router
+app.include_router(mail_log_router)
 from .themes import router as themes_router
 app.include_router(themes_router)
 from .seerr_login import router as seerr_login_router
@@ -1048,6 +1052,8 @@ from .user_management import router as user_management_router
 app.include_router(user_management_router)
 from .tools_proxy import router as tools_router
 app.include_router(tools_router)
+from .bazarr_subtitles import router as bazarr_subtitles_router
+app.include_router(bazarr_subtitles_router)
 
 @app.post('/admin/assets')
 def upload_asset(request:Request,data=Depends(form)):

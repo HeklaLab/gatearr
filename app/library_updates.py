@@ -29,7 +29,7 @@ def enqueue_season(db,user,event,pref):
     if event.watched or not (pref.seasons and pref.email and user.email and user.active and tracearr.configured(db) and config(db,'smtp_host') and event_accessible(user,event)):return
     data=json.loads(event.data)
     if data.get('email_queued'):return
-    values={'app_name':config(db,'app_name','Gatearr'),'username':user.name,'title':event.title,'season':str(data.get('season','')),'link':config(db,'public_url')+'/library/open/'+event.key,'minutes':'30','_locale':user.locale}
+    values={'app_name':config(db,'app_name','Gatearr'),'username':user.name,'title':event.title,'season':str(data.get('season','')),'link':config(db,'public_url')+'/library/open/'+event.key,'minutes':'30','_locale':__import__('app.i18n',fromlist=['user_language']).user_language(db,user)}
     payload={'notification':True,'purpose':'new_season','recipient':user.email,'values':values,'library_event':event.key,'user_id':user.id}
     now=int(time.time());db.add(MailJob(payload=encrypt(json.dumps(payload)),attempts=0,next_attempt=now,expires=now+86400));data['email_queued']=True;event.data=json.dumps(data)
 

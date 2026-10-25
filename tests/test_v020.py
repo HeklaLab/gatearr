@@ -196,10 +196,13 @@ def test_upgrade_from_012_preserves_accounts_and_secrets_but_removes_tracearr(tm
         assert db.execute("SELECT value FROM config WHERE key='onboarding_step'").fetchone()==('tools',)
 
 
-def test_three_tools_share_setup_step_but_have_individual_grants(client,monkeypatch):
+def test_three_tools_share_setup_step_but_have_individual_grants(client,monkeypatch,fake):
     setup(client)
     original=httpx.Client;requests=[]
     def handler(req):
+        # Application cards now fetch their media information by default.
+        if req.url.host=='emby.test':
+            return httpx.Response(200,json={'Items':[],'TotalRecordCount':0} if req.url.path.endswith('/Items') else fake.dto())
         requests.append(req)
         assert req.headers['X-Api-Key']=='private-tool-key'
         return httpx.Response(200,json={'appName':req.url.host.split('.')[0]})

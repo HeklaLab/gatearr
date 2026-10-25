@@ -45,6 +45,9 @@ def version(db,page):return footer.version(db) if page=='footer' else portal.ver
 def validate(db,page,value):
     if not isinstance(value,dict):raise ValueError('Invalid page')
     value=deepcopy(value);value['page']=page;portal.validate(value)
+    if page=='home':
+        from .applications import normalize
+        value=normalize(value,db);portal.validate(value)
     login_forms=sum(b['kind']=='login_form' for b in value['blocks'])
     if (page=='login' and login_forms!=1) or (page!='login' and login_forms):raise ValueError('The sign-in page must contain exactly one sign-in form')
     if page!='home' and any(b['kind'].startswith('widget_') for b in value['blocks']):raise ValueError('Widgets belong on the member portal')

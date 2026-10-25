@@ -1,9 +1,37 @@
 (()=>{
 'use strict';
-for(const link of document.querySelectorAll('[data-open-connection]'))link.addEventListener('click',()=>{for(const panel of document.querySelectorAll('.integration-detail'))panel.open=panel.id==='connection-'+link.dataset.openConnection;});
+const reduce=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
+function mark(){
+ const opened=document.querySelector('.integration-list>.integration-detail[open]');
+ for(const link of document.querySelectorAll('[data-open-connection]')){
+  const selected=opened?.id==='connection-'+link.dataset.openConnection;
+  if(selected)link.setAttribute('aria-current','true');else link.removeAttribute('aria-current');
+  link.setAttribute('aria-controls','connection-'+link.dataset.openConnection);link.setAttribute('aria-expanded',String(selected));
+ }
+}
+function choose(id,remember=true){
+ const panel=document.getElementById(id),list=panel?.parentElement;if(!panel?.classList.contains('integration-detail'))return;
+ for(const detail of list.querySelectorAll('.integration-detail'))detail.open=detail===panel;
+ list.prepend(panel);mark();
+ if(remember)history.replaceState(history.state,'',location.pathname+location.search+'#'+id);
+ if(!reduce())panel.querySelector('.integration-detail-grid')?.animate([{opacity:0,transform:'translateY(5px)'},{opacity:1,transform:'translateY(0)'}],{duration:240,easing:'ease-out'});
+}
+// Delegation also covers cards replaced after a connection test or save.
+window.GatearrPage.listen(document,'click',event=>{
+ const link=event.target.closest('[data-open-connection]');if(!link||event.defaultPrevented||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+ event.preventDefault();choose('connection-'+link.dataset.openConnection);
+ const header=document.querySelector('.integration-list>.integration-detail>summary'),bottom=header?.getBoundingClientRect().bottom;
+ if(bottom>innerHeight-24)window.scrollBy({top:bottom-innerHeight+24,behavior:reduce()?'instant':'smooth'});
+});
 const selected=new URLSearchParams(location.search).get('connection');
 const active=location.hash.startsWith('#connection-')?location.hash.slice(1):selected?'connection-'+selected:'';
-if(active){const detail=document.getElementById(active);if(detail?.classList.contains('integration-detail')){for(const panel of document.querySelectorAll('.integration-detail'))panel.open=panel===detail;detail.scrollIntoView({block:'start'});}}
+if(active){
+ history.replaceState(history.state,'',location.pathname+location.search);
+ choose(active,false);
+ const restore=()=>{history.replaceState(history.state,'',location.pathname+location.search+'#'+active);document.getElementById('connection-overview')?.scrollIntoView({block:'start'});};
+ if(document.readyState==='complete')restore();else window.GatearrPage.listen(window,'load',restore,{once:true});
+}
+window.GatearrPage.listen(document,'gatearr:saved',mark);mark();
 // Test the current form values without saving or replacing the configured status.
 window.GatearrPage.listen(document,'submit',async event=>{
  const form=event.target;if(!form.matches('form[action="/admin/connections/test"]'))return;

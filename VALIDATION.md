@@ -1,3 +1,15 @@
+# Gatearr 0.4.2 validation — 2026-10-25
+
+- **477 automated tests passed**, one optional rendered-theme export test skipped, and one existing dependency deprecation warning. All shipped top-level JavaScript files passed syntax checks.
+- Browser review covered 204 page/theme/viewport combinations across the six bundled theme variants, plus 96 Portal builder checks at 16 widths from 320 to 1920 CSS pixels. Checks found no page overflow, scripted errors or measured text-contrast failures in those views. These checks are not a complete accessibility certification and do not cover arbitrary administrator-authored colors.
+- Portal builder was exercised after direct loading and dynamic navigation, while resizing the same document, at viewport widths corresponding to 100–200% browser zoom, through desktop/tablet/phone previews, and with block addition/undo on an isolated copy. Palette words stayed intact and preview content was not clipped into nested scrollbars.
+- Focused follow-ups checked the account menu and language hover across all six themes, application subtitles/card information across 60 rendered views, and top/bottom guide return buttons at phone and desktop widths.
+- Bazarr tests cover opt-in individual/group permission separately from tool access, configured-profile gating, personal capacity, existing-language idempotence, profile preservation, concurrency/readback, free/day/permanent replacement locks and administrative unlocks. Native Bazarr responses are simulated; the persistent demo profile is a fixture, not a live Bazarr deployment.
+- SMTP history tests cover accepted/failed attempts, safe metadata, account/notification/test send paths, retention outside transient queue jobs and transaction rollbacks. An accepted SMTP transaction is not proof of inbox delivery.
+- Earlier 0.4.2 verification exercised an isolated native Tdarr 3.01.00 server through Gatearr, including signup, dashboard, API and WebSocket exchanges, without media or workers. The installation that originally showed a blank page was not accessed; real deployment compatibility remains to be confirmed there.
+- The isolated HTTP/SMTP smoke passed setup, native photo round trips and cache invalidation, account cloning, library permissions, settings copy, visual previews/publication, nested application journeys, uploads, verified email, password change/reset and Seerr preference propagation. Native services in this smoke were simulators; the running user demo was not reset.
+- GitHub Actions additionally gates release publication on the full suite, actual Docker Compose startup and HTTP/SMTP smoke checks, then builds AMD64 and ARM64 container images. No local Docker engine or production Emby/Jellyfin/Seerr/Bazarr deployment was used for this release review.
+
 # Gatearr 0.4.1 validation — 2026-10-23
 
 - **403 automated tests passed**, one optional rendered-theme export test skipped, and one existing Starlette/httpx deprecation warning. All shipped top-level JavaScript files passed syntax checks.

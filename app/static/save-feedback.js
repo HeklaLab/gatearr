@@ -28,7 +28,8 @@
      if(updated){const opened=[...region.querySelectorAll('details')].map(d=>d.open);region.replaceChildren(...updated.childNodes);region.querySelectorAll('details').forEach((d,i)=>d.open=opened[i]??d.open);}
     }
     document.dispatchEvent(new CustomEvent('gatearr:saved',{detail:{form,doc,action,data,success:successful}}));
-   }else location.assign(response.redirected?response.url:location.href);
+   }else if(window.GatearrNavigation)await window.GatearrNavigation.afterSave(response.redirected?response.url:location.href);
+   else location.assign(response.redirected?response.url:location.href);
   }catch{document.dispatchEvent(new CustomEvent('gatearr:savefailed',{detail:{form,action}}));await finish(button,false);}finally{button.disabled=false;locked.forEach(e=>e.disabled=false);forms.delete(form);}
  });
  document.addEventListener('click',event=>{const button=event.target.closest('[data-command=publish],[data-action=publish]');if(button)start(button);},true);

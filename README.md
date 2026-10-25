@@ -4,9 +4,9 @@
 
 A free, open-source, self-hosted account portal for **Emby and Jellyfin**. Give your users one place to access their media services, manage their accounts, reset forgotten passwords and follow device connection guides. Manage user groups, library permissions and optional Seerr requests from an interface you can make your own.
 
-**0.4.1 public beta** refreshes administration with a sidebar, animated capsule tabs and structured user profiles. It adds dynamic user search, guided selectors, logo cropping and clearer connection diagnostics, while improving theme readability and visual builders. Gatearr entered public beta with v0.3.2. Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
+**0.4.2 public beta** brings a consistent glass interface, clearer application cards, personal Bazarr subtitle preferences and SMTP history. Gatearr entered public beta with v0.3.2. Free and open source (MIT), with Docker images for AMD64 and ARM64. Real-world feedback will help shape the next releases.
 
-[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.4.1) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml)
+[Download the beta](https://github.com/HeklaLab/gatearr/releases/tag/v0.4.2) · [Report a bug](https://github.com/HeklaLab/gatearr/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml) · [Roadmap](ROADMAP.md)
 
 If something is broken, confusing or missing, please open an issue. Include versions, deployment details and reproduction steps; remove secrets and personal information from logs/screenshots. This is an early beta: back up persistent data and test permission changes with a limited account before applying them broadly.
 
@@ -14,7 +14,7 @@ If something is broken, confusing or missing, please open an issue. Include vers
 
 **Requires an existing Emby/Jellyfin server and Docker Compose v2.** Seerr, Tracearr and the administration tools are optional. SMTP enables invitations and self-service password recovery.
 
-1. Download [gatearr-docker.zip for v0.4.1](https://github.com/HeklaLab/gatearr/releases/download/v0.4.1/gatearr-docker.zip) and extract it.
+1. Download [gatearr-docker.zip for v0.4.2](https://github.com/HeklaLab/gatearr/releases/download/v0.4.2/gatearr-docker.zip) and extract it.
 2. Review the [installation prerequisites](#installation-prerequisites), then run from the extracted folder:
 
    ```sh
@@ -28,11 +28,11 @@ If something is broken, confusing or missing, please open an issue. Include vers
 
 Complete setup privately. For access from other devices or the internet, configure `PUBLIC_URL`, your existing HTTPS reverse proxy and the [documented security boundaries](SECURITY_REVIEW.md). Keep the persistent `/data` volume, including `bootstrap.json`.
 
-**Docker:** `ghcr.io/heklalab/gatearr:0.4.1` · **Architectures:** AMD64 / ARM64 · **License:** MIT
+**Docker:** `ghcr.io/heklalab/gatearr:0.4.2` · **Architectures:** AMD64 / ARM64 · **License:** MIT
 
 [Windows instructions](#windows--docker-desktop) · [Full Docker instructions](#start-with-docker) · [Upgrade an existing installation](UPGRADING.md) · [Community on Reddit](https://www.reddit.com/r/gatearr/)
 
-## Interface preview — v0.4.1
+## Interface preview — previous release (0.4.1)
 
 Real screenshots of Gatearr 0.4.1 running locally with the **Blue Boréal** theme and the original Gatearr logo. The reset demo uses fictional people, sample libraries and simulated integrations; no production accounts or credentials appear below.
 
@@ -113,17 +113,15 @@ The setup assistant configures portal identity, language, initial theme and medi
 
 </details>
 
-## What's new in 0.4.1
+## What's new in 0.4.2
 
-- **Administration:** fixed sidebar, shared animated capsule tabs, dynamic navigation, structured user profiles and clearer group permission sections.
-- **Everyday controls:** search users while typing, paginate by 10/20/50/100/all, use guided dropdowns, select languages directly and resize/crop logos before uploading.
-- **Readable themes:** improved foreground contrast across all six presets, matching bundled logos and aligned appearance controls.
-- **Visual builders:** complete device breadcrumbs, compact reorder/edit actions and content-sized previews with one page scrollbar.
-- **Connections:** test entered URLs/API keys before saving, get clearer URL Base/host/authentication diagnostics and open the Tdarr WebUI through Gatearr's protected proxy.
-- **Personalization:** edit public-facing labels while administration keeps its bundled translations; email editing offers enabled languages only. Updated default invitations introduce common access, password recovery and device guides.
-- **Fixes:** default widget/application alignment with Tracearr enabled, centered CAPTCHAs, assistance-language handling and disabled new grants for unconfigured tools. Existing custom portals, logos and email templates remain intact.
+- **Consistent interface:** shared diffuse landscapes and glass surfaces, rounded ON/OFF controls, smoother navigation and readable light/dark themes.
+- **Clearer portal:** Emby/Jellyfin library counts and Seerr quotas appear inside their application cards, below prominent purpose subtitles. Optional promotional counts and quota progress bars keep information compact and explicit.
+- **Personal subtitle choices:** authorized users select languages for one shared Bazarr profile, with individual/group limits and administrator-controlled replacement locks, independently of access to Bazarr itself.
+- **Administration:** a compact card directory, SMTP history under Activity log and user- or group-managed language with default fallback.
+- **Builders and fixes:** responsive tools after navigation, clearer application controls, return buttons at both ends of guides, dynamic saves, synchronized backgrounds and improved Tdarr loading.
 
-See [release notes](RELEASE_NOTES.md) and [upgrade instructions](UPGRADING.md). The gallery above shows the refreshed 0.4.1 demo.
+See [release notes](RELEASE_NOTES.md), [upgrade instructions](UPGRADING.md) and the [roadmap](ROADMAP.md). The gallery above remains from 0.4.1.
 
 ## Features introduced in 0.4.0
 
@@ -253,7 +251,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.4.1` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.4.2` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 
@@ -311,7 +309,7 @@ Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTE
 - **Emails**: separate template and SMTP tabs; localized invitation/recovery/verification/account-change templates and a Tracearr-dependent new-season template.
 - **Security**: password complexity and local Captcha protection for sign-in/recovery, with per-form controls and aggregate statistics. Native password rules also apply.
 - **Translations / Labels**: active languages, fixed labels and custom content translations.
-- **Activity log**: readable changes with actor, affected user, result and selected before/after values. Secrets are excluded; retention is bounded.
+- **Activity log**: readable changes with actor, affected user, result and selected before/after values, plus administrator-only SMTP history for new email attempts. Secrets and message bodies are excluded; SMTP acceptance does not prove inbox delivery.
 - **Updates and changelog**: release checks, installed version, changelog, feedback links and customization reset.
 
 ### Account management and assistance

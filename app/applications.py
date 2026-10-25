@@ -68,4 +68,5 @@ def normalize(layout,db):
             rows.append(row)
     for index,row in enumerate(rows):row['order']=(index+1)*10
     value['blocks']=rows
-    return value
+    from .application_information import migrate
+    return migrate(value)

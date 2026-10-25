@@ -41,25 +41,35 @@ def compose(db, recipient, purpose, values):
     return msg
 
 def send(db, recipient, purpose, values):
-    msg=compose(db,recipient,purpose,values)
-    host = config(db, "smtp_host")
-    if not host:
-        raise ValueError('SMTP not configured')
-    mode = config(db, "smtp_mode", "starttls")
-    port = int(config(db, "smtp_port", "587"))
-    if mode == "ssl":
-        connection = smtplib.SMTP_SSL(host, port, timeout=15, context=ssl.create_default_context())
-    else:
-        connection = smtplib.SMTP(host, port, timeout=15)
-    with connection as smtp:
-        smtp.ehlo()
-        if mode == "starttls":
-            smtp.starttls(context=ssl.create_default_context())
+    from .mail_log import record
+    msg=None;accepted=False;error='other'
+    try:
+        msg=compose(db,recipient,purpose,values)
+        host=config(db,"smtp_host")
+        if not host:
+            error='configuration';raise ValueError('SMTP not configured')
+        mode=config(db,"smtp_mode","starttls");port=int(config(db,"smtp_port","587"))
+        connection=smtplib.SMTP_SSL(host,port,timeout=15,context=ssl.create_default_context()) if mode=='ssl' else smtplib.SMTP(host,port,timeout=15)
+        with connection as smtp:
             smtp.ehlo()
-        username = config(db, "smtp_username")
-        if username:
-            smtp.login(username, decrypt(config(db, "smtp_password")))
-        smtp.send_message(msg)
+            if mode=='starttls':smtp.starttls(context=ssl.create_default_context());smtp.ehlo()
+            username=config(db,"smtp_username")
+            if username:smtp.login(username,decrypt(config(db,"smtp_password")))
+            refused=smtp.send_message(msg)
+            if refused:raise smtplib.SMTPRecipientsRefused(refused)
+            accepted=True
+    except Exception as exc:
+        if not accepted:
+            if isinstance(exc,smtplib.SMTPAuthenticationError):error='authentication'
+            elif isinstance(exc,smtplib.SMTPRecipientsRefused):error='recipients'
+            elif isinstance(exc,smtplib.SMTPSenderRefused):error='sender'
+            elif isinstance(exc,smtplib.SMTPDataError):error='data'
+            elif isinstance(exc,(OSError,smtplib.SMTPConnectError,smtplib.SMTPServerDisconnected)):error='connection'
+            elif isinstance(exc,(ValueError,KeyError)):error='configuration'
+            raise
+        # An error during QUIT does not undo SMTP acceptance or justify a resend.
+    finally:
+        record(db,recipient,purpose,msg['Subject'] if msg else '',values,'accepted' if accepted else 'failed','' if accepted else error)
 
 
 def html_source(db,purpose):

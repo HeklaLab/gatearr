@@ -1,9 +1,27 @@
 {% extends 'base.html' %}{% block content %}
-<div class="admin-mosaic-heading"><div>{% include 'admin_eyebrow.html' %}<h1>{{ _('Administration') }}</h1><p>{{ _('Your portal, your way.') }}</p></div><a class="button quiet" href="/home"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> {{ _('Home') }}</a></div>
-<div class="admin-mosaic">
-{% for href,icon,title,description in [('/admin/branding','palette','Branding','Identity, portal, themes and footer'),('/admin/users','users','Users','Accounts, groups, permissions and assistance'),('/admin/integrations','plug','Applications & API','Applications, connections and admin tools'),('/admin/emails','envelope','Emails','SMTP and visual email templates'),('/admin/translations','language','Translations / Labels','Languages and all interface text'),('/admin/activity','clock-rotate-left','Activity log','Actions and results')] %}
-<a class="admin-mosaic-card" href="{{ href }}"><span class="admin-mosaic-icons"><i class="fa-solid fa-{{ icon }}" aria-hidden="true"></i><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></span><h2>{{ _(title) }}</h2><p>{{ _(description) }}</p></a>
+<div class="admin-directory-heading"><div>{% include 'admin_eyebrow.html' %}<h1>{{ _('Administration') }}</h1><p>{{ _('Personalize your portal and manage access.') }}</p></div><a class="button quiet" href="/home"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>{{ _('View portal') }}</a></div>
+<div class="admin-directory-grid">
+{% for title,description,icon,entries in [
+('Personalize','Portal identity and experience','palette',[
+('/admin/branding','gem','Identity and logo','Portal name, logo and header'),
+('/admin/portal','table-columns','Portal builder','Pages and application blocks'),
+('/admin/branding/themes','swatchbook','Themes and colors','Palettes, light and dark appearance'),
+('/admin/design/home/howto/emby','book-open','Access guides','Instructions for each device'),
+('/admin/footer','window-maximize','Footer','Additional links and content'),
+('/admin/translations','language','Languages and labels','Translations and language policy')]),
+('Manage access','Accounts and connected services','users',[
+('/admin/users','user','Users','Accounts and individual permissions'),
+('/admin/groups','users','Groups','Members and shared rules'),
+('/admin/emby','user-plus','Create / clone users','Create and duplicate accounts'),
+('/admin/security','shield-halved','Security','Sign-in and access protection'),
+('/admin/integrations','plug','Applications & API','Service configuration and connections'),
+('/admin/integrations','sliders','Administration tools','Interfaces integrated into the portal')])
+] %}
+<section class="card admin-directory-panel"><div class="admin-directory-panel-heading"><span class="admin-directory-icon"><i class="fa-solid fa-{{ icon }}" aria-hidden="true"></i></span><div><h2>{{ _(title) }}</h2><p>{{ _(description) }}</p></div></div><div class="admin-directory-links">{% for href,item_icon,label,detail in entries %}<a class="admin-directory-link" href="{{ href }}"><i class="fa-solid fa-{{ item_icon }}" aria-hidden="true"></i><span><strong>{{ _(label) }}</strong><small>{{ _(detail) }}</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>{% endfor %}</div></section>
 {% endfor %}
 </div>
-<a class="admin-mosaic-update" href="/admin/updates"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i><span><strong>{{ _('Updates and changelog') }}</strong><small>{{ _('Installed version and new releases') }}</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+<h2 class="admin-directory-section-label">{{ _('Communicate and monitor') }}</h2>
+<div class="admin-directory-utilities"><section class="card"><a class="admin-directory-utility-title" href="/admin/emails"><i class="fa-solid fa-envelope" aria-hidden="true"></i><strong>{{ _('Emails') }}</strong><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a><p>{{ _('Email delivery and message templates.') }}</p><div class="admin-directory-shortcuts"><a href="/admin/emails?tab=smtp">{{ _('SMTP server') }}</a><a href="/admin/emails?tab=templates">{{ _('Email templates') }}</a></div></section>
+<section class="card"><a class="admin-directory-utility-title" href="/admin/activity"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><strong>{{ _('Activity log') }}</strong><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a><p>{{ _('Actions and results') }}</p></section>
+<section class="card"><a class="admin-directory-utility-title" href="/admin/updates"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i><strong>{{ _('Updates') }}</strong><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a><p>{{ _('Installed version and new releases') }}</p></section></div>
 {% endblock %}

@@ -62,6 +62,8 @@ def review(request,data,group,users,policy,access,remotes,api):
         old=group_for(db,user)
         local_target={**(json.loads(local.values) if local else access_values(user)),**access}
         add('Gatearr','Admin Gatearr',user.admin,local_target['gatearr_admin'])
+        add('Bazarr','Allow adding subtitle languages in Bazarr',bool(user.bazarr_subtitles),bool(local_target.get('bazarr_subtitles',False)))
+        add('Bazarr','Maximum subtitle languages',user.bazarr_subtitle_limit,int(local_target.get('bazarr_subtitle_limit',3)))
         before_tools=set(json.loads(user.tool_access));after_tools=set(local_target['tools'])
         for tool in sorted(before_tools|after_tools):add('Gatearr',tool.capitalize(),tool in before_tools,tool in after_tools)
         add('Seerr','Access',seerr_allowed(db,user),access.get('seerr_access',True))

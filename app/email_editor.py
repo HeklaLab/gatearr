@@ -68,7 +68,7 @@ def save(request:Request,data=Depends(form)):
                 i18n.store_content(db,'mail:'+purpose+':subject',config(db,purpose+'_subject',DEFAULTS[purpose+'_subject']),locale,subject)
                 i18n.store_content(db,'mail:'+purpose+':html',html_source(db,purpose),locale,html)
             db.flush()
-            try:send(db,admin.email,purpose,{'app_name':config(db,'app_name',settings.app_name),'username':admin.name,'link':config(db,'public_url',settings.public_url)+('/reset?token=preview' if purpose=='reset' else '/library/open/preview' if purpose=='new_season' else '/verify-email?token=preview'),'minutes':'30','title':'Fargo','season':'5','_locale':locale,'_allow_disabled':True})
+            try:send(db,admin.email,purpose,{'app_name':config(db,'app_name',settings.app_name),'username':admin.name,'link':config(db,'public_url',settings.public_url)+('/reset?token=preview' if purpose=='reset' else '/library/open/preview' if purpose=='new_season' else '/verify-email?token=preview'),'minutes':'30','title':'Fargo','season':'5','_locale':locale,'_allow_disabled':True,'_mail_context':'template_test'})
             except Exception:raise HTTPException(503,'SMTP failed. Check host, TLS, credentials and sender.')
             finally:transaction.rollback()
         return editor(request,purpose,locale,subject,html,'Test email sent. The draft has not been saved.')
@@ -86,6 +86,7 @@ def save(request:Request,data=Depends(form)):
 @router.post('/account/language')
 def account_language(request:Request,data=Depends(form)):
     user=require_user(request)
+    i18n.require_personal_language(request.state.db)
     user.locale=language(request,data.get('locale',i18n.default_language(request.state.db)))
     user.preferences_version+=1
     request.state.db.commit()
@@ -98,6 +99,7 @@ def member_language(request:Request,local_id:int,data=Depends(form)):
     require_admin(request)
     user=request.state.db.get(User,local_id)
     if not user or not user.emby_id:raise HTTPException(404,'Emby account not found')
+    i18n.require_personal_language(request.state.db)
     user.locale=language(request,data.get('locale',i18n.default_language(request.state.db)))
     user.preferences_version+=1
     request.state.db.commit()

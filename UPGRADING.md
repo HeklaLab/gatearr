@@ -1,3 +1,13 @@
+## Upgrading to 0.4.2 — public beta
+
+Back up the complete `/data` volume, including `bootstrap.json` or the configured encryption key. Pin `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.4.2` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+Automatic migrations 0023–0026 add SMTP delivery history and personal Bazarr subtitle choices, limits and replacement locks. Existing accounts, integrations, uploaded assets and customized email templates are retained. Legacy Emby/Jellyfin and Seerr widget settings move into application-card information, including their audience settings. Review your published portal after upgrading.
+
+Bazarr subtitle preferences are opt-in: configure Bazarr, select its shared language profile, enable the feature and grant individual/group permission with a language limit. Choose free replacement, a lock in days, or an indefinite administrative lock. This permission does not grant access to the Bazarr interface. Removing a personal language does not delete it from the shared native profile or remove downloaded subtitles.
+
+SMTP history records new attempts after the upgrade; it does not reconstruct historical emails. An accepted SMTP transaction is not proof of inbox delivery. Review the language policy in Translations if groups should manage language selection; groups without an active language use Gatearr's default.
+
 ## Upgrading to 0.4.1 — public beta
 
 Back up the complete `/data` volume, including `bootstrap.json` or the configured encryption key. Pin `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.4.1` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.

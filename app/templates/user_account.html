@@ -14,7 +14,7 @@
 </section>
 <section class="account-section">
 <div class="account-section-heading"><i class="fa-solid fa-sliders" aria-hidden="true"></i><h2>{{ _('Preferences') }}</h2></div>
-<div class="account-section-body"><p class="hint">{{ _('This language applies to your interface, emails and supported connected services.') }}</p><form method="post" action="/admin/users/{{ member.id }}/language"><input type="hidden" name="csrf" value="{{ csrf }}"><div class="account-inline-field account-locale-field"><label>{{ _('Language') }}<select name="locale">{% for code in languages %}<option value="{{ code }}" {% if member.locale==code %}selected{% endif %}>{{ language_names[code] }}</option>{% endfor %}</select></label><button>{{ _('Save language') }}</button></div></form>{% include 'library_preferences.html' %}</div>
+<div class="account-section-body"><p class="hint">{{ _('This language applies to your interface, emails and supported connected services.') }}</p>{% if language_policy=='group' %}{% set language_target=member %}{% include 'managed_language.html' %}{% else %}<form method="post" action="/admin/users/{{ member.id }}/language"><input type="hidden" name="csrf" value="{{ csrf }}"><div class="account-inline-field account-locale-field"><label>{{ _('Language') }}<select name="locale">{% for code in languages %}<option value="{{ code }}" {% if member.locale==code %}selected{% endif %}>{{ language_names[code] }}</option>{% endfor %}</select></label><button>{{ _('Save language') }}</button></div></form>{% endif %}{% include 'library_preferences.html' %}</div>
 </section>
 <section class="account-section">
 <div class="account-section-heading"><i class="fa-solid fa-link" aria-hidden="true"></i><h2>{{ _('Linked accounts') }}</h2></div>

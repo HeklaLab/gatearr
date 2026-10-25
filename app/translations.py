@@ -6,9 +6,29 @@ from sqlalchemy import delete,select,text,update
 from fastapi import APIRouter,Depends,HTTPException,Request
 from . import i18n,rich_mail
 from .main import form,require_admin,render,redirect,set_config
-from .models import Config,Language,ContentTranslation,User
+from .models import Config,Language,ContentTranslation,User,PermissionGroup,GroupMember
 from .content_catalog import sources
 router=APIRouter()
+
+@router.post('/admin/translations/policy')
+def save_language_policy(request:Request,data=Depends(form)):
+    require_admin(request);db=request.state.db
+    policy=str(data.get('language_policy',''))
+    if policy not in ('user','group'):raise ValueError('Invalid language policy')
+    set_config(db,'language_policy',policy);db.commit()
+    i18n.queue_language_sync(db)
+    return redirect('/admin/translations')
+
+@router.post('/admin/groups/{gid}/language')
+def save_group_language(request:Request,gid:int,data=Depends(form)):
+    require_admin(request);db=request.state.db
+    selected=str(data.get('locale',''))
+    if selected and selected not in i18n.languages(db):raise ValueError('Invalid language')
+    result=db.execute(update(PermissionGroup).where(PermissionGroup.id==gid,PermissionGroup.version==int(data.get('version','-1'))).values(locale=selected or None,version=PermissionGroup.version+1))
+    if result.rowcount!=1:db.rollback();raise HTTPException(409,'Group changed. Reload this page.')
+    db.commit()
+    i18n.queue_language_sync(db,list(db.scalars(select(User).join(GroupMember).where(GroupMember.group_id==gid))))
+    return redirect('/admin/groups/'+str(gid)+'?saved=language')
 def config_default(db):
     from .mailer import config
     return config(db,"default_locale","en")
@@ -119,6 +139,7 @@ def update_language(request:Request,code:str,data=Depends(form)):
         fallback=i18n.default_language(db)
         db.execute(update(User).where(User.locale==code).values(locale=fallback,preferences_version=User.preferences_version+1))
     db.commit()
+    i18n.queue_language_sync(db)
     return redirect('/admin/translations?edit_locale='+code)
 
 @router.post('/admin/translations')

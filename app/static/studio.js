@@ -10,7 +10,7 @@
  function button(text,fn,cls='secondary'){const b=el('button',text,cls);b.type='button';b.onclick=fn;return b;}
  function field(parent,label,value,onchange,type='text'){const l=el('label',label),input=el(type==='textarea'?'textarea':'input');if(type!=='textarea')input.type=type;input.value=value??'';input.addEventListener('input',()=>onchange(input.value));l.append(input);parent.append(l);return input;}
  function select(parent,label,value,options,onchange){const l=el('label',label),s=el('select');for(const [v,name]of options){const o=el('option',name);o.value=v;o.selected=String(v)===String(value);s.append(o);}s.onchange=()=>onchange(s.value);l.append(s);parent.append(l);return s;}
- function check(parent,label,value,fn){const l=el('label',undefined,'check'),i=el('input');i.type='checkbox';i.checked=!!value;i.onchange=()=>fn(i.checked);l.append(i,document.createTextNode(t(label)));parent.append(l);return i;}
+ function check(parent,label,value,fn){const l=el('label',undefined,'check'),i=el('input');i.type='checkbox';i.checked=!!value;i.onchange=()=>fn(i.checked);l.append(i,el('span',label,'check-label'));parent.append(l);return i;}
  function change(fn){history.push(clone(state));if(history.length>50)history.shift();future=[];fn();normalize();dirty=true;refresh();}
  function normalize(){state.blocks.forEach((b,i)=>b.order=(i+1)*10);state.blocks.filter(b=>b.kind==='applications').forEach(b=>{b.span=12;b.region='main';delete b.parent;delete b.slot;});}
  function refresh(rebuild=false){status.textContent=t('Unsaved changes');clearTimeout(timer);timer=setTimeout(()=>persist('save'),1000);clearTimeout(previewTimer);previewTimer=setTimeout(preview,220);if(rebuild)settings();root.querySelector('[data-command=undo]').disabled=!history.length;root.querySelector('[data-command=redo]').disabled=!future.length;}
@@ -87,6 +87,7 @@
  check(inspector,'Show application logo',b.show_logo,v=>change(()=>b.show_logo=v));
  field(inspector,'Title',b.title,v=>change(()=>b.title=v));
  for(const [key,label]of Object.entries(boot.widgets.metrics[b.kind]||{}))check(inspector,label,(b.metrics||[]).includes(key),v=>change(()=>b.metrics=v?[...(b.metrics||[]),key]:(b.metrics||[]).filter(x=>x!==key)));
+ if(b.kind==='widget_media'){select(inspector,'Count display',b.count_mode||'exact',[['exact','Exact counts'],['promotion','Promotion']],v=>{change(()=>b.count_mode=v);settings();});if(b.count_mode==='promotion')select(inspector,'Round down to',String(b.round_to||100),[['10','Nearest lower ten'],['100','Nearest lower hundred']],v=>change(()=>b.round_to=Number(v)));}
  if(b.kind==='widget_tracearr')select(inspector,'Period',b.period||'week',[['week','This week'],['month','This month'],['30days','Last 30 days']],v=>change(()=>b.period=v));
  if(b.kind==='widget_library'){if(boot.widgets.seerr)check(inspector,'Available requests',b.requests!==false,v=>change(()=>b.requests=v));if(boot.widgets.tracearr)check(inspector,'New seasons',b.seasons!==false,v=>change(()=>b.seasons=v));select(inspector,'Keep announcements',b.retention||'duration',boot.widgets.tracearr?[['duration','For a duration'],['watched','Until watched']]:[['duration','For a duration']],v=>{change(()=>b.retention=v);settings();});if(b.retention!=='watched')field(inspector,'Days',b.days||14,v=>change(()=>b.days=Math.max(1,Math.min(365,Number(v)))),'number');}
  inspector.append(el('h3','Target groups'));for(const group of boot.widgets.groups)check(inspector,group.name,(b.groups||[]).includes(group.id),v=>change(()=>b.groups=v?[...(b.groups||[]),group.id]:(b.groups||[]).filter(x=>x!==group.id)));
@@ -111,6 +112,21 @@
   const subtitle=()=>b.subtitles?.[app.key]??({'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}[app.key]||'Open application');
   const caption=()=>summary.textContent=(app.howto?t(app.entry_mode==='direct'?'Direct link':'Access guide')+' · ':'')+subtitle();caption();
   field(fields,'Subtitle',subtitle(),v=>{change(()=>{b.subtitles||={};b.subtitles[app.key]=v;});caption();});
+  if(['access:emby','access:seerr'].includes(app.key)){
+   const info=()=>{b.information||={};return b.information[app.key]||=clone(state.application_information_defaults?.[app.key]||{enabled:true});},current=b.information?.[app.key]||state.application_information_defaults?.[app.key]||{},kind=app.key==='access:emby'?'widget_media':'widget_seerr';
+   const information=el('div',undefined,'application-information-settings');fields.append(information);
+   check(information,'Show information in application card',current.enabled!==false,v=>{change(()=>info().enabled=v);settings();});
+   if(current.enabled!==false){
+    const defaults=current.metrics||current.rules?.[0]?.metrics||Object.keys(boot.widgets.metrics[kind]).slice(0,2);
+    const metrics=el('div',undefined,'application-metrics-settings');information.append(metrics);
+    for(const [metric,label]of Object.entries(boot.widgets.metrics[kind]))check(metrics,label,defaults.includes(metric),v=>{change(()=>{const active=info().metrics||defaults;info().metrics=v?[...active,metric]:active.filter(x=>x!==metric);});settings();});
+    if(kind==='widget_media'){
+     const mode=current.count_mode||current.rules?.[0]?.count_mode||'exact';
+     select(fields,'Count display',mode,[['exact','Exact counts'],['promotion','Promotion']],v=>{change(()=>info().count_mode=v);settings();});
+     if(mode==='promotion')select(fields,'Round down to',String(current.round_to||current.rules?.[0]?.round_to||100),[['10','Nearest lower ten'],['100','Nearest lower hundred']],v=>change(()=>info().round_to=Number(v)));
+    }
+   }
+  }
   if(app.howto){select(fields,'When clicked',app.entry_mode==='direct'?'direct':'structured',[['direct','Direct link'],['structured','Access guide']],async mode=>{try{const data=new FormData();data.set('csrf',csrf);data.set('mode',mode);const response=await fetch('/admin/design/home/application/'+app.howto+'/behavior',{method:'POST',body:data});if(!response.ok)throw Error(t('Unable to save application behavior'));app.entry_mode=mode;caption();status.textContent=t('Application behavior saved');preview();}catch(e){status.textContent=e.message;}});const a=el('a','Edit Access guides','application-guide-link');a.href='/admin/design/home/howto/'+app.howto;fields.append(a);
   }else if(app.key.startsWith('menu:')){fields.append(button('Create Access guides',async()=>{clearTimeout(timer);await persist('save');if(dirty||blocked)return;try{const data=new FormData();data.set('csrf',csrf);const r=await fetch('/admin/design/home/enable-howto/'+app.key.split(':')[1],{method:'POST',body:data});if(!r.ok)throw Error(t('Unable to create Access guides'));window.location.assign((await r.json()).url);}catch(e){status.textContent=e.message;}}));}
   row.append(summary,fields);list.append(row);

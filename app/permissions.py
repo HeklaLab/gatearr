@@ -304,6 +304,10 @@ def save_group(request:Request,gid:int,data=Depends(form)):
         if remotes and all('ExcludedSubFolders' in p for p in remotes.values()):policy['ExcludedSubFolders']=[]
     from .seerr_permissions import selected_permissions
     settings={}
+    if data.get('manage_bazarr_subtitles')=='on':
+        from .bazarr_subtitles import parse_capacity
+        settings['bazarr_subtitles']=data.get('bazarr_subtitles')=='on'
+        settings['bazarr_subtitle_limit']=parse_capacity(data.get('bazarr_subtitle_limit',json.loads(group.access_policy).get('bazarr_subtitle_limit',3)))
     if data.get('manage_admin')=='on':settings['gatearr_admin']=data.get('gatearr_admin')=='on'
     if data.get('manage_tools')=='on':
         tools=sorted(set(data.getlist('tools')))
@@ -332,6 +336,8 @@ def save_group(request:Request,gid:int,data=Depends(form)):
     for uid in order:
         recompute(db,indexed[uid],states[uid]);guard(db,indexed[uid],json.loads(states[uid].desired));apply_access(db,indexed[uid],group_for(db,indexed[uid]))
     db.commit()
+    from .i18n import queue_language_sync
+    queue_language_sync(db,[indexed[uid] for uid in affected])
     active_tab=str(data.get('active_tab','members'))
     if active_tab not in ('members','emby','seerr','access'):active_tab='members'
     return redirect('/admin/groups/'+str(gid)+'?saved=1&tab='+active_tab)

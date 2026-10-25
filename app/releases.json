@@ -1,5 +1,21 @@
 [
   {
+    "version": "0.4.2",
+    "date": "2026-10-25",
+    "changes": [
+      "Shared diffuse landscapes and glass surfaces across all six themes, rounded ON/OFF controls, a compact administration directory and smoother responsive navigation.",
+      "Cleaner account menu with a distinct active language, subtle hover and muted red Sign out; dynamic preference saves retain scroll and show feedback.",
+      "Emby/Jellyfin counts and Seerr quotas inside optional application-card information, with migrated widget settings/audiences, clearer subtitles and large cropped service artwork.",
+      "Truthful promotional media counts and explicit Seerr periods, limits and remaining-quota progress bars.",
+      "Responsive Portal builder tools and consistent editing controls; preserve stylesheet order after navigation. Device-choice buttons bracket every access guide.",
+      "Bazarr personal subtitle choices for authorized users/groups, separate from tool access, with capacity controls, a shared profile, free/day-based/indefinite locks and administrative unlocking.",
+      "Administrator SMTP history under Activity log with safe send-attempt metadata and shortcuts from Emails; SMTP acceptance does not guarantee inbox delivery.",
+      "User- or group-managed language with Gatearr-default fallback; atomic theme/background updates, readable mobile rows and keyboard-aware heading focus.",
+      "Tdarr runtime resource/API/socket routing, CSS path handling and retry feedback, exercised with an isolated native Tdarr 3.01.00 server.",
+      "Public roadmap and GitHub feature requests for future memberships, Aurora, guided media-server setup and member invitations."
+    ]
+  },
+  {
     "version": "0.4.1",
     "date": "2026-10-23",
     "changes": [

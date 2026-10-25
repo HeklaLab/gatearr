@@ -2,7 +2,9 @@
 (() => {
  const routes = new Set(['/home', '/account']);
  const localMenus = '.user-tabs,.admin-tabs,.studio-pages';
- let request, sequence = 0, committing = false;
+ let request, sequence = 0, committing = false, keyboardInput = false;
+ document.addEventListener('pointerdown',()=>{keyboardInput=false;},true);
+ document.addEventListener('keydown',event=>{if(['Tab','Enter',' '].includes(event.key))keyboardInput=true;},true);
  const observed = new WeakSet();
  function place(link, animate = true) {
   const capsule = link?.closest('.primary-capsule,.local-capsule');
@@ -43,12 +45,23 @@
    // The live appearance sheet may have a cache-busting URL after changing mode.
    if (new URL(current.href).pathname !== '/theme.css' && !wanted.has(current.href)) current.remove();
   }
-  for (const link of next) {
+  // Preserve the server's cascade, including page sheets inserted before shared
+  // controls. Appending a new builder sheet last changed its responsive layout.
+  let anchor = null;
+  for (const link of next.reverse()) {
    const href = new URL(link.getAttribute('href'), location.origin);
    if (href.origin !== location.origin) continue;
-   if ([...document.querySelectorAll('head link[rel=stylesheet]')].some(current =>
-    current.href === href.href || (href.pathname === '/theme.css' && new URL(current.href).pathname === '/theme.css'))) continue;
-   document.head.append(document.importNode(link, true));
+   let current = [...document.querySelectorAll('head link[rel=stylesheet]')].find(current =>
+    current.href === href.href || (href.pathname === '/theme.css' && new URL(current.href).pathname === '/theme.css'));
+   if (!current) {
+    current = document.importNode(link, true);
+    document.head.insertBefore(current, anchor);
+   } else {
+    let following = current.nextElementSibling;
+    while (following && !following.matches('link[rel=stylesheet]')) following = following.nextElementSibling;
+    if (following !== anchor) document.head.insertBefore(current, anchor);
+   }
+   anchor = current;
   }
  }
  async function navigate(url, fromHistory = false) {
@@ -64,6 +77,7 @@
   main.querySelector('.capsule-load-error')?.remove();
   main.setAttribute('aria-busy', 'true');
   select(url.pathname);
+  window.GatearrSidebar?.select(url);
   try {
    const response = await fetch(url.href, {credentials:'same-origin', cache:'no-store', signal:request.signal, headers:{Accept:'text/html'}});
    if (id !== sequence) return;
@@ -71,8 +85,10 @@
    if (!eligible(destination)) { location.assign(destination.href); return; }
    if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) throw Error();
    const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+   // A published theme must finish loading before a page drops draft overrides.
+   if(window.GatearrTheme?.pending)await window.GatearrTheme.pending;
    if (id !== sequence) return;
-   const nextMain = doc.querySelector('.shell > main');
+   let nextMain = doc.querySelector('.shell > main');
    const nextHeader = doc.querySelector('.topbar-modern');
    // A missing authenticated header means the session or installation state changed.
    if (!nextMain || doc.body.dataset.authenticated !== 'true') {
@@ -110,9 +126,14 @@
     const old=oldMenus.find(nav=>!nav.hasAttribute('data-group-tabs') && signature(nav)===signature(fresh));
     if(old){for(const link of old.querySelectorAll('a')){const next=[...fresh.querySelectorAll('a')].find(a=>a.href===link.href);if(next?.hasAttribute('aria-current'))link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}fresh.replaceWith(old);}
    }
+   const retainedSidebar=window.GatearrSidebar?.sync(nextMain.querySelector('.admin-sidebar'));
    committing=true;
    window.GatearrPage.reset();
-   main.replaceWith(nextMain);
+   if(retainedSidebar && main.contains(retainedSidebar)){
+    // Keep the sidebar connected so its slide never resets at a page commit.
+    main.querySelector(':scope>.admin-content').replaceWith(nextMain.querySelector(':scope>.admin-content'));
+    main.className=nextMain.className;nextMain=main;
+   }else main.replaceWith(nextMain);
    const scripts=document.querySelector('[data-page-scripts]');
    const freshScripts=doc.querySelector('[data-page-scripts]');
    if(scripts && freshScripts)scripts.replaceChildren(...freshScripts.childNodes);
@@ -125,7 +146,7 @@
    document.documentElement.lang = doc.documentElement.lang;
    if (doc.documentElement.dir) document.documentElement.dir = doc.documentElement.dir;
    else document.documentElement.removeAttribute('dir');
-   for (const key of ['accent','button_hover','bg','surface','text','muted','ink','logo-filter','default-brand-logo']) document.documentElement.style.removeProperty('--' + key);
+   for (const key of ['accent','button_hover','bg','surface','text','muted','ink','logo-filter','default-brand-logo','landscape-image']) document.documentElement.style.removeProperty('--' + key);
    document.documentElement.style.removeProperty('color-scheme');
    document.body.className = doc.body.className;
    if (doc.body.hasAttribute('style')) document.body.setAttribute('style', doc.body.getAttribute('style'));
@@ -142,12 +163,13 @@
    document.dispatchEvent(new CustomEvent('gatearr:headerupdated'));
    document.dispatchEvent(new CustomEvent('gatearr:navigated', {detail:{url:destination.href}}));
    const heading = nextMain.querySelector('h1');
-   if (heading) { heading.setAttribute('tabindex','-1'); heading.classList.add('capsule-page-heading'); heading.focus({preventScroll:true}); }
+   if (heading) { heading.setAttribute('tabindex','-1'); heading.classList.add('capsule-page-heading'); heading.classList.toggle('keyboard-page-focus',keyboardInput); heading.focus({preventScroll:true}); }
    const position = fromHistory ? history.state?.capsuleScroll || [0,0] : [0,0];
    window.scrollTo(...position);
   } catch (error) {
    if (error.name === 'AbortError' || id !== sequence) return;
    select(previous);
+   window.GatearrSidebar?.select(previousUrl);
    for(const nav of document.querySelectorAll(localMenus))for(const link of nav.querySelectorAll('a')){if(link.href===previousUrl.href)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
    if (fromHistory) { location.reload(); return; }
    const notice = document.createElement('p');
@@ -158,8 +180,16 @@
    if (id === sequence) { committing=false; request = null; document.querySelector('.shell > main')?.removeAttribute('aria-busy'); }
   }
  }
+ // Reuse page navigation for successful forms that do not have a local save
+ // region. Same-page preferences retain scroll without a document reload.
+ window.GatearrNavigation={afterSave(target=location.href){
+  const url=new URL(target,location.href);
+  if(!eligible(url)){location.assign(url.href);return Promise.resolve();}
+  if(url.pathname===location.pathname){history.replaceState({...history.state,capsuleScroll:[scrollX,scrollY]},'',url.href);return navigate(url,true);}
+  return navigate(url);
+ }};
  document.addEventListener('click', event => {
-  const link = event.target.closest('.primary-capsule:not(.guest-primary-capsule) a, .user-tabs a, .admin-tabs a, .studio-pages a, .admin-navigation a, .admin-mosaic-heading a[href="/home"]');
+  const link = event.target.closest('.primary-capsule:not(.guest-primary-capsule) a, .user-tabs a, .admin-tabs a, .studio-pages a, .admin-navigation a, .admin-mosaic-heading a[href="/home"], .admin-directory-heading a[href="/home"], .admin-directory-link, .admin-directory-utility-title, .admin-directory-shortcuts a, .admin-directory-text-link, .email-log-shortcut a, .mail-log-pagination');
   if (link?.hasAttribute('data-group-tab')) return;
   if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target || link.hasAttribute('download')) return;
   const url = new URL(link.href);

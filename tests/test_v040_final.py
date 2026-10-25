@@ -16,12 +16,12 @@ def test_fresh_portal_defaults_are_conditional_and_never_replace_custom_content(
     setup(client,fresh_layout=True)
     with SessionLocal() as db:
         value=portal.load(db);blocks=value['blocks']
-        assert [b['kind'] for b in blocks]==['welcome','applications','columns','widget_media','applications']
+        assert [b['kind'] for b in blocks]==['welcome','applications','applications']
         assert blocks[1]['applications']==['access:emby'] and blocks[-1]['applications']==['account'] and blocks[-1]['columns']==1
         for service in ('seerr','tracearr','radarr','sonarr','bazarr','tdarr'):
             for key,val in {'enabled':'true','url':'http://'+service,'api_key':encrypt('private'),'interface_enabled':'true'}.items():main.set_config(db,service+'_'+key,val)
-        full=portal.initial_layout(db);widgets=next(b for b in full['blocks'] if b['kind']=='columns')
-        assert widgets['columns']==2
+        full=portal.initial_layout(db)
+        assert next(b for b in full['blocks'] if b['id']=='main-applications')['information']=={'access:emby':{'enabled':True},'access:seerr':{'enabled':True}}
         assert next(b for b in full['blocks'] if b['id']=='main-applications')['applications']==['access:emby','access:seerr']
         tools=next(b for b in full['blocks'] if b['id']=='admin-applications')
         assert tools['visibility']=='admins' and tools['columns']==5
@@ -37,16 +37,15 @@ def test_fresh_widgets_stay_under_their_application_when_tracearr_is_enabled(cli
                     main.set_config(db,service+'_'+key,val)
         blocks=portal.initial_layout(db)['blocks']
         apps=next(b for b in blocks if b['id']=='main-applications')
-        row=next(b for b in blocks if b['id']=='service-widgets')
-        children=sorted((b for b in blocks if b.get('parent')==row['id']),key=lambda b:b['slot'])
-        assert row['columns']==apps['columns']==1+int(seerr_enabled)
-        assert [b['id'] for b in children]==['emby-statistics']+(['seerr-statistics'] if seerr_enabled else [])
-        assert [b['slot'] for b in children]==list(range(apps['columns']))
+        assert apps['columns']==1+int(seerr_enabled)
+        assert set(apps['information'])==set(apps['applications'])
+        assert all(info['enabled'] for info in apps['information'].values())
+        assert not any(b['kind'] in ('widget_media','widget_seerr') for b in blocks)
         activity=[b for b in blocks if b['kind']=='widget_tracearr']
         assert len(activity)==int(tracearr_enabled)
         if activity:
             assert not activity[0].get('parent') and activity[0]['span']==12
-            assert row['order']<activity[0]['order']<next(b for b in blocks if b['id']=='my-account')['order']
+            assert apps['order']<activity[0]['order']<next(b for b in blocks if b['id']=='my-account')['order']
 
 @pytest.mark.parametrize('kind,path',[('emby','/emby/Users/user-1/Images/Primary'),('jellyfin','/emby/UserImage')])
 def test_photo_native_upload_uses_correct_identity_body_and_private_credentials(client,monkeypatch,kind,path):

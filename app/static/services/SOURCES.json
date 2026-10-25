@@ -22,5 +22,9 @@
   "jellyfin": {
     "source": "https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/android/mobile/fastlane/icon.png",
     "sha256": "23a9d90597e72a55f4ae827b20c3d3c89b3fbe981939c53eb69d03a56bf823ec"
+  },
+  "seerr-background": {
+    "source": "https://raw.githubusercontent.com/seerr-team/seerr/develop/public/os_icon.svg",
+    "sha256": "b063bcbcb04f780466bbe8f01b0523e5fb3ff67dc32cb0347ad7612fbdfa09f4"
   }
 }

@@ -12,7 +12,7 @@ router=APIRouter()
 def notification(db,user,recipient,purpose):
     if not recipient:return
     if not config(db,'smtp_host'):raise ValueError('Configure SMTP before changing account credentials')
-    values={'app_name':config(db,'app_name','Gatearr'),'username':user.name,'link':config(db,'public_url'),'minutes':'30','_locale':user.locale}
+    values={'app_name':config(db,'app_name','Gatearr'),'username':user.name,'link':config(db,'public_url'),'minutes':'30','_locale':__import__('app.i18n',fromlist=['user_language']).user_language(db,user)}
     db.add(MailJob(payload=encrypt(json.dumps({'notification':True,'purpose':purpose,'recipient':recipient,'values':values})),attempts=0,next_attempt=int(time.time()),expires=int(time.time())+86400))
 
 @router.post('/admin/users/{uid}/account')

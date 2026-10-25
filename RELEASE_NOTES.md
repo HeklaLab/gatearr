@@ -1,37 +1,35 @@
-# Gatearr 0.4.1 — public beta
+# Gatearr 0.4.2 — public beta
 
-Gatearr 0.4.1 focuses on clearer administration, more consistent controls and fixes to builders, themes, translations and application connections.
+Gatearr 0.4.2 brings a more consistent glass interface, clearer application cards, personal subtitle-language preferences through Bazarr, and SMTP history for administrators.
 
-## Administration and everyday use
+## Interface and portal
 
-- Fixed sidebar and shared sliding capsule tabs, with dynamic page loading and a stable header between Home and Administration.
-- Structured user profiles and full-width permission sections for users and groups.
-- User search as you type, with pagination of 10, 20, 50, 100 or all users.
-- Guided dropdowns, consistent uploads and a logo preparation tool with automatic resizing, crop, fit and zoom.
-- Compact language choices with flags and a visible active language; switching applies immediately.
-- Better readability across Blue Boréal, Electric Lime and Neon Rose in light and dark appearances. Custom uploaded logos retain priority.
+- Shared diffuse landscapes and rounded glass surfaces across all six theme variants, with explicit animated ON/OFF switches and improved mobile layouts.
+- Compact administration directory, smoother sidebar/submenu navigation, a cleaner account menu, clearer active-language selection and muted red Sign out.
+- Emby/Jellyfin counts and Seerr quotas now live inside their application cards. Show or hide them in Portal builder; starter presets enable them. Existing widget settings and audiences are carried forward.
+- Access media and Request new movies & series sit directly below application names. Optional promotional counts round down truthfully; Seerr quotas explain their actual periods, limits and remaining availability.
+- Responsive Portal builder tools, consistent application settings and preserved stylesheet order after navigation. Access guides offer Choose another device buttons at both ends.
+- Dynamic saves with feedback and preserved scroll for supported preferences.
 
-## Builders and personalization
+## Personal subtitle languages through Bazarr
 
-- Complete device breadcrumbs through Windows, Mac, Linux, iPhone and Android, with clickable parent menus and a clear device-picker return.
-- Compact guide rows with grouped up/down arrows and aligned editing actions.
-- Portal and access-guide previews fit their content and responsive width; page scrolling replaces nested preview/panel scrollbars.
-- Public-facing interface labels remain editable; administration uses bundled translations. The translation editor identifies its target language and groups repeated application subtitles.
-- Email editors offer enabled languages only. Default invitations introduce one access portal, shared media credentials, self-service password recovery and device guides. Existing custom templates are preserved.
+Administrators choose one shared Bazarr language profile, grant subtitle-selection permission to users or groups, and set their language capacity. This does not grant access to the Bazarr interface. Users manage their own choices with a counter and add/remove controls; languages already present remain selectable without warnings or duplicate native updates.
 
-## Connections and fixes
+Choose free replacement, a lock for a configured number of days, or an indefinite lock until an administrator intervenes. Locks are enforced server-side. Personal removal does not delete languages from the shared profile or remove downloaded subtitles. Requested subtitles depend on availability for each title.
 
-- Test entered service URLs and API keys before saving, with separate reachability and authentication results.
-- Clearer native URL Base, allowed-host and network diagnostics, plus Tracearr API token and media-server ID guidance.
-- Protected Tdarr WebUI proxy with isolated native cookies, assets and WebSocket routing. Native authentication remains active; this provides interface access, not a Tdarr task-management API.
-- Disable new tool grants for unconfigured services while preserving stored grants and enforcing access checks.
-- Keep default media/request widgets below their matching applications, with Tracearr on a separate row. Existing customized portals are retained.
-- Center both CAPTCHAs, correct quota and appearance-control spacing, remove the Member caption and keep assistance-language changes session-local.
+## Administration and integrations
 
-## Upgrade and validation
+- SMTP history under Activity log records new send attempts and SMTP acceptance/failure without message bodies, private links or SMTP credentials. Shortcuts are available at the bottom of Emails and the mail editor. SMTP acceptance is not proof of inbox delivery.
+- User-managed or group-managed language, with Gatearr-default fallback and consistent interface/email/Seerr behavior.
+- Theme colors and backgrounds refresh together; connection selection avoids fragment jumps; mouse navigation no longer leaves title outlines while keyboard focus stays visible.
+- Tdarr resource/API/WebSocket routing and retry feedback are improved. Validation included an isolated native Tdarr 3.01.00 server; the actual deployment still needs its own compatibility check.
 
-Back up `/data`, including its encryption key, before updating. There are no additional database migrations from 0.4.0. Existing accounts, integration settings, uploaded logos, custom layouts and email templates remain in place. See [UPGRADING.md](https://github.com/HeklaLab/gatearr/blob/main/UPGRADING.md).
+## Upgrade
 
-Automated tests use simulated native services. Browser checks cover the functional demo, desktop/mobile builders, device navigation, language switching and theme readability. The release workflow additionally gates publication on the complete test suite, Docker startup and the HTTP/SMTP smoke, then publishes AMD64 and ARM64 images. Compatibility with the user's actual Tdarr instance still needs deployment-specific verification.
+Back up the complete `/data` volume, including its encryption key, before updating. Automatic migrations add SMTP history and subtitle preference/lock fields. Existing accounts, integration settings, uploaded logos and customized email templates remain in place. Legacy media/request widget settings are migrated into application-card information while retaining their audiences. New Bazarr subtitle permissions are opt-in.
 
-The refreshed [README gallery](https://github.com/HeklaLab/gatearr#interface-preview--v041) shows the functional 0.4.1 demo in Blue Boréal, with the original Gatearr logo and fictional sample accounts.
+See [upgrade instructions](https://github.com/HeklaLab/gatearr/blob/main/UPGRADING.md), the [full changelog](https://github.com/HeklaLab/gatearr/blob/main/CHANGELOG.md) and [validation details](https://github.com/HeklaLab/gatearr/blob/main/VALIDATION.md).
+
+## What's next
+
+The new [roadmap](https://github.com/HeklaLab/gatearr/blob/main/ROADMAP.md) covers memberships and paid plans, Aurora for the final release, guided media-server/reverse-proxy setup, and member invitations. It is non-exhaustive: [request a feature](https://github.com/HeklaLab/gatearr/issues/new?template=feature_request.yml) to help shape future releases.

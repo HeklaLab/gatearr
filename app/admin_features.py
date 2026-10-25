@@ -303,7 +303,7 @@ def user_role(request:Request,local_id:int,data=Depends(form)):
     from .group_access import unlocked
     unlocked(db,target)
     request.state.audit_subject=local_id
-    request.state.audit_detail='Gatearr administrator: '+str(target.admin)+' → '+str(data.get('admin')=='on')+'\nTools: '+target.tool_access+' → '+str(data.getlist('tools'))
+    request.state.audit_detail='Gatearr administrator: '+str(target.admin)+' → '+str(data.get('admin')=='on')+'\nBazarr subtitle permission: '+str(target.bazarr_subtitles)+' → '+str(data.get('bazarr_subtitles')=='on')+'\nTools: '+target.tool_access+' → '+str(data.getlist('tools'))
     grant=data.get('admin')=='on'
     if grant and (not target.active or target.emby_missing):raise HTTPException(400,'An active media account is required')
     import json
@@ -312,8 +312,14 @@ def user_role(request:Request,local_id:int,data=Depends(form)):
     from .tools_proxy import retained_tools
     tools=retained_tools(db,json.loads(target.tool_access),tools)
     changed_tools=json.loads(target.tool_access)!=tools
-    if target.admin==grant and not changed_tools:return redirect('/admin/users/'+str(local_id))
+    from .bazarr_subtitles import parse_capacity
+    subtitle_limit=parse_capacity(data.get('bazarr_subtitle_limit',target.bazarr_subtitle_limit))
+    request.state.audit_detail+='\nSubtitle language limit: '+str(target.bazarr_subtitle_limit)+' → '+str(subtitle_limit)
+    subtitles=data.get('bazarr_subtitles')=='on'
+    if target.admin==grant and not changed_tools and target.bazarr_subtitles==subtitles and target.bazarr_subtitle_limit==subtitle_limit:return redirect('/admin/users/'+str(local_id))
     target.tool_access=json.dumps(tools)
+    target.bazarr_subtitles=subtitles
+    target.bazarr_subtitle_limit=subtitle_limit
     if not grant and target.admin:
         count=db.scalar(select(func.count(User.id)).where(User.admin.is_(True),User.active.is_(True),User.emby_missing.is_(False),User.emby_id.is_not(None)))
         if target.active and not target.emby_missing and count<=1:

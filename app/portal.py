@@ -32,6 +32,8 @@ def validate(layout):
             raise ValueError('Invalid color: use #RRGGBB')
     if not isinstance(layout.get('blocks'), list) or len(layout['blocks']) > 50:
         raise ValueError('The portal supports up to 50 blocks')
+    from .application_information import validate as validate_information
+    validate_information(layout.get('application_information_defaults',{}))
     ids = set()
     for block in layout['blocks']:
         if not isinstance(block,dict) or not re.fullmatch(r'[a-zA-Z0-9_-]{1,40}',str(block.get('id',''))) or block.get('id') in ids:
@@ -49,6 +51,8 @@ def validate(layout):
             from .widgets import validate as validate_widget
             validate_widget(block)
         if block['kind']=='applications':
+            from .application_information import validate as validate_information
+            validate_information(block.get('information',{}))
             subtitles=block.get('subtitles',{})
             if not isinstance(subtitles,dict) or len(subtitles)>100 or any(not isinstance(k,str) or not isinstance(v,str) or len(v)>300 for k,v in subtitles.items()):raise ValueError('Invalid application subtitles')
             selected=block.get('applications',[])
@@ -121,6 +125,9 @@ def for_display(layout,locale,user=None,db=None,editor=False):
     for b in indexed.values():
         if b['kind']=='applications':
             b['cards']=[dict(available[key],subtitle=i18n.content(db,'block:'+b['id']+':application-subtitle:'+key,b.get('subtitles',{}).get(key,{'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}.get(key,'Open application')),locale)) for key in b.get('applications',[]) if key in available]
+            from .application_information import display as application_information
+            for card in b['cards']:
+                card['information']=application_information(db,user,card['key'],b.get('information',{}).get(card['key'],{}),editor)
             b['visible_columns']=min(b.get('columns',3),max(1,len(b['cards'])))
     for block in indexed.values():
         if block.get('parent'):
@@ -166,12 +173,7 @@ def initial_layout(db):
     blocks[0]['body']='Your services, one place.'
     applications=['access:emby']+(['access:seerr'] if configured(db,'seerr') else [])
     blocks.append(dict(id='main-applications',kind='applications',region='main',order=20,span=12,columns=len(applications),applications=applications,title='',body=''))
-    services=[('emby','widget_media',['movies','series'])]
-    if configured(db,'seerr'):services.append(('seerr','widget_seerr',['movies_left','series_left']))
-    # Match the media/request application columns; activity has its own row.
-    blocks.append(dict(id='service-widgets',kind='columns',region='main',order=30,span=12,columns=len(services),title='',body=''))
-    for index,(service,kind,metrics) in enumerate(services):
-        blocks.append(dict(id=service+'-statistics',kind=kind,region='main',order=31+index,span=12,parent='service-widgets',slot=index,metrics=metrics,show_logo=False,title='',body=''))
+    blocks[-1]['information']={key:{'enabled':True} for key in applications}
     if configured(db,'tracearr'):
         blocks.append(dict(id='tracearr-statistics',kind='widget_tracearr',region='main',order=40,span=12,metrics=['watch_time','favorite'],show_logo=False,title='',body=''))
     tools=[tool for tool in ('radarr','sonarr','bazarr','tracearr','tdarr') if configured(db,tool) and (tool not in ('tracearr','tdarr') or config(db,tool+'_interface_enabled')=='true')]

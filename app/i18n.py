@@ -31,7 +31,7 @@ def translate(message,locale=BASE_LANGUAGE,*,overrides=None,base_overrides=None,
 
 def resolve(request,user=None):
     available=languages(request.state.db)
-    if user:return user.locale if user.locale in available else default_language(request.state.db)
+    if user:return user_language(request.state.db,user)
     selected=request.cookies.get('gatearr_language')
     if selected in available:return selected
     candidates=[]
@@ -43,6 +43,29 @@ def resolve(request,user=None):
         if code in available and 0<quality<=1:candidates.append((quality,code))
     if candidates:return sorted(candidates,key=lambda item:item[0],reverse=True)[0][1]
     return default_language(request.state.db)
+
+def language_policy(db):
+    from .mailer import config
+    return 'group' if config(db,'language_policy','user')=='group' else 'user'
+
+def user_language(db,user):
+    """Effective language without overwriting the saved personal preference."""
+    if language_policy(db)=='group':
+        from .group_access import group_for
+        group=group_for(db,user)
+        selected=group.locale if group else None
+    else:selected=user.locale if user else None
+    return selected if selected in languages(db) else default_language(db)
+
+def require_personal_language(db):
+    from fastapi import HTTPException
+    if language_policy(db)=='group':raise HTTPException(409,'Language is managed by your group.')
+
+def queue_language_sync(db,users=None):
+    from .models import User
+    from .integrations import queue_user
+    for user in users if users is not None else db.scalars(select(User).where(User.active.is_(True))):
+        queue_user(db,user,force=True)
 
 ACCOUNT_LABEL_KEYS={'requests':'Receive notifications about my requests'}
 ACCOUNT_LABEL_DEFAULTS={'en':ACCOUNT_LABEL_KEYS}

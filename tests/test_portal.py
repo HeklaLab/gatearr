@@ -74,7 +74,7 @@ def prepare_user(client):
 def test_setup_once_and_admin_login(client):
     assert client.get('/login', follow_redirects=False).headers['location'] == '/setup'
     assert setup(client).status_code == 303
-    assert 'Your portal' in client.get('/admin').text
+    assert 'Personalize your portal' in client.get('/admin').text
     assert post(client, '/setup', {'name': 'Other', 'email': 'other@example.com', 'password': PASSWORD}, '/admin').status_code == 403
     with SessionLocal() as db:
         admin = db.scalar(select(User).where(User.admin.is_(True)))
@@ -254,7 +254,7 @@ def test_linked_admin_uses_normal_email_recovery(client):
 def test_health_and_migration_schema(client):
     assert client.get('/healthz').json() == {'status': 'ok'}
     with SessionLocal() as db:
-        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0021'
+        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0026'
 
 
 def test_form_limits_and_null_origin(client):
