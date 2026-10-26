@@ -1,2 +1,54 @@
-{% from 'icon_picker.html' import picker with context %}{% if custom_items %}<section class="card"><h2>{{ _('Custom application links') }}</h2><p>{{ _('Manage application links here. Choose their placement and order in Portal builder.') }}</p><p id="applications-status" role="status"></p><div id="application-list" data-version="{{ cfg.get('menu_version','0') }}">{% for item in custom_items %}<section class="application-editor" data-id="{{ item.id }}"><div class="section-heading"><h3> {% if item.icon_url or default_service_icon(item.label) %}<img class="app-icon" src="{{ item.icon_url or default_service_icon(item.label) }}" alt="">{% endif %} {{ item.label }}</h3></div><details><summary>{{ _('Edit application') }}</summary><form method="post" action="/admin/menu" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ item.id }}"><input type="hidden" name="position" value="{{ item.position }}"><input type="hidden" name="access_service" value="{{ item.access_service or '' }}"><div class="menu-fields"><label>{{ _('Name') }}<input name="label" value="{{ item.label }}" required></label><label>{{ _('URL') }}<input type="url" name="url" value="{{ item.url }}"></label><label>{{ _('Menu') }}<input name="menu_key" value="{{ item.menu_key }}" pattern="[a-z0-9_-]{1,40}"></label>{{ picker(item.icon,item.icon_url) }}</div><label class="check"><input type="checkbox" name="new_tab" {% if item.new_tab %}checked{% endif %}>{{ _('New tab') }}</label><button>{{ _('Save application') }}</button></form><form method="post" action="/admin/menu/delete"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ item.id }}"><button class="danger">{{ _('Delete') }}</button></form></details></section>{% endfor %}</div></section>{% endif %}
-<section class="card"><h2>{{ _('Add an application') }}</h2><form method="post" action="/admin/menu" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="position" value="{{ (items|length+1)*10 }}"><input type="hidden" name="menu_key" value="main"><div class="menu-fields"><label>{{ _('Name') }}<input name="label" required placeholder="My application"></label><label>{{ _('URL') }}<input type="url" name="url" placeholder="https://requests.example.com"></label>{{ picker('link','') }}</div><label class="check"><input type="checkbox" name="new_tab" checked>{{ _('New tab') }}</label><button>{{ _('Add application') }}</button></form></section><script id="applications-copy" type="application/json">{{ ui_catalog|tojson }}</script>
+{% from 'icon_picker.html' import picker with context %}
+<div id="custom-link-settings">
+{% if custom_items %}
+<section class="card custom-applications">
+  <h2>{{ _('Custom application links') }}</h2>
+  <p>{{ _('Manage application links here. Choose their placement and order in Portal builder.') }}</p>
+  <p id="applications-status" role="status"></p>
+  <div id="application-list" data-version="{{ cfg.get('menu_version','0') }}">
+  {% for item in custom_items %}
+    <section class="application-editor" data-id="{{ item.id }}">
+      <details class="custom-link-details">
+        <summary class="custom-link-summary">
+          <span class="custom-link-symbol" aria-hidden="true">{% if item.icon_url or default_service_icon(item.label) %}<img src="{{ item.icon_url or default_service_icon(item.label) }}" alt="">{% else %}<i class="{{ font_icon_class(item.icon) }}"></i>{% endif %}</span>
+          <span class="custom-link-heading"><strong>{{ item.label }}</strong><small class="hint custom-link-url">{{ item.url }}</small></span>
+          <span class="custom-link-edit">{{ _('Edit application') }} <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></span>
+        </summary>
+        <div class="custom-link-body">
+          <form id="custom-link-form-{{ item.id }}" class="custom-link-form" method="post" action="/admin/menu" enctype="multipart/form-data">
+            <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ item.id }}"><input type="hidden" name="position" value="{{ item.position }}"><input type="hidden" name="access_service" value="{{ item.access_service or '' }}">
+            <div class="custom-link-fields">
+              <label>{{ _('Name') }}<input name="label" value="{{ item.label }}" required></label>
+              <label>{{ _('URL') }}<input type="url" name="url" value="{{ item.url }}"></label>
+            </div>
+            <div class="custom-link-assets">{{ picker(item.icon,item.icon_url) }}</div>
+            <div class="custom-link-options">
+              <label class="check"><input type="checkbox" name="new_tab" {% if item.new_tab %}checked{% endif %}>{{ _('New tab') }}</label>
+              <input type="hidden" name="menu_key" value="{{ item.menu_key }}">
+            </div>
+          </form>
+          <div class="custom-link-actions">
+            <form method="post" action="/admin/menu/delete"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ item.id }}"><button class="danger">{{ _('Delete') }}</button></form>
+            <button form="custom-link-form-{{ item.id }}">{{ _('Save application') }}</button>
+          </div>
+        </div>
+      </details>
+    </section>
+  {% endfor %}
+  </div>
+</section>
+{% endif %}
+<section class="card custom-link-create">
+  <h2>{{ _('Add an application') }}</h2>
+  <form class="custom-link-form" method="post" action="/admin/menu" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="position" value="{{ (items|length+1)*10 }}"><input type="hidden" name="menu_key" value="main">
+    <div class="custom-link-fields">
+      <label>{{ _('Name') }}<input name="label" required placeholder="My application"></label>
+      <label>{{ _('URL') }}<input type="url" name="url" placeholder="https://requests.example.com"></label>
+    </div>
+    <div class="custom-link-assets">{{ picker('link','') }}</div>
+    <div class="custom-link-create-actions"><label class="check"><input type="checkbox" name="new_tab" checked>{{ _('New tab') }}</label><button>{{ _('Add application') }}</button></div>
+  </form>
+</section>
+</div>
+<script id="applications-copy" type="application/json">{{ ui_catalog|tojson }}</script>

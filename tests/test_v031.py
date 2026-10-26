@@ -14,6 +14,9 @@ def test_two_application_rows_have_exact_order_without_implicit_account(client):
     setup(client)
     with SessionLocal() as db:
         main.set_config(db,'radarr_enabled','true');main.set_config(db,'sonarr_enabled','true');main.set_config(db,'bazarr_enabled','true')
+        for tool in ('radarr','sonarr','bazarr'):
+            main.set_config(db,tool+'_url','http://'+tool+':1234')
+            main.set_config(db,tool+'_api_key','test-key')
         owner=db.scalar(select(User).where(User.admin.is_(True)));owner.tool_access='["radarr","sonarr","bazarr"]';db.commit()
         value=portal.load(db)
     value['blocks']=[{'id':'first','kind':'applications','region':'main','span':12,'order':10,'columns':2,'applications':['access:emby','radarr']},{'id':'second','kind':'applications','region':'main','span':12,'order':20,'columns':3,'applications':['sonarr','account','bazarr']}]
@@ -36,7 +39,10 @@ def test_two_application_rows_have_exact_order_without_implicit_account(client):
 def test_admin_needs_explicit_tool_permission_and_app_selection(client):
     setup(client)
     with SessionLocal() as db:
-        main.set_config(db,'radarr_enabled','true');db.commit();value=portal.load(db)
+        main.set_config(db,'radarr_enabled','true')
+        main.set_config(db,'radarr_url','http://radarr:7878')
+        main.set_config(db,'radarr_api_key','test-key')
+        db.commit();value=portal.load(db)
     value['blocks']=[{'id':'apps','kind':'applications','region':'main','span':12,'order':10,'columns':1,'applications':['radarr']}]
     assert design(client,'home','publish',value).status_code==200
     assert 'href="/tools/radarr"' not in client.get('/home').text

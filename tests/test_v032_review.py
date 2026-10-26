@@ -25,9 +25,9 @@ def test_factory_guides_icons_and_idempotent_seed(client):
         assert 'emby-theater-linux' in next(json.loads(g.draft) for g in db.scalars(select(Guide)) if 'Linux' in json.loads(g.draft)['title'])['steps'][0]['link_url']
 
 
-def test_native_application_is_not_repeated_in_custom_links(client):
+def test_explicit_native_application_is_not_repeated_in_custom_links(client):
     setup(client)
-    assert post(client,'/admin/menu',{'label':'Seerr','url':'https://requests.example.com','icon':'link','position':10},'/admin').status_code==303
+    assert post(client,'/admin/menu',{'label':'Seerr','access_service':'seerr','url':'https://requests.example.com','icon':'link','position':10},'/admin').status_code==303
     page=client.get('/admin/integrations').text
     assert page.count('action="/admin/connections/emby"')==1
     assert '<h3><i class="fa-solid fa-grip-vertical"' not in page

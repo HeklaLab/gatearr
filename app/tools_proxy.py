@@ -4,6 +4,7 @@ Only configured upstreams are reachable; no request supplies a target URL or API
 import json,time
 from urllib.parse import urlsplit,urljoin,unquote
 import httpx
+from .connections import tdarr_upstream_url
 from fastapi import APIRouter,Request,Depends,HTTPException
 from fastapi.responses import Response,RedirectResponse,StreamingResponse
 from sqlalchemy import delete
@@ -149,6 +150,7 @@ async def handle(request,tool):
         if not grant:return Response('Open this tool from Gatearr to sign in.',status_code=401,headers={'Cache-Control':'no-store'})
         if request.method not in ('GET','HEAD','OPTIONS') and origin(request.headers.get('origin',''))!=origin(portal):return Response('Origin rejected',status_code=403)
         base=config(db,tool+'_url');key=decrypt(config(db,tool+'_api_key'));actor=db.get(Session,grant.session_digest).user_id;subject=grant.user_id
+        if tool=='tdarr':base=tdarr_upstream_url(base)
     body=await bounded_body(request,32*1024*1024)
     # Preserve the raw escaped path/query. The fixed upstream cannot be replaced by //host or redirects.
     if not safe_path(request,tool):return Response('Invalid path',400)
@@ -235,6 +237,7 @@ async def websocket_proxy(socket):
         if not tool or origin(socket.headers.get('origin',''))!=origin(config(db,'public_url')) or not authorize(db,socket,tool):
             await socket.close(code=1008);return
         base=config(db,tool+'_url');key=decrypt(config(db,tool+'_api_key'));public=config(db,'public_url')
+        if tool=='tdarr':base=tdarr_upstream_url(base)
     parsed=urlsplit(base);path=socket.scope['raw_path'].decode('ascii')
     if tool=='tdarr':path=path[len(prefix(tool)):] or '/'
     url=('wss' if parsed.scheme=='https' else 'ws')+'://'+parsed.netloc+parsed.path.rstrip('/')+path

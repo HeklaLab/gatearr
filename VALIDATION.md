@@ -1,3 +1,12 @@
+# Gatearr 0.4.3 validation — 2026-10-26
+
+- **544 automated tests passed**, one optional rendered-theme export skipped and one existing dependency deprecation warning. All 32 top-level JavaScript files passed syntax checks.
+- Regression coverage includes independent application-card destinations, draft/publication isolation, same-named custom links, permission boundaries, URL ports/paths, Tdarr hash URLs, image resizing/alignment, appearance persistence and migration 0027 idempotence.
+- Final browser checks verified image alignment and proportions in previews and published login/portal/footer pages; color alignment and gradient spacing at five widths; guide tile clicks, keyboard focus and submenus; consistent builder headings/navigation; widget order and unique title fields with persisted edits. Earlier focused reviews covered all six bundled themes and responsive image/account-card controls.
+- The isolated HTTP/SMTP smoke passed setup, native photo round trips, account cloning, library permissions, settings copy, visual publication, nested guides, verified email, password change/reset and Seerr preference propagation. Its Seerr fixture now configures a public URL explicitly, without relying on same-name custom-link matching. Native services were simulators; the main demo was preserved.
+- The deployment-specific Emby port report (#5) remains unconfirmed on the reporter’s server. Music is deferred to the roadmap. No production media server or local Docker engine was used for this final review.
+- GitHub Actions gates publication on the full suite and Docker Compose/SMTP smoke before building AMD64/ARM64 images and releasing their verified digest.
+
 # Gatearr 0.4.2 validation — 2026-10-25
 
 - **477 automated tests passed**, one optional rendered-theme export test skipped, and one existing dependency deprecation warning. All shipped top-level JavaScript files passed syntax checks.

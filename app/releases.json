@@ -1,5 +1,44 @@
 [
   {
+    "version": "0.4.3",
+    "date": "2026-10-26",
+    "changes": [
+      "Choose direct links, embedded tools or media guides independently for each portal card. Unconfigured tools support direct links with a custom URL.",
+      "Resize images in pixels or percent, crop large uploads with the shared image editor, and preview saved images in their upload controls.",
+      "Browse release history grouped by series, with shared highlights, patch-specific fixes and a GitHub roadmap shortcut.",
+      "Fix custom links disappearing when named after native applications; retain independent editing, deletion and card destinations (#4, #6).",
+      "Correct image alignment and responsive sizing; replace the default Emby image with a neutral placeholder.",
+      "Unify builder headings and navigation, simplify guide editing, retain templates only for Portal, and remove duplicate widget title fields.",
+      "Improve guide cards with diffuse device artwork and return buttons at intermediate steps; add a matching My account watermark.",
+      "Remember signed-out appearance and restore spacing, color-control alignment and compact application settings. Move Library updates and Statistics to the end of the palette, retaining the Tracearr logo.",
+      "Fix Tdarr assets when its configured URL ends in a hash route; improve URL guidance and frame spacing.",
+      "Preserve media URL ports and paths; open the public Emby interface when automatic sign-in is unavailable, without passing stale credentials."
+    ],
+    "features": [
+      {
+        "title": "Application cards",
+        "text": "Choose direct links, embedded tools or media guides independently for each portal card. Unconfigured tools support direct links with a custom URL."
+      },
+      {
+        "title": "Portal builder",
+        "text": "Resize images in pixels or percent, crop large uploads with the shared image editor, and preview saved images in their upload controls."
+      },
+      {
+        "title": "Release history",
+        "text": "Browse release history grouped by series, with shared highlights, patch-specific fixes and a GitHub roadmap shortcut."
+      }
+    ],
+    "fixes": [
+      "Fix custom links disappearing when named after native applications; retain independent editing, deletion and card destinations (#4, #6).",
+      "Correct image alignment and responsive sizing; replace the default Emby image with a neutral placeholder.",
+      "Unify builder headings and navigation, simplify guide editing, retain templates only for Portal, and remove duplicate widget title fields.",
+      "Improve guide cards with diffuse device artwork and return buttons at intermediate steps; add a matching My account watermark.",
+      "Remember signed-out appearance and restore spacing, color-control alignment and compact application settings. Move Library updates and Statistics to the end of the palette, retaining the Tracearr logo.",
+      "Fix Tdarr assets when its configured URL ends in a hash route; improve URL guidance and frame spacing.",
+      "Preserve media URL ports and paths; open the public Emby interface when automatic sign-in is unavailable, without passing stale credentials."
+    ]
+  },
+  {
     "version": "0.4.2",
     "date": "2026-10-25",
     "changes": [
@@ -13,6 +52,38 @@
       "User- or group-managed language with Gatearr-default fallback; atomic theme/background updates, readable mobile rows and keyboard-aware heading focus.",
       "Tdarr runtime resource/API/socket routing, CSS path handling and retry feedback, exercised with an isolated native Tdarr 3.01.00 server.",
       "Public roadmap and GitHub feature requests for future memberships, Aurora, guided media-server setup and member invitations."
+    ],
+    "features": [
+      {
+        "title": "Interface and navigation",
+        "text": "Shared diffuse landscapes and glass surfaces across all six themes, rounded ON/OFF controls, a compact administration directory and smoother responsive navigation."
+      },
+      {
+        "title": "Application cards",
+        "text": "Emby/Jellyfin counts and Seerr quotas inside optional application-card information, with migrated widget settings/audiences, clearer subtitles and large cropped service artwork."
+      },
+      {
+        "title": "Application cards",
+        "text": "Truthful promotional media counts and explicit Seerr periods, limits and remaining-quota progress bars."
+      },
+      {
+        "title": "Bazarr subtitle preferences",
+        "text": "Bazarr personal subtitle choices for authorized users/groups, separate from tool access, with capacity controls, a shared profile, free/day-based/indefinite locks and administrative unlocking."
+      },
+      {
+        "title": "Email history",
+        "text": "Administrator SMTP history under Activity log with safe send-attempt metadata and shortcuts from Emails; SMTP acceptance does not guarantee inbox delivery."
+      },
+      {
+        "title": "Roadmap",
+        "text": "Public roadmap and GitHub feature requests for future memberships, Aurora, guided media-server setup and member invitations."
+      }
+    ],
+    "fixes": [
+      "Cleaner account menu with a distinct active language, subtle hover and muted red Sign out; dynamic preference saves retain scroll and show feedback.",
+      "Responsive Portal builder tools and consistent editing controls; preserve stylesheet order after navigation. Device-choice buttons bracket every access guide.",
+      "User- or group-managed language with Gatearr-default fallback; atomic theme/background updates, readable mobile rows and keyboard-aware heading focus.",
+      "Tdarr runtime resource/API/socket routing, CSS path handling and retry feedback, exercised with an isolated native Tdarr 3.01.00 server."
     ]
   },
   {
@@ -27,6 +98,41 @@
       "Complete device breadcrumbs and compact guide steps; portal and access-guide previews grow to their content without nested scrolling.",
       "Test entered connection settings before saving, with separate HTTP/API diagnostics, URL Base and Tracearr token/server-ID guidance.",
       "Protected Tdarr WebUI proxy with scoped native cookies, asset paths and WebSocket routing; actual compatibility still depends on the installed Tdarr version.",
+      "Customizable labels limited to public user journeys; native admin translations remain fixed, the edit language is visible and repeated subtitles are grouped.",
+      "Email editing limited to enabled languages; improved default invitations describe shared access, password recovery and device guides while preserving custom templates.",
+      "Existing tool grants retained while new grants are disabled for unconfigured services; assistance language changes remain session-local.",
+      "Centered CAPTCHA forms, corrected quota/control alignment and accessible page-heading focus.",
+      "Default Emby/Jellyfin and Seerr widgets stay under their matching applications, with Tracearr on a separate row; existing customized portals are preserved."
+    ],
+    "features": [
+      {
+        "title": "Interface and navigation",
+        "text": "Fixed administration sidebar, shared sliding capsule tabs and dynamic page navigation with a stationary header."
+      },
+      {
+        "title": "User profiles",
+        "text": "Structured user profiles, full-width user/group permission sections and immediate language selection from a compact list with flags."
+      },
+      {
+        "title": "User profiles",
+        "text": "Dynamic user search and pagination (10, 20, 50, 100 or all), reorganized group settings and full-width password policy."
+      },
+      {
+        "title": "Image uploads",
+        "text": "Guided dropdowns, consistent image upload controls and logo resizing/cropping with fit, zoom and original/3:1/square formats."
+      },
+      {
+        "title": "Connection diagnostics",
+        "text": "Test entered connection settings before saving, with separate HTTP/API diagnostics, URL Base and Tracearr token/server-ID guidance."
+      },
+      {
+        "title": "Connected applications",
+        "text": "Protected Tdarr WebUI proxy with scoped native cookies, asset paths and WebSocket routing; actual compatibility still depends on the installed Tdarr version."
+      }
+    ],
+    "fixes": [
+      "Improved text, links, status badges, capsules and bundled logos across all six theme variants, especially Electric Lime light.",
+      "Complete device breadcrumbs and compact guide steps; portal and access-guide previews grow to their content without nested scrolling.",
       "Customizable labels limited to public user journeys; native admin translations remain fixed, the edit language is visible and repeated subtitles are grouped.",
       "Email editing limited to enabled languages; improved default invitations describe shared access, password recovery and device guides while preserving custom templates.",
       "Existing tool grants retained while new grants are disabled for unconfigured services; assistance language changes remain session-local.",
@@ -86,7 +192,62 @@
         "Expose the new-season email template in the main email menu when Tracearr is enabled.",
         "Keep captcha-required alerts in place and display a visible local checkmark."
       ]
-    }
+    },
+    "features": [
+      {
+        "title": "Appearance",
+        "text": "Three editable theme presets: Blue Boréal, Electric Lime and Neon Rose, each with light/dark variants and an animated personal appearance capsule."
+      },
+      {
+        "title": "Connected applications",
+        "text": "Tracearr personal statistics, explicit server/account matching, native interface access, and admin-only Tdarr interface access."
+      },
+      {
+        "title": "Personal activity",
+        "text": "Personal request availability and new-season announcements, optional Tracearr-dependent season email template and notification preferences."
+      },
+      {
+        "title": "Security",
+        "text": "Locally bundled Cap protection for sign-in and password recovery, with per-form controls and aggregate statistics in Security → Captcha."
+      },
+      {
+        "title": "Dynamic saving",
+        "text": "Save supported settings, email templates and translations without reloading the page."
+      },
+      {
+        "title": "Installation",
+        "text": "Five-stage multilingual installation with logo upload, initial theme selection and separate server/API connection tests."
+      },
+      {
+        "title": "Interface and navigation",
+        "text": "Animated capsule navigation, native Emby/Jellyfin profile pictures and consolidated email-only account preferences."
+      },
+      {
+        "title": "User groups",
+        "text": "Conditional fresh-install portal defaults, guarded group rename/deletion and a per-user native permission comparison before joining groups."
+      },
+      {
+        "title": "Application cards",
+        "text": "Independent compact media, Seerr, Tracearr and Library updates blocks with optional app logos and audience priorities."
+      },
+      {
+        "title": "Application cards",
+        "text": "Unified Applications & API overview, expandable service settings and read-only diagnostics, separate from saving."
+      }
+    ],
+    "fixes": [
+      "Existing compact controls and red/green status indicators are retained across light and dark themes.",
+      "Preview color presets immediately with identical navigation geometry and improved theme/translation spacing.",
+      "Align email-template actions, compact appearance-policy controls, and use native widget logos with disabled dependency states.",
+      "User-scoped data, server-bound Tracearr identities, incremental library baselines and send-time notification authorization checks.",
+      "Cap Core and solver assets run locally inside the Gatearr container, without a dashboard, Redis or cloud CAPTCHA account.",
+      "Allow PNG/SVG uploads up to 5 MiB and restrict image sources to uploads and bundled assets across editors.",
+      "Enforce Tracearr mail dependencies through editing and translation routes.",
+      "Align widget columns with application cards on desktop and mobile.",
+      "Expose the new-season email template in the main email menu when Tracearr is enabled.",
+      "Keep captcha-required alerts in place and display a visible local checkmark.",
+      "Compact language management with flags and inline settings; refreshed administration mosaic, email tabs and theme-aware default logos."
+    ]
   },
   {
     "version": "0.3.4",
@@ -116,7 +277,18 @@
       "Improvements": [
         "Reviewed interface terminology across all 21 bundled languages, with natural app wording for navigation, accounts, permissions, guides, email editing and updates; administrator overrides are preserved."
       ]
-    }
+    },
+    "features": [],
+    "fixes": [
+      "Recompute update availability against the installed version, including cached results; identical versions no longer trigger an update badge.",
+      "Image widths set in the email builder are respected in editing, preview and saved messages.",
+      "Permission selections expand with the page, without nested scroll regions; library controls use the available width.",
+      "Email template and language selectors, subject, save status and editing actions use an aligned responsive header.",
+      "Email block deletion uses the same red danger button as the portal builder.",
+      "Updates and feedback share the left overview column; customization reset is on the right.",
+      "Release history shows each version once, expands only the installed version and marks it with a green current-version indicator.",
+      "Reviewed interface terminology across all 21 bundled languages, with natural app wording for navigation, accounts, permissions, guides, email editing and updates; administrator overrides are preserved."
+    ]
   },
   {
     "version": "0.3.3",
@@ -182,7 +354,58 @@
         "Emby and Jellyfin policy editors use native device, folder and rating metadata, preserve unrelated settings and verify writes by reading them back.",
         "Branding supports PNG/SVG logo uploads, logo/name display modes and a customizable browser-tab title."
       ]
-    }
+    },
+    "features": [
+      {
+        "title": "Email editor",
+        "text": "Block-based email editing with text, headings, images, dividers, buttons and live preview."
+      },
+      {
+        "title": "Application cards",
+        "text": "Editable and translatable application subtitles."
+      },
+      {
+        "title": "Connection diagnostics",
+        "text": "Connection tests show resolved IP, reachability, response time and API status; SMTP connection testing verifies saved settings without sending an email."
+      },
+      {
+        "title": "User profiles",
+        "text": "Compact user account cards, categorized native permission controls and named selections replace long permission tables and JSON fields."
+      },
+      {
+        "title": "Permissions",
+        "text": "Read-only media-server and Seerr permission snapshots refresh every five minutes; stale forms are rejected without overwriting newer remote changes."
+      },
+      {
+        "title": "Permissions",
+        "text": "Emby and Jellyfin policy editors use native device, folder and rating metadata, preserve unrelated settings and verify writes by reading them back."
+      },
+      {
+        "title": "Branding",
+        "text": "Branding supports PNG/SVG logo uploads, logo/name display modes and a customizable browser-tab title."
+      }
+    ],
+    "fixes": [
+      "Existing guide steps can be selected and edited, including older guides without step identifiers.",
+      "Email account forms submit to the correct endpoint; changing the administrator email returns to sign-in.",
+      "Unauthorized applications no longer reserve empty grid columns.",
+      "Device icons are consistent in the guide editor, live preview and published pages.",
+      "Responsive builder palettes, form controls and application selectors no longer overflow narrow screens.",
+      "Transparent footer, clearer titles and consistent red/green library-access indicators. Shared 40 px form controls, compact utilities and understated horizontal navigation tabs.",
+      "Invitation column shows confirmed emails and retains pending addresses for resending.",
+      "Security settings are grouped under Users.",
+      "Personalized portal-view action beside the user name and a full-width red Logged as banner.",
+      "More natural navigation labels across supported languages, including Appearance instead of a literal branding translation in French.",
+      "Collapsible application settings show one application at a time, with full-width fields, ordering controls and compact inactive entries.",
+      "Guide step editing separates optional buttons, image uploads and duplicate/delete actions, with clear destination guidance and responsive spacing.",
+      "Release notes organized by category.",
+      "Group editors now share typed media-server controls with user editors, including schedules, devices, ratings and folders; unavailable settings are preserved.",
+      "Uploaded identity logos are accepted and reused on the portal and sign-in page.",
+      "The full-width Logged as banner remains visible while scrolling. Account safety panels, clone forms and integration sections use consistent spacing.",
+      "Email editing uses the portal builder layout: draggable block palette, central message canvas and property inspector, with undo/redo and desktop/phone previews.",
+      "Public media URLs are centralized in Applications & API, including automatic Emby login; legacy branding addresses are migrated.",
+      "Group permissions use separate media-server, Seerr and admin-tools tabs, with consistent spacing and preserved edits between tabs."
+    ]
   },
   {
     "version": "0.3.2",
@@ -197,6 +420,34 @@
       "Simplified builder navigation, application-count limits, pixel spacing and contrasting save confirmations.",
       "Content reset preserves server connections and restores bundled logos and starter Emby access guides.",
       "Edit usernames across the media server and Seerr display settings; sign in with username or account email."
+    ],
+    "features": [
+      {
+        "title": "Account management",
+        "text": "Account deactivation rotates remote passwords, blocks Gatearr recovery and preserves the disabled state during imports. Reactivation allows password recovery."
+      },
+      {
+        "title": "Languages",
+        "text": "Choose the default language during setup. English can be disabled; at least one language must remain active."
+      },
+      {
+        "title": "Request quotas",
+        "text": "Request quotas per user or group, optional Seerr request counters and clear permission ownership."
+      },
+      {
+        "title": "Content reset",
+        "text": "Content reset preserves server connections and restores bundled logos and starter Emby access guides."
+      },
+      {
+        "title": "Account management",
+        "text": "Edit usernames across the media server and Seerr display settings; sign in with username or account email."
+      }
+    ],
+    "fixes": [
+      "Access guides and safe editing of saved portal blocks without opening application links.",
+      "One Applications & API card per application, refreshed administration navigation and live theme previews.",
+      "Compact user tabs, single-group permission ownership, Seerr permissions and request summaries.",
+      "Simplified builder navigation, application-count limits, pixel spacing and contrasting save confirmations."
     ]
   },
   {
@@ -207,6 +458,24 @@
       "Application rows have selectable applications, column counts and drag ordering; My account is an explicit application.",
       "Portal builder owns How to editing; native tools require explicit per-user access.",
       "Compact Translations / Labels, clearer administration navigation and configurable password complexity.",
+      "Taller tool frames, cleaner account settings, GitHub feedback links and installation guidance."
+    ],
+    "features": [
+      {
+        "title": "Applications & API",
+        "text": "Applications & API combines application links and server connections in one administration page."
+      },
+      {
+        "title": "Portal builder",
+        "text": "Application rows have selectable applications, column counts and drag ordering; My account is an explicit application."
+      },
+      {
+        "title": "Security",
+        "text": "Compact Translations / Labels, clearer administration navigation and configurable password complexity."
+      }
+    ],
+    "fixes": [
+      "Portal builder owns How to editing; native tools require explicit per-user access.",
       "Taller tool frames, cleaner account settings, GitHub feedback links and installation guidance."
     ]
   },
@@ -221,12 +490,40 @@
       "Include twenty additional editable language packs, with interface, default email and starter-guide translations; English alone is enabled on a fresh installation. Existing enabled languages and overrides are preserved.",
       "Place authenticated connection summaries for configured services above the forms, align Emby/Jellyfin and Seerr side by side and remove translation settings from API connections.",
       "Preserve existing layouts, guide IDs, published snapshots, accounts, uploaded assets, encrypted connections and the compressed-response proxy fix from 0.2.3."
+    ],
+    "features": [
+      {
+        "title": "Visual studio",
+        "text": "One visual studio for the public sign-in page, member home and shared footer, with pointer/touch drag-and-drop, real live previews, responsive widths, nested columns, rich text and image uploads."
+      },
+      {
+        "title": "Visual studio",
+        "text": "Edit page and block colors, gradients, buttons and hover states directly in the studio. Move the sign-in form without removing it, use starter templates, undo/redo, autosaved drafts and explicit publication with conflict detection."
+      },
+      {
+        "title": "Access guides",
+        "text": "Replace How to forms with a visual choice tree, breadcrumbs and drag-and-drop cards. Choose direct links, more choices or a guide; write and reorder rich guide steps with uploaded images, download buttons and reusable server variables."
+      },
+      {
+        "title": "Languages",
+        "text": "Include twenty additional editable language packs, with interface, default email and starter-guide translations; English alone is enabled on a fresh installation. Existing enabled languages and overrides are preserved."
+      }
+    ],
+    "fixes": [
+      "Keep My account after applications and enabled admin tools. Bundle original PNG logos for Emby, Jellyfin, Seerr, Radarr, Sonarr and Bazarr while preserving custom icon choices.",
+      "Place authenticated connection summaries for configured services above the forms, align Emby/Jellyfin and Seerr side by side and remove translation settings from API connections.",
+      "Preserve existing layouts, guide IDs, published snapshots, accounts, uploaded assets, encrypted connections and the compressed-response proxy fix from 0.2.3."
     ]
   },
   {
     "version": "0.2.3",
     "date": "2026-10-20",
     "changes": [
+      "Fix unreadable Radarr, Sonarr and Bazarr pages caused by compressed upstream responses: preserve wire bytes and Content-Encoding together.",
+      "Replace the browser Accept-Encoding header instead of combining it with identity; preserve streamed HTML, scripts and images without optional server-side decompressors."
+    ],
+    "features": [],
+    "fixes": [
       "Fix unreadable Radarr, Sonarr and Bazarr pages caused by compressed upstream responses: preserve wire bytes and Content-Encoding together.",
       "Replace the browser Accept-Encoding header instead of combining it with identity; preserve streamed HTML, scripts and images without optional server-side decompressors."
     ]
@@ -237,6 +534,18 @@
     "changes": [
       "Increase button and navigation contrast and align service fields and user invitation controls.",
       "Replace text-only icon lists with a searchable visual picker for all 2,060 bundled Font Awesome Free 6.7.2 icons, including Solid, Regular and Brands.",
+      "Remove external icon URL input from services and How to choices; keep PNG/SVG uploads and validated Font Awesome selections.",
+      "Fix tool connection diagnostics, accept private root or prefixed URLs and ignore incomplete disabled optional tools. Preserve safe form fields on error without exposing API keys.",
+      "Show every enabled Radarr, Sonarr and Bazarr application to Gatearr administrators automatically, including custom portals without service blocks. Member tool grants remain independent."
+    ],
+    "features": [
+      {
+        "title": "Icons",
+        "text": "Replace text-only icon lists with a searchable visual picker for all 2,060 bundled Font Awesome Free 6.7.2 icons, including Solid, Regular and Brands."
+      }
+    ],
+    "fixes": [
+      "Increase button and navigation contrast and align service fields and user invitation controls.",
       "Remove external icon URL input from services and How to choices; keep PNG/SVG uploads and validated Font Awesome selections.",
       "Fix tool connection diagnostics, accept private root or prefixed URLs and ignore incomplete disabled optional tools. Preserve safe form fields on error without exposing API keys.",
       "Show every enabled Radarr, Sonarr and Bazarr application to Gatearr administrators automatically, including custom portals without service blocks. Member tool grants remain independent."
@@ -252,6 +561,25 @@
       "Footer editor shows only the selected columns, with rich text and inline PNG/SVG uploads; hidden drafts are retained.",
       "Hide the language selector when only one language is enabled.",
       "Readable audit actions, username snapshots and redacted change details."
+    ],
+    "features": [
+      {
+        "title": "Appearance",
+        "text": "Dark-only appearance with a darker, subtle background gradient and editable colors."
+      },
+      {
+        "title": "Connected applications",
+        "text": "Radarr, Sonarr and Bazarr embedded under /tools on the portal hostname, with per-request permissions."
+      },
+      {
+        "title": "Activity log",
+        "text": "Readable audit actions, username snapshots and redacted change details."
+      }
+    ],
+    "fixes": [
+      "Clear active parent/child administration navigation and consistent button spacing.",
+      "Footer editor shows only the selected columns, with rich text and inline PNG/SVG uploads; hidden drafts are retained.",
+      "Hide the language selector when only one language is enabled."
     ]
   },
   {
@@ -266,6 +594,41 @@
       "Editable light/dark palettes, gradients and forced, automatic or user-selected appearance.",
       "Centered rich footer with one, two or three columns and PNG/SVG uploads.",
       "Simplified service creation, How to choices and local Font Awesome icons.",
+      "Preserved setup form fields on connection failures, consistent controls and equal color columns.",
+      "Storage preflight diagnostics and documented installation prerequisites."
+    ],
+    "features": [
+      {
+        "title": "Administration",
+        "text": "Reorganized administration: Branding, Users/groups, Services/How to and Activity log."
+      },
+      {
+        "title": "User assistance",
+        "text": "Audited administrator assistance using live member sessions, with expiry and a visible return button."
+      },
+      {
+        "title": "Account management",
+        "text": "Direct email/password management with encrypted notification outbox and verification/reset links."
+      },
+      {
+        "title": "Appearance",
+        "text": "Editable light/dark palettes, gradients and forced, automatic or user-selected appearance."
+      },
+      {
+        "title": "Footer",
+        "text": "Centered rich footer with one, two or three columns and PNG/SVG uploads."
+      },
+      {
+        "title": "Access guides",
+        "text": "Simplified service creation, How to choices and local Font Awesome icons."
+      },
+      {
+        "title": "Application cards",
+        "text": "Admin tools: optional, individually authorized Radarr, Sonarr and Bazarr reverse-proxy interfaces."
+      }
+    ],
+    "fixes": [
+      "Tracearr integration removed; stored connection secrets and queued synchronization jobs are deleted on upgrade.",
       "Preserved setup form fields on connection failures, consistent controls and equal color columns.",
       "Storage preflight diagnostics and documented installation prerequisites."
     ]
@@ -284,6 +647,77 @@
       "Blue and cyan default theme with a transparent logo.",
       "Complete media permission editor, verified per-field synchronization and user groups with shared library access.",
       "Default Seerr journey and opt-in automatic session handoff through the existing reverse proxy."
+    ],
+    "features": [
+      {
+        "title": "Docker distribution",
+        "text": "First public Gatearr release with Docker images for AMD64 and ARM64."
+      },
+      {
+        "title": "Updates and changelog",
+        "text": "Version and changelog page, with administrator notifications for new GitHub releases."
+      },
+      {
+        "title": "Footer",
+        "text": "Global footer builder with text, links, uploaded PNG logos and draft previews."
+      },
+      {
+        "title": "Access guides",
+        "text": "Editable default Windows, Mac, Android and iPhone application journeys."
+      },
+      {
+        "title": "Customization",
+        "text": "Customizable portal, menus, guides, branding and database-managed translations."
+      },
+      {
+        "title": "Media accounts",
+        "text": "Emby and Jellyfin accounts, library permissions and account self-service."
+      },
+      {
+        "title": "Emails",
+        "text": "SMTP, visual email templates, secure recovery and Seerr/Tracearr synchronization."
+      },
+      {
+        "title": "Permissions",
+        "text": "Complete media permission editor, verified per-field synchronization and user groups with shared library access."
+      },
+      {
+        "title": "Connected applications",
+        "text": "Default Seerr journey and opt-in automatic session handoff through the existing reverse proxy."
+      }
+    ],
+    "fixes": [
+      "Blue and cyan default theme with a transparent logo."
     ]
+  },
+  {
+    "version": "2026-10-16",
+    "date": "2026-10-16",
+    "archive": true,
+    "changes": [
+      "Gatearr identity, separate administration pages and numbered setup steps.",
+      "Encrypted media API keys configured during setup, authenticated connection health and manual tests.",
+      "Database-managed languages and interface text, one account language for the interface, emails and Seerr synchronization.",
+      "Emby library permissions use virtual-folder GUIDs, preserve unrelated policies and verify writes by reading them back."
+    ],
+    "features": [
+      {
+        "title": "Unified portal",
+        "text": "Gatearr identity, separate administration pages and numbered setup steps."
+      },
+      {
+        "title": "Application connections",
+        "text": "Encrypted media API keys configured during setup, authenticated connection health and manual tests."
+      },
+      {
+        "title": "Languages and emails",
+        "text": "Database-managed languages and interface text, one account language for the interface, emails and Seerr synchronization."
+      },
+      {
+        "title": "Library access",
+        "text": "Emby library permissions use virtual-folder GUIDs, preserve unrelated policies and verify writes by reading them back."
+      }
+    ],
+    "fixes": []
   }
 ]

@@ -51,6 +51,8 @@ def validate(layout):
             from .widgets import validate as validate_widget
             validate_widget(block)
         if block['kind']=='applications':
+            from .application_behavior import validate as validate_behavior
+            validate_behavior(block.get('application_behaviors',{}))
             from .application_information import validate as validate_information
             validate_information(block.get('information',{}))
             subtitles=block.get('subtitles',{})
@@ -59,7 +61,10 @@ def validate(layout):
             if not isinstance(selected,list) or len(selected)>100 or any(not isinstance(k,str) or not re.fullmatch(r'(?:access:[a-z0-9_-]{1,80}|menu:[0-9]+|account|radarr|sonarr|bazarr|tracearr|tdarr)',k) for k in selected) or len(set(selected))!=len(selected):raise ValueError('Invalid application selection')
             if len(selected)>block.get('columns',3):raise ValueError('Select no more applications than the configured number')
             if block.get('columns',3) not in (1,2,3,4,5,6) or block['span']!=12 or block.get('parent') or block['region']!='main':raise ValueError('Applications use a full row in the main content')
-        if block['kind']=='image':asset_url(block.get('url',''))
+        if block['kind']=='image':
+            asset_url(block.get('url',''),optional=True)
+            from .image_blocks import validate as validate_image
+            validate_image(block)
         if block['kind']=='button':link_url(block.get('url',''),layout.get('page')=='login')
         if block['kind']=='columns' and block.get('columns',2) not in (1,2,3):raise ValueError('Choose one, two or three columns')
         if block.get('visibility','everyone') not in ('everyone','admins','members'):raise ValueError('Invalid visibility')
@@ -94,7 +99,8 @@ def localized(block,name,locale,db=None):
     return translated
 
 def for_display(layout,locale,user=None,db=None,editor=False):
-    layout=deepcopy(layout);regions={key:[] for key in REGIONS};indexed={}
+    from .image_blocks import normalize as normalize_images
+    layout=normalize_images(layout);regions={key:[] for key in REGIONS};indexed={}
     from .widgets import choose,display as widget_display,TYPES
     visible_widgets=choose(db,layout['blocks'],user,editor) if db is not None else set()
     for block in sorted(layout['blocks'],key=lambda block:(block['order'],block['id'])):
@@ -126,6 +132,9 @@ def for_display(layout,locale,user=None,db=None,editor=False):
         if b['kind']=='applications':
             b['cards']=[dict(available[key],subtitle=i18n.content(db,'block:'+b['id']+':application-subtitle:'+key,b.get('subtitles',{}).get(key,{'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}.get(key,'Open application')),locale)) for key in b.get('applications',[]) if key in available]
             from .application_information import display as application_information
+            from .application_behavior import destination
+            b['cards']=[destination(db,card,b.get('application_behaviors',{}).get(card['key'])) for card in b['cards']]
+            if not editor:b['cards']=[card for card in b['cards'] if card['href']]
             for card in b['cards']:
                 card['information']=application_information(db,user,card['key'],b.get('information',{}).get(card['key'],{}),editor)
             b['visible_columns']=min(b.get('columns',3),max(1,len(b['cards'])))
@@ -144,7 +153,7 @@ def save(db, draft, expected, publish=False):
     validate(draft)
     from .image_sources import require_image
     for block in draft['blocks']:
-        if block['kind']=='image':block['url']=require_image(block['url'],db)
+        if block['kind']=='image':block['url']=require_image(block.get('url',''),db,optional=True)
     # Compare-and-swap: two administrators cannot silently overwrite the same draft.
     from sqlalchemy.dialects.sqlite import insert
     db.execute(insert(Config).values(key='portal_version', value='0').on_conflict_do_nothing())

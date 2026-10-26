@@ -157,8 +157,12 @@ def test_assistance_can_use_only_live_matching_media_session(client,fake,monkeyp
         assert response.status_code==303 and response.headers['location'].startswith('https://media.test/web/index.html?') and 'user-token' in response.headers['location'] and 'owner-token' not in response.headers['location']
         assert response.headers['referrer-policy']=='no-referrer'
         logout(member_client)
-        page=client.get('/services/emby/open')
-        assert 'must sign in to Gatearr again' in page.text
+        # The source session is gone: no member token can be reused.
+        # Opening the public native sign-in page is still safe.
+        page=client.get('/services/emby/open',follow_redirects=False)
+        assert page.status_code==303
+        assert page.headers['location']=='https://media.test/web/index.html'
+        assert 'user-token' not in page.headers['location'] and 'owner-token' not in page.headers['location']
 
 
 def test_howto_service_and_tutorial_are_created_without_manual_identifiers(client):

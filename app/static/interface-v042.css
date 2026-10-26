@@ -231,6 +231,20 @@ body .studio-inspector .application-order button+button{border-inline-start:1px 
 body .studio-inspector .application-order button:hover:not(:disabled){background:var(--nav-selected)}
 body .studio-inspector .application-choice-summary{margin-inline-start:0}
 
+/* A compact application header, with a plain disclosure title rather than
+   another pill competing with the switch and grouped reorder arrows. */
+#page-studio .studio-inspector .application-choice-header{grid-template-columns:58px minmax(0,1fr) auto;gap:8px}
+#page-studio .application-choice-header .check{width:58px;min-width:58px}
+#page-studio .application-choice-header .gatearr-switch{width:58px;min-width:58px;height:26px;flex-basis:58px;margin:0}
+#page-studio .application-choice-header .gatearr-switch-track:before{width:18px;height:18px}
+#page-studio .application-choice-header .gatearr-switch-track:after{font-size:10px;line-height:16px;top:4px}
+#page-studio .application-choice-header input:checked+.gatearr-switch-track:before{transform:translateX(32px)}
+html[dir=rtl] #page-studio .application-choice-header input:checked+.gatearr-switch-track:before{transform:translateX(-32px)}
+#page-studio .studio-inspector .application-choice-toggle{padding:0;min-height:32px;height:auto;border:0;border-radius:6px;background:transparent;box-shadow:none;font-size:13px;font-weight:600;gap:6px}
+#page-studio .studio-inspector .application-choice-toggle:hover{background:transparent;color:var(--accent-label)}
+#page-studio .studio-inspector .application-order{justify-self:end}
+#page-studio .studio-inspector .application-order button{width:26px;min-width:26px;height:30px;min-height:30px;border-radius:0;box-shadow:none}
+
 /* Subtitle permissions use the same compact form rhythm as other services. */
 .bazarr-subtitle-settings{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
 .bazarr-profile-picker,.bazarr-language-action{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
@@ -287,3 +301,145 @@ body .subtitle-language-row[data-subtitle-locked] .guided-select-trigger:disable
 .guide-device-navigation{display:flex;margin:0 0 24px}
 .guide-steps+.guide-device-navigation{margin:24px 0 0}
 .guide-device-navigation .button{display:inline-flex;align-items:center;gap:8px;text-align:start}
+
+.tool-frame-intro{margin-bottom:20px}
+
+/* Custom links: one compact disclosure row, balanced fields and a single footer. */
+#custom-link-settings{container:custom-links / inline-size}
+#custom-link-settings .application-editor{padding:0;margin:12px 0;background:color-mix(in srgb,var(--surface) 25%,transparent);border-color:var(--line);box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;overflow:clip}
+#custom-link-settings .custom-link-details{margin:0}
+#custom-link-settings .custom-link-summary{display:flex;align-items:center;gap:12px;list-style:none;padding:16px 18px;cursor:pointer}
+#custom-link-settings .custom-link-summary::-webkit-details-marker{display:none}
+#custom-link-settings .custom-link-summary:hover{background:color-mix(in srgb,var(--text) 4%,transparent)}
+#custom-link-settings .custom-link-symbol{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,transparent);color:var(--accent-label);font-size:18px}
+#custom-link-settings .custom-link-symbol img{width:26px;height:26px;object-fit:contain}
+#custom-link-settings .custom-link-heading{display:grid;gap:3px;min-width:0;flex:1;line-height:1.4}
+#custom-link-settings .custom-link-heading strong{font-size:14px;color:var(--text);overflow-wrap:anywhere}
+#custom-link-settings .custom-link-url{font-size:11px;margin:0;overflow-wrap:anywhere}
+#custom-link-settings .custom-link-edit{display:flex;align-items:center;gap:8px;flex:none;font-size:12px;color:var(--muted)}
+#custom-link-settings .custom-link-edit i{font-size:10px;transition:transform .18s ease}
+#custom-link-settings .custom-link-details[open]>.custom-link-summary{border-bottom:1px solid var(--line)}
+#custom-link-settings .custom-link-details[open]>.custom-link-summary .custom-link-edit i{transform:rotate(180deg)}
+#custom-link-settings .custom-link-body{padding:18px}
+#custom-link-settings .custom-link-form{margin:0;min-width:0}
+#custom-link-settings .custom-link-fields{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:16px}
+#custom-link-settings .custom-link-fields label,#custom-link-settings .icon-source-fields label{margin:0;min-width:0}
+#custom-link-settings .custom-link-fields input{height:40px;min-height:40px;margin-top:6px;font-size:13px}
+#custom-link-settings .custom-link-assets{padding-block:16px;margin-top:16px;border-block:1px solid var(--line);min-width:0}
+#custom-link-settings .icon-source-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+#custom-link-settings .icon-picker-toggle{height:40px;min-height:40px;padding:6px 10px;border-radius:var(--field-radius);box-shadow:none;font-size:12px;gap:9px}
+#custom-link-settings .icon-picker-toggle i{font-size:18px}
+#custom-link-settings .upload-control{border-radius:var(--field-radius);padding:6px;gap:8px;margin-top:6px;background:color-mix(in srgb,var(--bg) 25%,transparent)}
+#custom-link-settings .upload-control .upload-picker{min-height:30px;height:auto;font-size:11px;padding:5px 8px;border-radius:9px;box-shadow:none}
+#custom-link-settings .upload-control .upload-name{font-size:11px;min-width:70px}
+#custom-link-settings .icon-picker>.hint{font-size:11px;line-height:1.5;margin:10px 0 0}
+#custom-link-settings .field-label{margin-bottom:6px}
+#custom-link-settings .custom-link-options{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:16px}
+#custom-link-settings .check{margin:0;font-size:12px}
+#custom-link-settings .custom-link-actions,#custom-link-settings .custom-link-create-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px}
+#custom-link-settings .custom-link-actions form{margin:0}
+#custom-link-settings .custom-link-actions button,#custom-link-settings .custom-link-create-actions>button{height:36px;min-height:36px;font-size:12px;margin:0}
+@container custom-links (max-width:650px){
+ #custom-link-settings .custom-link-fields,#custom-link-settings .icon-source-fields{grid-template-columns:minmax(0,1fr)}
+ #custom-link-settings .custom-link-summary{display:grid;grid-template-columns:36px minmax(0,1fr);padding:14px;gap:8px 10px}
+ #custom-link-settings .custom-link-edit{grid-column:2;margin-inline-start:0}
+ #custom-link-settings .custom-link-body{padding:14px}
+ #custom-link-settings .custom-link-actions{gap:8px}
+ #custom-link-settings .custom-link-actions button{padding-inline:12px}
+}
+@media(prefers-reduced-motion:reduce){#custom-link-settings .custom-link-edit i{transition:none}}
+
+.image-block-placeholder{display:grid;place-content:center;justify-items:center;gap:12px;min-height:180px;padding:24px;border:1px dashed var(--line);border-radius:var(--box-radius);background:var(--surface);color:var(--muted)}
+.image-block-placeholder i{font-size:28px}
+.release-series-history .release-series{padding:0;margin:0 0 18px;overflow:clip}
+.release-series>summary{display:flex;align-items:center;gap:16px;padding:20px;list-style:none;cursor:pointer}
+.release-series>summary::-webkit-details-marker{display:none}
+.release-series-number{font-size:28px;letter-spacing:-1px;color:var(--accent-label)}
+.release-series[data-release-series="Before 0.1"] .release-series-number{font-size:16px;max-width:80px}
+.release-series-heading{display:grid;gap:4px;flex:1;min-width:0}
+.release-series-heading .hint{margin:0;font-size:12px}
+.release-series>summary>i{font-size:12px;color:var(--muted);transition:transform .18s ease}
+.release-series[open]>summary>i{transform:rotate(180deg)}
+.release-series-content{padding:0 20px 20px}
+.release-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;margin-bottom:24px}
+.release-feature{padding:14px 0;border-top:1px solid var(--line);min-width:0}
+.release-feature h4{font-size:14px;margin:0 0 8px}
+.release-feature p{font-size:13px;line-height:1.65;color:var(--muted);margin:0 0 8px;overflow-wrap:anywhere}
+.release-feature p .hint{font-size:11px;white-space:nowrap}
+.release-section-heading{display:flex;align-items:center;gap:9px;font-size:14px;margin:14px 0}
+.release-section-heading i{color:var(--accent-label)}
+.release-series .release-entry>summary{flex-wrap:wrap}
+.release-series .release-entry:last-child{border-bottom:0}
+.update-feedback .builder-actions{display:flex;flex-wrap:wrap;gap:8px}
+.update-feedback .builder-actions .button{margin:0}
+@media(max-width:700px){.release-feature-grid{grid-template-columns:minmax(0,1fr)}.release-series>summary{flex-wrap:wrap;padding:16px;gap:12px}.release-series-content{padding:0 16px 16px}.release-series>summary>.installed-version{font-size:11px}.release-series-number{font-size:25px}.release-series-heading{min-width:140px}}
+@media(prefers-reduced-motion:reduce){.release-series>summary>i{transition:none}}
+
+/* Align color controls by their lower edge, even when translated labels wrap. */
+#theme-editor .color-grid>label{display:flex;flex-direction:column;justify-content:flex-end;gap:8px;min-width:0;margin:0}
+#theme-editor .color-grid>label>input[type=color]{flex-shrink:0;margin:0;width:100%}
+.guest-language-menu .account-menu-panel form.account-menu-language{border-bottom:0;padding-bottom:0}
+.services+.guide-device-navigation{margin:24px 0 0}
+
+/* Guide choices: the same device emblem, softly cropped into the glass. */
+body .guide-choices .guide-choice{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:174px;padding:24px;background:radial-gradient(ellipse at 100% 0,color-mix(in srgb,var(--accent) 10%,transparent),transparent 75%),linear-gradient(145deg,var(--glass-sheen),transparent 55%),var(--glass-fill);transition:transform .2s ease,border-color .2s ease}
+.guide-choice>:not(.guide-choice-art){position:relative;z-index:1;max-width:100%}
+body .guide-choice .guide-choice-art{position:absolute;z-index:0;pointer-events:none;inset-inline-end:-.15em;top:.02em;display:grid;place-items:center;width:1.15em;height:1.15em;font-size:clamp(130px,15vw,180px);line-height:1;color:var(--accent-label,var(--accent));opacity:.16;transform:rotate(-14deg);mask-image:linear-gradient(90deg,transparent,#000 35%)}
+.guide-choice-art>i{font-size:inherit;line-height:1}
+.guide-choice-art>img{display:block;width:100%;height:100%;object-fit:contain}
+body .guide-choice>.service-icon{margin:0;color:var(--accent-label,var(--accent));font-size:26px}
+body .guide-choice>strong{margin-top:16px;font-size:20px;line-height:1.35;overflow-wrap:anywhere}
+body .guide-choice>span:last-child{margin-top:auto;color:var(--muted)}
+body .guide-choices .guide-choice:hover{transform:translateY(-2px);border-color:var(--accent-label,var(--accent))}
+@media(prefers-reduced-motion:reduce){body .guide-choices .guide-choice{transition:none}body .guide-choices .guide-choice:hover{transform:none}}
+@media(prefers-reduced-transparency:reduce){body .guide-choices .guide-choice{background:var(--surface)}body .guide-choice .guide-choice-art{opacity:.08}}
+
+/* Guide editor controls are plain titles with a separate, aligned action row. */
+body #howto-studio .journey-card{grid-template-columns:minmax(0,1fr);gap:10px;padding:16px 0}
+body #howto-studio .journey-card .journey-card-title{display:block;width:100%;min-height:24px;height:auto;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;text-align:start;white-space:normal;font-weight:600;line-height:1.5}
+body #howto-studio .journey-card .journey-card-title:hover{background:transparent;text-decoration:underline;text-underline-offset:3px}
+body #howto-studio .journey-card-actions{display:flex;flex-wrap:wrap;width:100%;gap:10px}
+body #howto-studio .journey-card-actions>:is(a,button){margin:0}
+body #howto-studio .journey-card .journey-reorder{flex:none;display:inline-flex;overflow:hidden}
+body #howto-studio .journey-card .journey-reorder button{border-radius:0;box-shadow:none}
+#theme-editor .palette-editor{display:flex;flex-direction:column;gap:22px}
+#theme-editor .palette-editor>label{margin:0}
+#theme-editor .palette-editor>label:not(.check){display:grid;gap:8px}
+#theme-editor .palette-editor>label>input{margin:0}
+#theme-editor .palette-editor>.form-actions{margin:0;gap:12px}
+.integration-detail-grid .integration-options{margin:22px 0;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.integration-detail-grid .integration-options[open]>summary{margin-bottom:18px}
+.integration-detail-grid .integration-options+label{margin-top:22px}
+
+/* A stretched native selection button makes the entire guide-editor tile clickable. */
+body #howto-studio #journey-list{display:grid;gap:10px;margin:18px 0}
+body #howto-studio .journey-card,body #howto-studio .journey-card[aria-current=true]{padding:14px;border:1px solid var(--glass-edge);border-radius:14px;background:color-mix(in srgb,var(--surface) 65%,transparent);gap:12px;cursor:default}
+body #howto-studio .journey-card[aria-current=true]{border-color:var(--accent-label,var(--accent));background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+body #howto-studio .journey-card[aria-current=true]::before{content:none}
+body #howto-studio .journey-card .journey-card-title{position:static;display:flex;align-items:center;gap:12px;text-decoration:none;cursor:pointer}
+body #howto-studio .journey-card-title::after{content:'';position:absolute;inset:0;border-radius:14px;z-index:1}
+body #howto-studio .journey-card:has(.journey-card-title:hover){border-color:var(--accent-label,var(--accent))}
+body #howto-studio .journey-card:has(.journey-card-title:focus-visible){outline:2px solid var(--accent-label,var(--accent));outline-offset:3px}
+body #howto-studio .journey-card-title>i{font-size:20px;width:24px;flex:none;color:var(--accent-label,var(--accent));text-align:center}
+body #howto-studio .journey-card-copy{display:grid;gap:4px;min-width:0}
+body #howto-studio .journey-card-copy strong{font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+body #howto-studio .journey-card-copy small{font-size:11px;font-weight:400;color:var(--muted);line-height:1.4}
+body #howto-studio .journey-card-actions{position:relative;z-index:2;pointer-events:none}
+body #howto-studio .journey-card-actions>*{pointer-events:auto}
+@media(prefers-reduced-transparency:reduce){body #howto-studio .journey-card{background:var(--surface)}}
+
+body #howto-studio .journey-card .journey-card-title:hover{text-decoration:none}
+
+/* Image blocks follow the same inherited text alignment as their captions. */
+.portal-block.kind-image>figure{margin:0}
+.portal-block.kind-image>figure>.portal-image{display:inline-block;vertical-align:top}
+
+/* Image size is independent from the grid: columns provide multi-block layouts. */
+.portal-grid>.portal-block.kind-image{grid-column:1/-1}
+.portal-block.kind-image>figure>.portal-image{height:auto;max-height:none;max-width:100%}
+.image-width-fields{display:grid;grid-template-columns:minmax(0,1fr) 82px;gap:12px;align-items:end}
+body .studio-inspector .image-width-fields>label{margin:14px 0}
+.image-width-fields input,.image-width-fields select{width:100%;min-width:0}
+body .portal-service .service-symbol-watermark{display:grid;place-items:center;font-size:300px;color:var(--accent-label,var(--accent));filter:none}
+.service-symbol-watermark>i{font-size:inherit;line-height:1}
+@media(max-width:600px){body .portal-service .service-symbol-watermark{font-size:260px}}

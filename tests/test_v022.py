@@ -81,7 +81,10 @@ def test_configured_tools_are_available_to_admins_and_independent_member_grants(
     setup(client)
     with SessionLocal() as db:
         owner=db.scalar(select(User).where(User.admin.is_(True)));owner.tool_access='[]'
-        for tool in tools_proxy.PROXY_TOOLS:main.set_config(db,tool+'_enabled','true')
+        for tool in tools_proxy.PROXY_TOOLS:
+            main.set_config(db,tool+'_enabled','true')
+            main.set_config(db,tool+'_url','http://'+tool+':1234')
+            main.set_config(db,tool+'_api_key','test-key')
         db.scalar(select(User).where(User.admin.is_(True))).tool_access=json.dumps(list(tools_proxy.PROXY_TOOLS))
         db.commit()
     page=client.get('/home').text

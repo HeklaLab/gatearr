@@ -5,6 +5,12 @@ from .security import decrypt
 from .settings import settings
 
 
+def tdarr_upstream_url(value):
+    """Browser hash routes are not part of the HTTP upstream's base address."""
+    from urllib.parse import urlsplit,urlunsplit
+    return urlunsplit(urlsplit(value)._replace(fragment='')).rstrip('/')
+
+
 def emby_connection():
     with SessionLocal() as db:
         url = config(db,'emby_url')

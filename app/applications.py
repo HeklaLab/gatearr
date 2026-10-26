@@ -1,4 +1,5 @@
 """Stable application identities shared by the editor and permission-filtered portal."""
+import json
 from sqlalchemy import select
 from .models import AccessService,MenuItem
 from .mailer import config
@@ -18,39 +19,50 @@ def catalog(db,user=None,editor=False,locale='en'):
         if s.key in ('radarr','sonarr','bazarr','tracearr','tdarr') or s.key in attached and s.key not in ('emby','seerr'):continue
         if s.key=='seerr' and not can_seerr:continue
         href=access_href(db,s.key)
-        manual=next((m for m in menu_rows if m.access_service==s.key or m.label.casefold()==s.key),None)
-        if not editor and (not href and not manual or (s.key=='seerr' and not config(db,'seerr_public_url') and not s.browser_url and not manual)):continue
-        if manual and not manual.access_service:href=manual.url
+        # Only an explicit association can customize the native service.
+        # Display names never merge an unrelated custom-link identity.
+        manual=next((m for m in menu_rows if m.access_service==s.key),None)
         result.append(dict(key='access:'+s.key,name=content(db,'menu:'+str(manual.id)+':label',manual.label,locale) if manual else content(db,'service:'+s.key+':name',s.name,locale),href=href,image=(manual.icon_url or (service_icon(db,s.key,media) if manual.icon=='link' else '')) if manual else service_icon(db,s.key,media),icon=manual.icon if manual else s.icon,external=not href.startswith('/'),howto=s.key,entry_mode=s.entry_mode))
     for item in menu_rows:
-        if any(a['key']=='access:'+(item.access_service or item.label.casefold()) for a in result):continue
+        if item.access_service and any(a['key']=='access:'+item.access_service for a in result):continue
         key=item.access_service
-        if not can_seerr and (key=='seerr' or item.label.casefold()=='seerr'):continue
+        if not can_seerr and key=='seerr':continue
         if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):continue
         href=access_href(db,key) if key else item.url
         result.append(dict(key='menu:'+str(item.id),name=content(db,'menu:'+str(item.id)+':label',item.label,locale),href=href,image=item.icon_url or default_icon(key or item.label,media),icon=item.icon,external=item.new_tab and not key,howto=key or '',menu_key=item.menu_key))
     for tool in ('radarr','sonarr','bazarr','tracearr','tdarr'):
-        if editor or tool in tools:result.append(dict(key=tool,name=tool.capitalize(),href='/tools/'+tool,image=default_icon(tool,media),icon='gears',external=False,howto=''))
+        grants = json.loads(user.tool_access) if user else []
+        if editor or tool in tools or user and (user.admin or tool in grants and tool not in ('tracearr','tdarr')):
+            result.append(dict(key=tool,name=tool.capitalize(),href='/tools/'+tool,image=default_icon(tool,media),icon='gears',external=False,howto='',can_embed=editor or tool in tools))
     if media=='jellyfin':
         for application in result:
             if application['image']=='/static/services/emby.png':application['image']=default_icon('jellyfin')
     result.append(dict(key='account',name='My account',href='/account',image='',icon='user-circle',external=False,howto=''))
-    return result
+    from .application_behavior import describe
+    return [describe(db, app) for app in result]
 
 def normalize(layout,db):
     """Upgrade old block variants in memory without overwriting existing snapshots."""
     from copy import deepcopy
     value=deepcopy(layout);apps=catalog(db,editor=True);legacy_rows=[b for b in value['blocks'] if b['kind']=='services'];last_legacy=max(legacy_rows,key=lambda b:(b['order'],b['id']))['id'] if legacy_rows else None
     old_services=any(b['kind']=='services' for b in value['blocks'])
+    # Legacy automatic grids used the same-named manual link as the native
+    # card's destination. Keep that one card, without hiding the editable link.
     for b in value['blocks']:
         kind=b['kind']
         if kind not in ('services','application','account','applications'):continue
         if kind=='account' and old_services and b['id']=='account' and b.get('body')=='Manage your details and password.':
             b['_remove']=True;continue
         if kind=='services':
-            b['applications']=[a['key'] for a in apps if (a['key']!='access:emby' or b.get('include_emby')) and (not a.get('menu_key') or a['menu_key']==b.get('menu_key','main')) and (a['key']!='account' or b['id']==last_legacy) and (a['key'] not in ('radarr','sonarr','bazarr','tracearr','tdarr') or config(db,a['key']+'_enabled')=='true')]
+            settings=b.get('application_behaviors',{})
+            legacy_aliases={a['key'] for a in apps if a['key'].startswith('menu:') and any(n['key'] in ('access:emby','access:seerr') and settings.get(n['key'],{}).get('url')==a['href'] and n['name']==a['name'] for n in apps)}
+            b['applications']=[a['key'] for a in apps if a['key'] not in legacy_aliases and (a['key']!='access:emby' or b.get('include_emby')) and (not a.get('menu_key') or a['menu_key']==b.get('menu_key','main')) and (a['key']!='account' or b['id']==last_legacy) and (a['key'] not in ('radarr','sonarr','bazarr','tracearr','tdarr') or config(db,a['key']+'_enabled')=='true')]
         elif kind=='application':b['applications']=[b.get('service_key','emby') if b.get('service_key') in ('radarr','sonarr','bazarr','tracearr','tdarr') else 'access:'+b.get('service_key','emby')]
         elif kind=='account':b['applications']=['account']
+        if kind in ('services','application'):
+            settings=b.setdefault('application_behaviors',{})
+            for key in b.get('applications',[]):
+                if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):settings.setdefault(key,{'mode':'embedded'})
         b.update(kind='applications',span=12,region='main');b.pop('parent',None);b.pop('slot',None);b.setdefault('columns',3)
     value['blocks']=[b for b in value['blocks'] if not b.pop('_remove',False)]
     # Preserve older selections when converting multi-row application grids.
@@ -69,4 +81,5 @@ def normalize(layout,db):
     for index,row in enumerate(rows):row['order']=(index+1)*10
     value['blocks']=rows
     from .application_information import migrate
-    return migrate(value)
+    from .application_behavior import freeze
+    return freeze(migrate(value),{app['key']:app for app in apps})

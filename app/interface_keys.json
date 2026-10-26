@@ -352,6 +352,7 @@
   "Display and app addresses",
   "Displayed text",
   "Divider",
+  "Do not add # or /# at the end of the Tdarr WebUI URL.",
   "Do not manage in Gatearr",
   "Download media",
   "Download or help link",

@@ -51,25 +51,33 @@ def stop(request:Request,data=Depends(form)):
 @router.get('/services/emby/open')
 def open_media(request:Request):
     user=require_user(request);db=request.state.db
-    row=db.get(MediaSession,source_digest(request));session=db.get(Session,row.session_digest) if row else None
-    if not row or row.user_id!=user.id or row.expires<=int(time.time()) or not session or session.version!=user.version or session.expires<=int(time.time()):
-        return render(request,'message.html',message='Automatic login unavailable. This user must sign in to Gatearr again.')
-    value=json.loads(decrypt(row.payload))
-    if value.get('url')!=config(db,'emby_url'):raise HTTPException(403,'Connection changed')
-    from .emby import emby
-    verified=emby.request('GET','/Users/'+user.emby_id,token=value['token'])
-    if verified.get('Id')!=user.emby_id or verified.get('Policy',{}).get('IsDisabled'):raise HTTPException(403,'Media session expired')
     service=db.get(AccessService,'emby')
     base=service.browser_url if service else ''
+    from .application_behavior import media_browser_page
+    def native_signin():
+        if not base or getattr(request.state,'support',None):
+            return render(request,'message.html',message='Automatic login unavailable. This user must sign in to Gatearr again.')
+        response=redirect(media_browser_page(base));response.headers['Referrer-Policy']='no-referrer';return response
+    row=db.get(MediaSession,source_digest(request));session=db.get(Session,row.session_digest) if row else None
+    if not row or row.user_id!=user.id or row.expires<=int(time.time()) or not session or session.version!=user.version or session.expires<=int(time.time()):
+        return native_signin()
+    value=json.loads(decrypt(row.payload))
+    if value.get('url')!=config(db,'emby_url'):raise HTTPException(403,'Connection changed')
+    from .emby import emby,EmbyError
+    try:verified=emby.request('GET','/Users/'+user.emby_id,token=value['token'])
+    except EmbyError:return native_signin()
+    if verified.get('Id')!=user.emby_id or verified.get('Policy',{}).get('IsDisabled'):raise HTTPException(403,'Media session expired')
     if not base:raise HTTPException(400,'Configure the public media URL')
     from .connections import media_kind
     if media_kind(db)=='jellyfin':
         return render(request,'message.html',message='Automatic browser login is not supported by this Jellyfin web client. Open the media service and sign in.')
-    base=base.rstrip('/')
-    page=base if base.endswith('/web/index.html') else base+'/index.html' if base.endswith('/web') else base+'/web/index.html'
+    page=media_browser_page(base)
     if verified.get('Policy',{}).get('IsAdministrator'):
         response=redirect(page);response.headers['Referrer-Policy']='no-referrer';return response
-    url=page+'?'+urlencode({'serverId':value['server'],'userId':user.emby_id,'accessToken':value['token'],'e':'1'})
+    from urllib.parse import urlsplit,urlunsplit,parse_qsl
+    parsed=urlsplit(page)
+    params={**dict(parse_qsl(parsed.query)), 'serverId':value['server'],'userId':user.emby_id,'accessToken':value['token'],'e':'1'}
+    url=urlunsplit((parsed.scheme,parsed.netloc,parsed.path,urlencode(params),parsed.fragment))
     response=redirect(url);response.headers['Referrer-Policy']='no-referrer';return response
 
 

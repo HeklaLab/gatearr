@@ -25,8 +25,14 @@ def theme_css(request: Request):
     if draft:
         require_admin(request)
     layout = portal.load(request.state.db, draft)
-    from .themes import css
-    return Response(css(request.state.db,request.state.user,draft),media_type='text/css')
+    from .themes import css,remember_appearance
+    user=request.state.user
+    appearance=request.cookies.get('gatearr_appearance')
+    if not user and not draft and appearance in ('light','dark','auto'):
+        from types import SimpleNamespace
+        user=SimpleNamespace(theme_preference=appearance)
+    response=Response(css(request.state.db,user,draft),media_type='text/css')
+    return remember_appearance(request,response,request.state.user) if not draft else response
 
 @router.get('/admin/portal')
 def builder(request: Request):
@@ -209,7 +215,9 @@ def integrations(request: Request):
     from .connection_health import checks
     items = list(db.scalars(select(MenuItem).order_by(MenuItem.position)))
     native = {'emby', 'jellyfin', 'seerr', 'radarr', 'sonarr', 'bazarr', 'tracearr', 'tdarr'}
-    custom_items = [item for item in items if (item.access_service or '').lower() not in native and item.label.lower() not in native]
+    # A display name is not an integration identity. Keep independently created
+    # links editable, including old same-named duplicates already in the database.
+    custom_items = [item for item in items if (item.access_service or '').lower() not in native]
     return render(request,'integrations.html',jobs=jobs,owners=owners,emby_connection_url=config(db,'emby_url'),emby_key_saved=bool(config(db,'emby_api_key')),connection_checks=checks(db),integration_order=('emby','seerr','radarr','sonarr','bazarr','tracearr','tdarr'),items=items,custom_items=custom_items)
 
 @router.post('/admin/integrations')
@@ -267,6 +275,9 @@ def test_connection(request: Request, data=Depends(form)):
         from fastapi.responses import JSONResponse
         from urllib.parse import urlsplit
         base=url_ok(data.get('url',''))
+        if service=='tdarr':
+            from .connections import tdarr_upstream_url
+            base=tdarr_upstream_url(base)
         parsed=urlsplit(base)
         if parsed.query or parsed.fragment:raise ValueError('Enter a server URL without query parameters')
         if service in ('radarr','sonarr','bazarr'):

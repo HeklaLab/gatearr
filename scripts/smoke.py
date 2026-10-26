@@ -83,7 +83,7 @@ def run(base='http://localhost:8000', mailpit='http://localhost:8025', smtp_host
         submit(client, '/admin/emby/libraries', {'id':cloned_id,'libraries':['22222222222222222222222222222222']}, '/admin/users/'+cloned_id)
         assert 'Films' in client.get('/admin/users/'+cloned_id+'?tab=emby').text
         submit(client, '/admin/emby/copy', {'id':cloned_id,'source_id':'demo-user-1','copy_options':['Configuration','DisplayPreferences'],'acknowledge':'on'}, '/admin/users/'+cloned_id)
-        submit(client, '/admin/integrations', {'service':'seerr','enabled':'on','url':services_base+'/seerr','api_key':'demo-seerr-key','notification_mode':'optional'}, '/admin/integrations')
+        submit(client, '/admin/connections/seerr/save', {'enabled':'on','url':services_base+'/seerr','public_url':'https://requests.example.com','api_key':'demo-seerr-key','notification_mode':'optional'}, '/admin/integrations')
         def layout_version():
             return re.search(r'name="version" value="(\d+)"',client.get('/admin/portal').text)[1]
         submit(client, '/admin/portal/block', {'version':layout_version(),'kind':'text','region':'main','order':'11','span':'12','title':'Welcome to Gatearr','body':'Your movie night starts here. Find your films, shows and requests in one place.'}, '/admin/portal')

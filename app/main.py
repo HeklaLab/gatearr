@@ -633,7 +633,8 @@ def login(request: Request, data=Depends(form)):
     capture(db,user,password,request.state.new_session_digest)
     from .support import capture as capture_media
     capture_media(db,user,result,request.state.new_session_digest)
-    return response
+    from .themes import remember_appearance
+    return remember_appearance(request,response,user)
 
 @app.post("/logout")
 def logout(request: Request, data=Depends(form)):
@@ -645,6 +646,8 @@ def logout(request: Request, data=Depends(form)):
     request.state.db.commit()
     response = redirect("/login")
     response.delete_cookie("gatearr_session", path="/")
+    from .themes import remember_appearance
+    remember_appearance(request,response,request.state.user)
     request.state.rotated = True
     return response
 

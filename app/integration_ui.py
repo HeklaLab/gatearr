@@ -17,6 +17,9 @@ def save(request:Request,service:str,data=Depends(form)):
         connect_media(db,data)
     else:
         active=data.get('enabled')=='on';base=url_ok(data.get('url',''),optional=not active)
+        if service=='tdarr':
+            from .connections import tdarr_upstream_url
+            base=tdarr_upstream_url(base)
         if base and (urlsplit(base).query or urlsplit(base).fragment):raise ValueError('Invalid URL')
         if service in ('radarr','sonarr','bazarr') and base:
             parsed=urlsplit(base)

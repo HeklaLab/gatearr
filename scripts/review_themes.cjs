@@ -46,6 +46,13 @@ const mime={'.html':'text/html','.css':'text/css','.js':'text/javascript','.png'
    }
   }
   if(screen==='bazarr')await page.locator('[data-open-connection="bazarr"]').click();
+  if(screen==='integrations'){
+   const editor=page.locator('#application-list>.application-editor').first();
+   if(await editor.count()){
+    await editor.locator('.custom-link-summary').click();
+    await editor.scrollIntoViewIfNeeded();
+   }
+  }
   if(['subtitle-account','subtitle-locked','subtitle-permanent'].includes(screen))await page.locator('.bazarr-subtitle-account').scrollIntoViewIfNeeded();
   if(screen==='builder'){
    const boot=JSON.parse(await page.locator('#studio-data').textContent());

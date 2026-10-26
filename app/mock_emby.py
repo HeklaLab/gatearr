@@ -170,7 +170,7 @@ async def copy_data(request: Request, user_id: str):
 
 @app.get("/emby/Users/{user_id}")
 def user(request: Request, user_id: str):
-    authorize(request)
+    authorize(request,user_id)
     with connection() as db:
         row = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
     if not row:

@@ -64,7 +64,8 @@ def refresh_due():
 @router.get('/admin/updates')
 def updates(request: Request):
     require_admin(request)
-    return render(request, 'updates.html', release_status=status(request.state.db), changelog=list({entry['version']:entry for entry in reversed(CHANGELOG)}.values())[::-1])
+    from .release_history import grouped
+    return render(request, 'updates.html', release_status=status(request.state.db), release_series=grouped(CHANGELOG, VERSION))
 
 @router.post('/admin/updates/check')
 def refresh(request: Request, data=Depends(form)):

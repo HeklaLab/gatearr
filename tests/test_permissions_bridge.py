@@ -178,5 +178,10 @@ def test_default_seerr_card_needs_public_url_and_respects_manual_menu(client):
         db.add(MenuItem(label='Seerr',url='https://requests.test',position=99,menu_key='main',new_tab=True));db.commit()
     page=client.get('/home')
     assert page.status_code==200
-    # The manual entry takes precedence over the automatic service card.
-    assert page.text.count('https://requests.test')==1
+    # Same names and destinations do not merge independent application identities.
+    assert page.text.count('https://requests.test')==2
+    from app.applications import catalog
+    with SessionLocal() as db:
+        cards=catalog(db,editor=True)
+        assert any(a['key']=='access:seerr' for a in cards)
+        assert any(a['key'].startswith('menu:') and a['name']=='Seerr' for a in cards)

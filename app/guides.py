@@ -160,7 +160,7 @@ def save_service(request: Request, data=Depends(form)):
     db.add(row)
     from .models import MenuItem
     for item in db.scalars(select(MenuItem)):
-        if item.access_service==key or item.label.casefold()==key:
+        if item.access_service==key:
             item.access_service=key;item.label=row.name;item.icon=row.icon;item.icon_url=row.icon_url
             if row.browser_url:item.url=row.browser_url
     db.commit()

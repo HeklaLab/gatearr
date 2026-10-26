@@ -54,8 +54,10 @@ def test_shipped_theme_foregrounds_are_readable(preset,mode):
 def test_export_real_pages_for_browser_review(client,policy_api,monkeypatch):
     target=Path(os.environ['GATEARR_THEME_REVIEW']);target.mkdir(parents=True,exist_ok=True)
     group=post(client,'/admin/groups',{'name':'Famille'},'/admin/groups').headers['location']
-    from app.models import MailDelivery
+    from app.models import MailDelivery,MenuItem
     with SessionLocal() as db:
+        db.add(MenuItem(label='Sonarr',url='https://sonarr.example.test',position=100,menu_key='main',new_tab=True))
+        db.add(MenuItem(label='Additional media tools',url='https://media.example.test/applications',position=110,menu_key='main',new_tab=True))
         db.add_all([MailDelivery(at=1792960000,recipient='alex@example.com',subject='Gatearr — Verify your email',purpose='verify',context='transactional',state='accepted',error=''),MailDelivery(at=1792960001,recipient='emma@example.com',subject='Gatearr — SMTP test',purpose='verify',context='smtp_test',state='failed',error='connection')]);db.commit()
     from contextlib import contextmanager
     from app import bazarr_subtitles as subtitles
@@ -89,7 +91,7 @@ def test_export_real_pages_for_browser_review(client,policy_api,monkeypatch):
             response=client.get(scene);assert response.status_code==200
             (target/(case+'.svg')).write_text(response.text)
             (target/(case+'.css')).write_text(stylesheet.replace(scene,'/'+case+'.svg'))
-            for name,path in [('users','/admin/users'),('account','/admin/users/1'),('group',group),('admin','/admin'),('mail-log','/admin/activity/mail'),('bazarr','/admin/integrations'),('subtitle-account','/account'),('subtitle-locked','/account'),('subtitle-permanent','/account'),('home','/home'),('themes','/admin/branding/themes'),('integrations','/admin/integrations'),('mail','/admin/mail-editor'),('builder','/admin/portal'),('guides','/admin/design/home/howto/emby'),('translations','/admin/translations')]:
+            for name,path in [('updates','/admin/updates'),('users','/admin/users'),('account','/admin/users/1'),('group',group),('admin','/admin'),('mail-log','/admin/activity/mail'),('bazarr','/admin/integrations'),('subtitle-account','/account'),('subtitle-locked','/account'),('subtitle-permanent','/account'),('home','/home'),('themes','/admin/branding/themes'),('integrations','/admin/integrations'),('mail','/admin/mail-editor'),('builder','/admin/portal'),('guides','/admin/design/home/howto/emby'),('translations','/admin/translations')]:
                 with SessionLocal() as db:
                     main.set_config(db,'bazarr_subtitle_lock_mode','days' if name in ('subtitle-locked','bazarr') else 'permanent' if name=='subtitle-permanent' else 'free');db.commit()
                 response=client.get(path);assert response.status_code==200

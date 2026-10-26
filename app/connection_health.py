@@ -19,6 +19,9 @@ def configured(db,service):
 
 def probe(service,values):
     base,key=values['url'],values['key']
+    if service=='tdarr':
+        from .connections import tdarr_upstream_url
+        base=tdarr_upstream_url(base)
     diagnostics=values.setdefault('diagnostics',{});diagnostics.update(host=urlsplit(base).hostname,reachable=False,api_valid=False,tls=urlsplit(base).scheme=='https');started=time.perf_counter()
     try:diagnostics['resolved_ips']=sorted({item[4][0] for item in socket.getaddrinfo(diagnostics['host'],None,type=socket.SOCK_STREAM)})[:4]
     except OSError:diagnostics['resolved_ips']=[]

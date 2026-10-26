@@ -108,3 +108,35 @@ def test_assistance_cannot_bypass_read_only_portal_via_native_proxy(client,monke
     assert post(client,f'/admin/users/{uid}/assist',{},'/admin/users').status_code==303
     monkeypatch.setattr(tools_proxy.httpx,'AsyncClient',lambda **kw:pytest.fail('Assistance reached native administration'))
     assert client.get('/tools/radarr/app/').status_code==401
+
+@pytest.mark.parametrize('has_token',[False,True])
+def test_unavailable_media_handoff_still_opens_public_browser_without_token(client,monkeypatch,has_token):
+    setup(client)
+    from app.models import MediaSession
+    with SessionLocal() as db:
+        service=db.get(AccessService,'emby');service.browser_url='https://play.example.test:8920/emby'
+        owner=db.scalar(select(User).where(User.admin.is_(True)))
+        session=db.scalar(select(Session).where(Session.user_id==owner.id))
+        if has_token:support.capture(db,owner,{'AccessToken':'must-not-leak','ServerId':'server'},session.digest)
+        else:
+            for row in db.scalars(select(MediaSession).where(MediaSession.user_id==owner.id)):db.delete(row)
+        db.commit()
+    monkeypatch.setattr('app.emby.emby.request',lambda *args,**kwargs:(_ for _ in ()).throw(EmbyError('session unavailable')))
+    response=client.get('/services/emby/open',follow_redirects=False)
+    assert response.status_code==303
+    assert response.headers['location']=='https://play.example.test:8920/emby/web/index.html'
+    assert 'must-not-leak' not in response.headers['location']
+    assert response.headers['referrer-policy']=='no-referrer'
+
+
+def test_demo_media_session_can_read_only_its_own_profile(tmp_path,monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import mock_emby
+    monkeypatch.setattr(mock_emby,'DB',str(tmp_path/'mock-media.db'))
+    with TestClient(mock_emby.app) as native:
+        login=native.post('/emby/Users/AuthenticateByName',json={'Username':'demo','Pw':'DemoPassword123!'})
+        assert login.status_code==200
+        data=login.json();headers={'X-Emby-Token':data['AccessToken']}
+        assert native.get('/emby/Users/'+data['User']['Id'],headers=headers).status_code==200
+        assert native.get('/emby/Users/demo-admin-1',headers=headers).status_code==403
+        assert native.get('/emby/Users/Query',headers=headers).status_code==403

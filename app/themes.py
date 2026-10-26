@@ -51,6 +51,14 @@ def landscape(bg:str,accent:str,end:str,mode:str,angle:int=135):
         raise HTTPException(422,'Invalid landscape palette')
     return Response(landscape_svg(bg,accent,end,mode,angle),media_type='image/svg+xml')
 
+def remember_appearance(request,response,user):
+    """Keep only the last appearance choice on this browser, never an identity."""
+    if user and not getattr(request.state,'support',None) and load(request.state.db)['mode']=='user':
+        choice=getattr(user,'theme_preference','auto') or 'auto'
+        if choice in ('light','dark','auto'):
+            response.set_cookie('gatearr_appearance',choice,max_age=31536000,httponly=True,secure=request.state.cookie_secure,samesite='lax',path='/')
+    return response
+
 def css(db,user=None,draft=False):
     value=validate(load(db,draft));mode=value['mode']
     if mode=='user':mode=getattr(user,'theme_preference','auto') or 'auto'
@@ -100,4 +108,6 @@ def preference(request:Request,data=Depends(__import__('app.main',fromlist=['for
     from .main import require_user,redirect
     user=require_user(request)
     if load(request.state.db)['mode']!='user' or data.get('theme') not in ('light','dark','auto'):raise ValueError('Theme is managed by the administrator')
-    user.theme_preference=data['theme'];request.state.db.commit();return redirect(data.get('next','/account') if str(data.get('next','')).startswith('/') and not str(data.get('next','')).startswith('//') else '/account')
+    user.theme_preference=data['theme'];request.state.db.commit()
+    response=redirect(data.get('next','/account') if str(data.get('next','')).startswith('/') and not str(data.get('next','')).startswith('//') else '/account')
+    return remember_appearance(request,response,user)

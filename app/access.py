@@ -87,11 +87,13 @@ def public_access(request,key,node_id=''):
     from .group_access import seerr_allowed
     if key=='seerr' and not seerr_allowed(request.state.db,user):raise HTTPException(403,'Seerr access is not granted')
     db=request.state.db;service=service_or_404(db,key)
-    if service.entry_mode=='direct':
+    forced_guide=request.query_params.get('view')=='guide'
+    if service.entry_mode=='direct' and not forced_guide:
         url=service_url(db,service)
         if not url:raise HTTPException(404,'Service not found')
         return redirect(url)
-    if not node_id and '/guide/' in (href:=access_href(db,key)):return redirect(href)
+    from .application_behavior import guide_href
+    if not node_id and '/guide/' in (href:=(guide_href(db,key) if forced_guide else access_href(db,key))):return redirect(href)
     nodes=visible_nodes(db,service,load(service));indexed={node['id']:node for node in nodes}
     current=indexed.get(node_id) if node_id else None
     if node_id and (not current or current['kind']!='group'):raise HTTPException(404,'Submenu not found')
@@ -100,10 +102,12 @@ def public_access(request,key,node_id=''):
         crumbs.append({'title':local(parent,'title',request.state.locale,db),'href':'/access/'+key+'/'+parent['id']})
         parent=indexed.get(parent.get('parent',''))
     crumbs.reverse()
+    if forced_guide:
+        for crumb in crumbs:crumb['href']+='?view=guide'
     entries=[]
     for node in sorted(nodes,key=lambda node:(node['position'],node['id'])):
         if node.get('parent','')!=node_id:continue
-        kind=node['kind'];href='/access/'+key+'/'+node['id']
+        kind=node['kind'];href='/access/'+key+'/'+node['id']+('?view=guide' if forced_guide else '')
         if kind=='browser':href=service_url(db,service)
         elif kind=='link':href=node['url']
         elif kind=='guide':href='/access/'+key+'/guide/'+str(node['guide_id'])

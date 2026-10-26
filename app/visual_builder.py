@@ -23,7 +23,7 @@ def login_default(db):
     blocks += [{**b,'region':'main','order':30+i*10} for i,b in enumerate(legacy['blocks']) if b['region']=='login']
     return {'page':'login','nav_position':'top','sidebar_position':'left','theme':deepcopy(legacy['theme']),'colors':{},'blocks':blocks,'show_header':True}
 
-def load(db,page,draft=False):
+def _load(db,page,draft=False):
     if page not in PAGES:raise HTTPException(404,'Page not found')
     if page=='home':return {**portal.load(db,draft),'page':'home'}
     if page=='login':
@@ -40,11 +40,17 @@ def load(db,page,draft=False):
     blocks=[block]+[{'id':'footer-column-'+str(i),'parent':block['id'],'slot':i,'kind':'text','region':'main','order':(i+2)*10,'span':12,'title':'','body':text,'rich':True} for i,text in enumerate(columns)]
     return {'page':'footer','nav_position':'top','sidebar_position':'left','theme':deepcopy(portal.DEFAULT['theme']),'colors':{},'blocks':blocks,'show_header':False}
 
+def load(db,page,draft=False):
+    from .image_blocks import normalize
+    return normalize(_load(db,page,draft))
+
 def version(db,page):return footer.version(db) if page=='footer' else portal.version(db) if page=='home' else int(config(db,'login_version','0'))
 
 def validate(db,page,value):
     if not isinstance(value,dict):raise ValueError('Invalid page')
     value=deepcopy(value);value['page']=page;portal.validate(value)
+    from .image_blocks import normalize as normalize_images
+    value=normalize_images(value)
     if page=='home':
         from .applications import normalize
         value=normalize(value,db);portal.validate(value)
@@ -56,13 +62,19 @@ def validate(db,page,value):
         if b['kind']=='application' and b.get('service_key','emby') not in ('radarr','sonarr','bazarr','tracearr','tdarr') and not db.get(AccessService,b.get('service_key','emby')):raise ValueError('Invalid service')
         if b['kind']=='image':
             from .image_sources import require_image
-            b['url']=require_image(b['url'],db)
+            b['url']=require_image(b.get('url',''),db,optional=True)
         if b.get('rich'):b['body']=footer.clean_html(b.get('body',''))
     return value
 
 def save(db,page,value,expected,publish=False):
     value=validate(db,page,value)
     if publish:
+        from .application_behavior import destination
+        apps={app['key']:app for app in catalog(db,editor=True)}
+        for block in value['blocks']:
+            if block['kind']=='applications':
+                for key in block.get('applications',[]):
+                    if key in apps:destination(db,apps[key],block.get('application_behaviors',{}).get(key),publishing=True)
         from .widgets import conflicts
         if conflicts(value['blocks']):raise ValueError('Widget audiences overlap at the same priority. Change their audience or priority.')
     if page=='home':
@@ -140,7 +152,6 @@ def guide(request:Request,guide_id:int):
 def enable_howto(request:Request,item_id:int,data=Depends(form)):
     require_admin(request);db=request.state.db;item=db.get(MenuItem,item_id)
     if not item:raise HTTPException(404,'Application not found')
-    if item.label.strip().casefold() in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise HTTPException(400,'How to is unavailable for this application')
     key=item.access_service
     if not key:
         key='service-'+str(item.id)
@@ -156,10 +167,7 @@ def application_behavior(request:Request,key:str,data=Depends(form)):
     if key in ('radarr','sonarr','bazarr','tracearr','tdarr'):raise HTTPException(400,'Access guides are unavailable for admin tools')
     service=db.get(AccessService,key)
     if not service:raise HTTPException(404,'Application not found')
-    mode=data.get('mode')
-    if mode not in ('direct','structured'):raise ValueError('Invalid application behavior')
-    service.entry_mode=mode;db.commit()
-    return {'mode':mode}
+    raise HTTPException(410,'Reload the builder to configure each application card independently')
 
 @router.get('/admin/access-guides')
 def guide_index(request:Request):

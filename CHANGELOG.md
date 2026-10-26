@@ -1,3 +1,22 @@
+# 0.4.3 — 26 October 2026
+
+## Improvements
+
+- Choose opening behavior per application card: direct link, embedded tool or media guide. Unconfigured tools offer a direct URL field.
+- Size images in pixels or percent; resize/crop large uploads and see saved-image previews.
+- Group release history by series and add a GitHub roadmap shortcut.
+- Refresh guide cards, simplify guide editing and unify builder navigation. Keep templates exclusive to Portal; add My account background artwork.
+
+## Fixes
+
+- Keep same-named custom applications editable and independent; isolate each card’s destination and draft changes (#4, #6).
+- Correct image alignment, responsive sizing and empty placeholders (#8).
+- Fix Tdarr resources with hash-based URLs and improve connection guidance.
+- Preserve media ports/paths and safely fall back to the public Emby interface when automatic sign-in is unavailable.
+- Restore theme persistence, spacing and color-control alignment; remove duplicate widget titles. Place Library updates and Statistics last, preserving the Tracearr logo.
+
+The deployment-specific Emby port report (#5) still needs confirmation from the reporter. Music support remains on the roadmap without an ETA.
+
 # 0.4.2 — 25 October 2026
 
 ## Interface and navigation

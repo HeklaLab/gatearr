@@ -1,3 +1,11 @@
+## Upgrading to 0.4.3 — public beta
+
+Back up the complete `/data` volume, including `bootstrap.json` or the configured encryption key. Pin `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.4.3` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+Migration 0027 stores existing application behavior and destinations on each saved card, separately in draft and published layouts. Accounts, integration secrets, uploaded assets and existing custom links are retained. Same-named custom apps stay independent. Review your portal and its application destinations after updating.
+
+Legacy image widths are preserved as percentages; new image settings use pixels or percent. Only Portal offers templates; existing login/footer layouts remain editable. Restoring an older version after migration may require restoring the matching data backup.
+
 ## Upgrading to 0.4.2 — public beta
 
 Back up the complete `/data` volume, including `bootstrap.json` or the configured encryption key. Pin `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.4.2` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
