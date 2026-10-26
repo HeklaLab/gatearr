@@ -58,6 +58,14 @@ Customize login, portal, access guides and footer from one workspace. Add applic
 
 ![Gatearr 0.4.3 portal builder](screenshots/gatearr-builder-v043.jpg)
 
+### Connection guides
+
+Help members connect their devices without knowing the underlying applications. They choose a computer, phone or Smart TV, then follow a guide with the application link, server address and sign-in instructions. The example below shows the complete Smart TV guide using a fictional server and account.
+
+![Choose a device to access your media in Gatearr 0.4.3](screenshots/gatearr-devices-v043.jpg)
+
+![Complete Smart TV connection guide in Gatearr 0.4.3](screenshots/gatearr-guide-v043.jpg)
+
 ### Applications and appearance
 
 Service status and connection settings share one overview. Blue Boréal is shown here; Electric Lime and Neon Rose remain available as alternate presets.
@@ -87,7 +95,7 @@ The setup assistant configures portal identity, language, initial theme and medi
 ![Gatearr 0.4.3 first installation](screenshots/gatearr-setup-v043.jpg)
 
 <details>
-<summary>More screenshots: mobile portal, account, guides, emails and sign-in</summary>
+<summary>More screenshots: mobile portal, account, guide builder, emails and sign-in</summary>
 
 ### Mobile portal
 
@@ -101,13 +109,9 @@ Members manage their personal account and preferences, while administrators orga
 
 ![Gatearr 0.4.3 user groups](screenshots/gatearr-groups-v043.jpg)
 
-### Device guides and their editor
+### Guide builder
 
-Choose a device from illustrated cards, follow the connection steps and return to the device picker from either end of a guide. The guide builder uses clickable choice tiles, separate reorder controls and the shared Portal builder navigation.
-
-![Gatearr 0.4.3 device picker](screenshots/gatearr-devices-v043.jpg)
-
-![Gatearr 0.4.3 Smart TV connection guide](screenshots/gatearr-guide-v043.jpg)
+Build device journeys with clickable choice tiles, separate reorder controls and the shared Portal builder navigation.
 
 ![Gatearr 0.4.3 guide builder with complete device breadcrumbs](screenshots/gatearr-guide-editor-v043.jpg)
 
