@@ -32,19 +32,19 @@ Complete setup privately. For access from other devices or the internet, configu
 
 [Windows instructions](#windows--docker-desktop) · [Full Docker instructions](#start-with-docker) · [Upgrade an existing installation](UPGRADING.md) · [Community on Reddit](https://www.reddit.com/r/gatearr/)
 
-## Interface preview — previous release (0.4.1)
+## Interface preview — Gatearr 0.4.3
 
 Real screenshots of Gatearr 0.4.3 running locally with the **Blue Boréal** theme and the original Gatearr logo. The reset demo uses fictional people, sample libraries and simulated integrations; no production accounts or credentials appear below.
 
 ### Your portal
 
-The standard member portal shows media counts and request quotas inside their application cards, with viewing activity on its own row.
+The standard member portal combines Emby library counts, Seerr request quotas and personal viewing activity. Clear purpose labels and large diffuse service artwork keep application cards easy to recognize.
 
 ![Gatearr 0.4.3 default Blue Boréal portal](screenshots/gatearr-home-v043.jpg)
 
 ### Administration and people
 
-A fixed sidebar and shared capsule tabs lead to live user search, structured profiles and group permissions.
+A compact administration directory and persistent sidebar organize appearance, users, applications, emails and activity. Search fictional accounts and manage individual or shared group permissions from structured profiles.
 
 ![Gatearr 0.4.3 administration](screenshots/gatearr-admin-v043.jpg)
 
@@ -54,7 +54,7 @@ A fixed sidebar and shared capsule tabs lead to live user search, structured pro
 
 ### Visual portal builder
 
-Build responsive pages with application rows, independent widgets, columns, text and images. The preview follows its content without nested scrolling.
+Customize login, portal, access guides and footer from one workspace. Add application cards, statistics, columns, text and images; configure each card’s opening behavior independently and size images in pixels or percent.
 
 ![Gatearr 0.4.3 portal builder](screenshots/gatearr-builder-v043.jpg)
 
@@ -76,6 +76,8 @@ Manage members, native permissions and library access through shared groups. Ena
 
 ### Updates
 
+Browse release history by version series, with shared feature highlights followed by fixes for each patch release. A shortcut opens the public roadmap.
+
 ![Gatearr 0.4.3 release history grouped by series](screenshots/gatearr-updates-v043.jpg)
 
 ### First installation
@@ -93,11 +95,15 @@ The setup assistant configures portal identity, language, initial theme and medi
 
 ### Account and user groups
 
+Members manage their personal account and preferences, while administrators organize shared access through user groups.
+
 ![Gatearr 0.4.3 account settings](screenshots/gatearr-account-v043.jpg)
 
 ![Gatearr 0.4.3 user groups](screenshots/gatearr-groups-v043.jpg)
 
 ### Device guides and their editor
+
+Choose a device from illustrated cards, follow the connection steps and return to the device picker from either end of a guide. The guide builder uses clickable choice tiles, separate reorder controls and the shared Portal builder navigation.
 
 ![Gatearr 0.4.3 device picker](screenshots/gatearr-devices-v043.jpg)
 
@@ -107,9 +113,13 @@ The setup assistant configures portal identity, language, initial theme and medi
 
 ### Invitation template
 
+Edit the invitation email visually and preview its content using the portal’s default branding.
+
 ![Gatearr 0.4.3 invitation email editor](screenshots/gatearr-emails-v043.jpg)
 
 ### Sign-in and account recovery
+
+A consistent sign-in and password-recovery experience uses the same Gatearr identity and Blue Boréal appearance.
 
 ![Gatearr 0.4.3 sign-in page](screenshots/gatearr-login-v043.jpg)
 
