@@ -34,82 +34,86 @@ Complete setup privately. For access from other devices or the internet, configu
 
 ## Interface preview — previous release (0.4.1)
 
-Real screenshots of Gatearr 0.4.1 running locally with the **Blue Boréal** theme and the original Gatearr logo. The reset demo uses fictional people, sample libraries and simulated integrations; no production accounts or credentials appear below.
+Real screenshots of Gatearr 0.4.3 running locally with the **Blue Boréal** theme and the original Gatearr logo. The reset demo uses fictional people, sample libraries and simulated integrations; no production accounts or credentials appear below.
 
 ### Your portal
 
-The default portal keeps media and request widgets below their matching applications, with viewing activity on its own row.
+The standard member portal shows media counts and request quotas inside their application cards, with viewing activity on its own row.
 
-![Gatearr 0.4.1 default Blue Boréal portal](screenshots/gatearr-home-v041.jpg)
+![Gatearr 0.4.3 default Blue Boréal portal](screenshots/gatearr-home-v043.jpg)
 
 ### Administration and people
 
 A fixed sidebar and shared capsule tabs lead to live user search, structured profiles and group permissions.
 
-![Gatearr 0.4.1 administration](screenshots/gatearr-admin-v041.jpg)
+![Gatearr 0.4.3 administration](screenshots/gatearr-admin-v043.jpg)
 
-![Gatearr 0.4.1 users with fictional accounts](screenshots/gatearr-users-v041.jpg)
+![Gatearr 0.4.3 users with fictional accounts](screenshots/gatearr-users-v043.jpg)
 
-![Gatearr 0.4.1 structured user profile](screenshots/gatearr-user-profile-v041.jpg)
+![Gatearr 0.4.3 structured user profile](screenshots/gatearr-user-profile-v043.jpg)
 
 ### Visual portal builder
 
 Build responsive pages with application rows, independent widgets, columns, text and images. The preview follows its content without nested scrolling.
 
-![Gatearr 0.4.1 portal builder](screenshots/gatearr-builder-v041.jpg)
+![Gatearr 0.4.3 portal builder](screenshots/gatearr-builder-v043.jpg)
 
 ### Applications and appearance
 
 Service status and connection settings share one overview. Blue Boréal is shown here; Electric Lime and Neon Rose remain available as alternate presets.
 
-![Gatearr 0.4.1 application connection overview](screenshots/gatearr-integrations-v041.jpg)
+![Gatearr 0.4.3 application connection overview](screenshots/gatearr-integrations-v043.jpg)
 
-![Gatearr 0.4.1 appearance settings with Blue Boréal selected](screenshots/gatearr-themes-v041.jpg)
+![Gatearr 0.4.3 appearance settings with Blue Boréal selected](screenshots/gatearr-themes-v043.jpg)
 
 ### Groups and translations
 
-Review native permissions and library differences before assigning a group. Enabled languages are displayed with flags and a clear editing language.
+Manage members, native permissions and library access through shared groups. Enabled languages are displayed with flags and a clear editing language.
 
-![Gatearr 0.4.1 group permission review](screenshots/gatearr-group-review-v041.jpg)
+![Gatearr 0.4.3 group permissions](screenshots/gatearr-group-review-v043.jpg)
 
-![Gatearr 0.4.1 translation center](screenshots/gatearr-languages-v041.jpg)
+![Gatearr 0.4.3 translation center](screenshots/gatearr-languages-v043.jpg)
+
+### Updates
+
+![Gatearr 0.4.3 release history grouped by series](screenshots/gatearr-updates-v043.jpg)
 
 ### First installation
 
 The setup assistant configures portal identity, language, initial theme and media-server access.
 
-![Gatearr 0.4.1 first installation](screenshots/gatearr-setup-v041.jpg)
+![Gatearr 0.4.3 first installation](screenshots/gatearr-setup-v043.jpg)
 
 <details>
 <summary>More screenshots: mobile portal, account, guides, emails and sign-in</summary>
 
 ### Mobile portal
 
-![Gatearr 0.4.1 mobile Blue Boréal portal](screenshots/gatearr-home-mobile-v041.jpg)
+![Gatearr 0.4.3 mobile Blue Boréal portal](screenshots/gatearr-home-mobile-v043.jpg)
 
 ### Account and user groups
 
-![Gatearr 0.4.1 account settings](screenshots/gatearr-account-v041.jpg)
+![Gatearr 0.4.3 account settings](screenshots/gatearr-account-v043.jpg)
 
-![Gatearr 0.4.1 user groups](screenshots/gatearr-groups-v041.jpg)
+![Gatearr 0.4.3 user groups](screenshots/gatearr-groups-v043.jpg)
 
 ### Device guides and their editor
 
-![Gatearr 0.4.1 device picker](screenshots/gatearr-devices-v041.jpg)
+![Gatearr 0.4.3 device picker](screenshots/gatearr-devices-v043.jpg)
 
-![Gatearr 0.4.1 Smart TV connection guide](screenshots/gatearr-guide-v041.jpg)
+![Gatearr 0.4.3 Smart TV connection guide](screenshots/gatearr-guide-v043.jpg)
 
-![Gatearr 0.4.1 guide builder with complete device breadcrumbs](screenshots/gatearr-guide-editor-v041.jpg)
+![Gatearr 0.4.3 guide builder with complete device breadcrumbs](screenshots/gatearr-guide-editor-v043.jpg)
 
 ### Invitation template
 
-![Gatearr 0.4.1 invitation email editor](screenshots/gatearr-emails-v041.jpg)
+![Gatearr 0.4.3 invitation email editor](screenshots/gatearr-emails-v043.jpg)
 
 ### Sign-in and account recovery
 
-![Gatearr 0.4.1 sign-in page](screenshots/gatearr-login-v041.jpg)
+![Gatearr 0.4.3 sign-in page](screenshots/gatearr-login-v043.jpg)
 
-![Gatearr 0.4.1 password recovery](screenshots/gatearr-password-reset-v041.jpg)
+![Gatearr 0.4.3 password recovery](screenshots/gatearr-password-reset-v043.jpg)
 
 </details>
 
@@ -121,7 +125,7 @@ The setup assistant configures portal identity, language, initial theme and medi
 - Theme/spacing fixes, improved Tdarr loading and safer Emby browser opening.
 - Release history grouped by series and a roadmap shortcut.
 
-See [release notes](RELEASE_NOTES.md), [upgrade instructions](UPGRADING.md) and the [roadmap](ROADMAP.md). The gallery above remains from 0.4.1.
+See [release notes](RELEASE_NOTES.md), [upgrade instructions](UPGRADING.md) and the [roadmap](ROADMAP.md). The gallery above shows the current 0.4.3 interface.
 
 ## Features introduced in 0.4.0
 

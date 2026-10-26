@@ -1,7 +1,7 @@
-# Gatearr 0.4.1 screenshots
+# Gatearr 0.4.3 screenshots
 
-Captured from the running local demo on 23 October 2026. All pages use Blue Boréal and the default Gatearr logo. Alex Morgan and the other accounts, example.com addresses, libraries and service activity are fictional. Native services are simulated. Images are unretouched browser captures; the first-installation page uses a separate unconfigured demo instance.
+Captured from the running local demo on 26 October 2026, using the factory portal, Blue Boréal dark and the default Gatearr logo. Jordan Lee, Alex Morgan and the other people, example.com addresses, media libraries and activity are fictional. Native services are simulated. The main portal, mobile portal and account screenshots show a standard member; administration screenshots use a fictional administrator.
 
-The portal uses the factory 0.4.1 layout, including aligned media/request widgets and a separate Tracearr row. Administration views show the released sidebar, capsule tabs and structured profile. The group review is captured before confirmation; it does not apply permissions.
+These are unretouched browser captures. The first-installation screenshot comes from a separate unconfigured local instance. The gallery includes application-card information, current builders and device guides, account settings, administration and grouped release history.
 
-JPEG files preserve the browser capture format. Earlier screenshots remain in historical Git tags; this directory contains the current gallery.
+This documentation-only refresh does not alter the 0.4.3 release packages, version, application code or container images. Previous gallery screenshots remain available in historical Git commits and tags.
