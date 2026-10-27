@@ -1,3 +1,7 @@
 {% macro logo(alt,extra='',preview=false) -%}
 <span class="brand-logo-wrap theme-logo {{ extra }}"><img class="gatearr-logo" {% if preview %}data-logo-preview{% endif %} data-default-brand-logo src="{{ default_brand_logo_url }}" alt="{{ alt }}"><img class="gatearr-logo-color" data-default-brand-logo src="{{ default_brand_logo_url }}" alt="" aria-hidden="true"></span>
 {%- endmacro %}
+
+{% macro custom_logo(alt,classes='') -%}
+<span class="custom-logo-variants {{ classes }}"><img class="custom-logo-dark" src="{{ custom_logo_dark }}" alt="{{ alt }}"><img class="custom-logo-light" src="{{ custom_logo_light }}" alt="{{ alt }}"></span>
+{%- endmacro %}

@@ -1,5 +1,35 @@
 [
   {
+    "version": "0.4.4",
+    "date": "2026-10-27",
+    "changes": [
+      "Upload separate light and dark logos and offer appearance selection before signing in.",
+      "Navigate device choices and guides with smooth, accessible transitions.",
+      "Fix the email template size limit and improve spacing in the email editor.",
+      "Keep Seerr group permission switches compact and aligned.",
+      "Show unavailable embedded access with a configuration hint while keeping direct links.",
+      "Allow disabling an offline integration without revalidating saved settings.",
+      "Compact release-history highlights into independent columns and improve common interface translations."
+    ],
+    "features": [
+      {
+        "title": "Appearance",
+        "text": "Upload separate light and dark logos and offer appearance selection before signing in."
+      },
+      {
+        "title": "Access guides",
+        "text": "Navigate device choices and guides with smooth, accessible transitions."
+      }
+    ],
+    "fixes": [
+      "Fix the email template size limit and improve spacing in the email editor.",
+      "Keep Seerr group permission switches compact and aligned.",
+      "Show unavailable embedded access with a configuration hint while keeping direct links.",
+      "Allow disabling an offline integration without revalidating saved settings.",
+      "Compact release-history highlights into independent columns and improve common interface translations."
+    ]
+  },
+  {
     "version": "0.4.3",
     "date": "2026-10-26",
     "changes": [

@@ -51,3 +51,15 @@ def test_reviewed_labels_render_in_each_language_without_changing_user_overrides
         assert i18n.content(db,'mail:reset:subject','${app_name} — reset your password',code)=='Custom ${app_name}'
         assert 'Branding' not in i18n.overrides(db,code)
         assert i18n.overrides(db,code)['Home']=='Custom home label'
+
+
+def test_publish_theme_uses_natural_french_action():
+    assert i18n.CATALOGS['fr']['Publish theme']=='Publier le thème'
+    assert i18n.CATALOGS['fr']['Publish themes']=='Publier les thèmes'
+
+
+def test_revised_german_and_spanish_use_interface_terms():
+    assert i18n.CATALOGS['de']['Password does not meet the minimum length requirement.']=='Das Passwort ist zu kurz.'
+    assert i18n.CATALOGS['es']['Password does not meet the minimum length requirement.']=='La contraseña no alcanza la longitud mínima.'
+    for code in ('de','es'):
+        assert i18n.CATALOGS[code]['Applications are visible only to users with permission to access them.'] != 'Applications are visible only to users with permission to access them.'

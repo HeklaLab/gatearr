@@ -1,5 +1,5 @@
 'use strict';
-const themeOverrides=['accent','button_hover','bg','surface','text','muted','ink','logo-filter','default-brand-logo','landscape-image'];
+const themeOverrides=['accent','button_hover','bg','surface','text','muted','ink','logo-filter','default-brand-logo','landscape-image','custom-logo-dark-display','custom-logo-light-display'];
 let themeReload=0;
 async function reloadTheme(){
  const previous=[...document.querySelectorAll('link[rel=stylesheet]')].find(link=>new URL(link.href).pathname==='/theme.css');
@@ -28,7 +28,7 @@ function bindCapsules(){for(const capsule of document.querySelectorAll('.theme-c
   const previous=buttons.find(b=>b.getAttribute('aria-pressed')==='true'),data=new FormData(capsule);data.set('theme',button.value);select(button);
   try{
    const response=await fetch('/account/theme',{method:'POST',body:data,credentials:'same-origin'});if(!response.ok)throw Error();
-   if(response.redirected&&new URL(response.url).pathname==='/login'){location.assign(response.url);return;}
+   if(document.body.dataset.authenticated==='true'&&response.redirected&&new URL(response.url).pathname==='/login'){location.assign(response.url);return;}
    await window.GatearrTheme.reload();
    document.dispatchEvent(new CustomEvent('gatearr:themechange',{detail:{mode:button.value}}));
   }catch{select(previous);let notice=capsule.querySelector('[role=alert]');if(!notice){notice=document.createElement('span');notice.setAttribute('role','alert');capsule.append(notice);}notice.textContent=document.body.dataset.failed;}

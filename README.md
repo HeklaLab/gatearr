@@ -131,15 +131,14 @@ A consistent sign-in and password-recovery experience uses the same Gatearr iden
 
 </details>
 
-## What's new in 0.4.3
+## What's new in 0.4.4
 
-- Independent direct-link, embedded-tool and guide behavior for each application card; same-named custom apps remain editable.
-- Image sizing in pixels/percent, corrected alignment, large-image resizing and saved-image previews.
-- Consistent builder navigation, clearer clickable guide choices and diffuse device artwork.
-- Theme/spacing fixes, improved Tdarr loading and safer Emby browser opening.
-- Release history grouped by series and a roadmap shortcut.
+- Separate custom logos for light and dark themes, plus appearance selection before sign-in.
+- Smoother device guides and a compact, organized release history.
+- More reliable email templates, offline integration settings and group permission controls.
+- Clearer application-card options and improved interface wording.
 
-See [release notes](RELEASE_NOTES.md), [upgrade instructions](UPGRADING.md) and the [roadmap](ROADMAP.md). The gallery above shows the current 0.4.3 interface.
+See [release notes](RELEASE_NOTES.md), [upgrade instructions](UPGRADING.md) and the [roadmap](ROADMAP.md). The gallery above shows the 0.4.3 interface.
 
 ## Features introduced in 0.4.0
 
@@ -269,7 +268,7 @@ docker compose run --rm --no-deps gatearr python -m app.bootstrap --check
 docker compose up -d --wait
 ```
 
-Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.4.3` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
+Default image: `ghcr.io/heklalab/gatearr:latest`. Pin `:0.4.4` for a controlled version. Public container pulls require no GitHub credentials. The source repository and release downloads are public; opening a GitHub issue requires a GitHub account.
 
 Open `http://localhost:8000/setup`. Edit `PORT`, `BIND_ADDRESS` and `PUBLIC_URL` for your deployment. For LAN testing set `BIND_ADDRESS=0.0.0.0` and `PUBLIC_URL=http://YOUR_SERVER_IP:8000`. Ports 80/443 normally belong to your existing HTTPS proxy; Gatearr serves HTTP internally on 8000. There is no bundled Caddy or second TLS listener.
 

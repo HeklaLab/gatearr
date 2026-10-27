@@ -149,3 +149,35 @@ def test_mail_log_migration_preserves_existing_configuration(tmp_path):
         assert connection.execute("select value from config where key='app_name'").fetchone()[0]=='Keep my portal'
         assert connection.execute('select count(*) from mail_deliveries').fetchone()[0]==0
         assert connection.execute('select version_num from alembic_version').fetchone()[0]=='0023'
+
+@pytest.mark.parametrize('length,character', [(10001, 'x'), (50000, 'é'), (50000, '😀')])
+def test_large_mail_template_can_be_saved_and_tested(client, transport, length, character):
+    setup(client); smtp(client)
+    prefix = '<p>${link}'
+    suffix = '</p>'
+    html = prefix + character * (length - len(prefix) - len(suffix)) + suffix
+    assert edit(client, html=html).status_code == 303
+    response = edit(client, html=html, action='test')
+    assert response.status_code == 200
+    assert edit(client, html=html).status_code == 303
+    assert len(transport.messages) == 1
+    assert character * 100 in transport.messages[0].get_body(preferencelist=('html',)).get_content()
+
+
+@pytest.mark.parametrize('action', ['save', 'test'])
+def test_oversized_mail_template_is_rejected_with_clear_error(client, transport, action):
+    setup(client); smtp(client)
+    html = '<p>' + 'x' * 50000 + '</p>'
+    response = edit(client, html=html, action=action)
+    assert response.status_code == 400
+    assert '50,000 characters' in response.text
+    assert not transport.messages
+
+
+def test_template_expanded_by_sanitization_is_rejected_before_save(client, transport):
+    setup(client); smtp(client)
+    html = '<p>${link}' + '&' * 49980 + '</p>'
+    response = edit(client, html=html)
+    assert response.status_code == 400
+    assert '50,000 characters after formatting' in response.text
+    assert client.get('/admin/mail-editor').status_code == 200

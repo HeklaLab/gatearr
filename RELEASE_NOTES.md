@@ -1,16 +1,13 @@
-# Gatearr 0.4.3 — public beta
+# Gatearr 0.4.4 — public beta
 
-A more predictable Portal builder, independent application cards and fixes for images, custom links and Tdarr.
+- **Branding and appearance:** upload separate logos for light and dark themes, and let visitors choose their appearance before signing in when enabled by the administrator. Existing custom logos remain supported.
+- **Guides and updates:** smooth device-guide navigation and a more compact release history grouped by topic, with fixes kept by version.
+- **Email:** fix the mismatch that rejected edited templates over 10,000 characters; templates support up to 50,000 characters. Improve editor spacing.
+- **Integrations and permissions:** disable offline connections without revalidating saved settings; show unavailable embedded access alongside direct links; fix stretched Seerr group switches.
+- **Translations:** review interface wording and fill missing translations across all 21 bundled language packs.
 
-- **Application cards:** choose direct links, embedded tools or guides per card. Unconfigured tools offer a direct URL; custom apps remain independent even when they share a native app’s name.
-- **Images:** numeric px/% sizing, working alignment, a shared crop/resize editor for large uploads and saved-image previews.
-- **Builder and guides:** consistent navigation and headings, fully clickable guide choices, diffuse device artwork and clearer controls. Templates are exclusive to Portal.
-- **Interface:** remembered appearance, corrected spacing/color alignment, a My account watermark and cleaner widget settings. Tracearr’s widget is now Statistics, with its original logo.
-- **Integrations:** corrected Tdarr hash-URL resources and safer Emby browser-opening fallback, preserving configured ports and paths.
-- **Updates:** compact history grouped by release series and a roadmap shortcut.
+The email size mismatch is one possible cause of the reported Windows/Docker issue; that deployment still needs confirmation. Setup wizard layout and the Discord link are planned for 0.4.5.
 
 ## Upgrade
 
-Back up the complete `/data` volume, including its encryption key. Update the container to `ghcr.io/heklalab/gatearr:0.4.3` (or `latest`). Migration 0027 preserves existing card behavior and destinations in drafts and published layouts; review your portal after upgrading. See [upgrade instructions](https://github.com/HeklaLab/gatearr/blob/main/UPGRADING.md).
-
-Custom-link, card-behavior and image-upload reports (#4, #6, #8) are addressed. The deployment-specific Emby port report (#5) still needs reporter confirmation. Music remains on the [roadmap](https://github.com/HeklaLab/gatearr/blob/main/ROADMAP.md), without an ETA.
+Back up the complete `/data` volume, including its encryption key. Update the container to `ghcr.io/heklalab/gatearr:0.4.4` (or `latest`). Existing configuration and custom logos are retained. See [upgrade instructions](https://github.com/HeklaLab/gatearr/blob/main/UPGRADING.md).

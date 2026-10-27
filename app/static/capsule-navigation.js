@@ -37,7 +37,7 @@
    else link.removeAttribute('aria-current');
   }
  }
- const eligible = url => url.origin === location.origin && (routes.has(url.pathname) || (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) && !url.pathname.startsWith('/admin/setup'));
+ const eligible = url => url.origin === location.origin && (routes.has(url.pathname) || url.pathname.startsWith('/access/') || (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) && !url.pathname.startsWith('/admin/setup'));
  function syncStyles(doc) {
   const next = [...doc.querySelectorAll('head link[rel=stylesheet]')];
   const wanted = new Set(next.map(link => new URL(link.getAttribute('href'), location.origin).href));
@@ -189,7 +189,7 @@
   return navigate(url);
  }};
  document.addEventListener('click', event => {
-  const link = event.target.closest('.primary-capsule:not(.guest-primary-capsule) a, .user-tabs a, .admin-tabs a, .studio-pages a, .admin-navigation a, .admin-mosaic-heading a[href="/home"], .admin-directory-heading a[href="/home"], .admin-directory-link, .admin-directory-utility-title, .admin-directory-shortcuts a, .admin-directory-text-link, .email-log-shortcut a, .mail-log-pagination');
+  const link = event.target.closest('.primary-capsule:not(.guest-primary-capsule) a, .user-tabs a, .admin-tabs a, .studio-pages a, .admin-navigation a, .admin-mosaic-heading a[href="/home"], .admin-directory-heading a[href="/home"], .admin-directory-link, .admin-directory-utility-title, .admin-directory-shortcuts a, .admin-directory-text-link, .email-log-shortcut a, .mail-log-pagination, .guide-journey .guide-choice, .guide-journey .breadcrumbs a, .guide-journey .guide-device-navigation a');
   if (link?.hasAttribute('data-group-tab')) return;
   if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target || link.hasAttribute('download')) return;
   const url = new URL(link.href);

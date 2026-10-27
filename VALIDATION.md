@@ -1,3 +1,12 @@
+# Gatearr 0.4.4 validation — 2026-10-27
+
+- **559 automated tests passed**, one optional rendered-theme export skipped and one existing dependency deprecation warning. All 32 top-level JavaScript files passed syntax checks.
+- Translation checks cover the same keys and preserved interpolation variables across all 21 bundled catalogues, reviewed interface terms and rendered pages in each locale, including RTL direction. Wording was reviewed manually in context; these checks do not constitute native-speaker certification. A fresh migration enables English only and keeps the other bundled languages available but disabled.
+- Regression coverage includes edited email-template limits, sanitization, disabling offline integrations without altering saved settings, guest appearance policy, legacy/split custom logos, compact Seerr switches, unavailable embedded-access hints, independent changelog sections and guide navigation.
+- Focused browser reviews during this release covered guest appearance selection, light/dark custom logos, responsive permission controls, guide transitions/history/focus and reduced motion, and the accepted independent-column changelog layout. Existing demo settings were retained.
+- The reported external Windows/Docker email deployment and gadon.tv installation were not directly accessed. The confirmed template-size mismatch is fixed; its relation to the reporter's environment remains unconfirmed.
+- GitHub Actions gates publication on the complete suite and isolated Docker Compose/SMTP smoke, then builds AMD64/ARM64 images and publishes their verified digest. No local Docker engine or production media services were used for the final review.
+
 # Gatearr 0.4.3 validation — 2026-10-26
 
 - **544 automated tests passed**, one optional rendered-theme export skipped and one existing dependency deprecation warning. All 32 top-level JavaScript files passed syntax checks.

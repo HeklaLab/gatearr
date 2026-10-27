@@ -58,3 +58,22 @@ def test_intermediate_guide_groups_offer_device_return_above_and_below(client):
         assert len(buttons)==2
         assert all('href="/access/emby?view=guide"' in button and 'Choose another device' in button for button in buttons)
     assert 'guide-device-navigation' not in client.get('/access/emby?view=guide').text
+
+
+def test_guest_can_change_appearance_only_when_users_choose(client):
+    setup(client);policy('user');logout(client);client.cookies.clear()
+    page=client.get('/login').text
+    assert 'guest-language-menu' in page and 'class="theme-capsule"' in page
+    for choice in ('dark','light','auto'):
+        response=post(client,'/account/theme',{'theme':choice,'next':'/login'},'/login')
+        assert response.status_code==303
+        assert client.cookies.get('gatearr_appearance')==choice
+        css=client.get('/theme.css').text
+        assert ('@media(prefers-color-scheme:dark)' in css) == (choice=='auto')
+        if choice!='auto':assert 'color-scheme:'+choice in css
+        html=client.get('/login').text
+        assert 'value="'+choice+'"' in html and 'aria-pressed="true"' in html
+    policy('dark')
+    assert 'class="theme-capsule"' not in client.get('/login').text
+    assert post(client,'/account/theme',{'theme':'light'},'/login').status_code==400
+    assert 'color-scheme:dark' in client.get('/theme.css').text

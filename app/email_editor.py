@@ -54,6 +54,8 @@ def save(request:Request,data=Depends(form)):
     if data.get('source_hash') and data['source_hash']!=stamp:raise HTTPException(409,'The source text has changed. Reload the translation page.')
     subject=validate(str(data.get('subject','')),subject=True)
     html=validate(str(data.get('html','')),html=True)
+    if len(html)>50000:
+        raise HTTPException(400,'Email template must contain at most 50,000 characters after formatting.')
     action=data.get('action','save')
     if action=='preview':return editor(request,purpose,locale,subject,html)
     if action=='test':

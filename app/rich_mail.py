@@ -19,7 +19,8 @@ def attribute(tag,name,value):
     return value
 
 def clean(value):
-    if len(value)>50000:raise ValueError('Template too long or invalid subject')
+    # Sanitization and variable substitution can expand an already validated template.
+    if len(value)>300000:raise ValueError('Template too long or invalid subject')
     return nh3.clean(value,tags=TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attribute,url_schemes={'https','http'},url_relative=lambda value:value if value=='${link}' or __import__('app.image_sources',fromlist=['local_path']).local_path(value) else None,filter_style_properties={'color','background-color','text-align','font-size','font-weight','font-style','text-decoration','line-height','max-width','display','margin-left','margin-right','padding','border-radius'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
 
 class PlainText(HTMLParser):

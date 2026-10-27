@@ -294,12 +294,12 @@ async def form(request: Request):
     chunks, length = [], 0
     async for chunk in request.stream():
         length += len(chunk)
-        if length > (5*1024*1024+65536 if accepts_icon else 262144 if request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/','/admin/groups/')) or request.url.path.endswith('/permissions/category') else 65536):
+        if length > (10*1024*1024+65536 if request.url.path=='/admin/settings' else 5*1024*1024+65536 if accepts_icon else 786432 if request.url.path=='/admin/mail-editor' else 262144 if request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/','/admin/groups/')) or request.url.path.endswith('/permissions/category') else 65536):
             raise HTTPException(413, 'Form too large')
         chunks.append(chunk)
     # Preserve the bounded body for Starlette's form parser after streaming it once.
     request._body = b"".join(chunks)
-    data = await request.form(max_fields=2000 if request.url.path.startswith("/admin/groups/") or request.url.path.endswith("/permissions/category") else 400 if request.url.path.startswith(("/admin/guides/", "/admin/access/")) else 100, max_files=1 if accepts_icon else 0)
+    data = await request.form(max_fields=2000 if request.url.path.startswith("/admin/groups/") or request.url.path.endswith("/permissions/category") else 400 if request.url.path.startswith(("/admin/guides/", "/admin/access/")) else 100, max_files=2 if request.url.path=='/admin/settings' else 1 if accepts_icon else 0)
     supplied = str(data.get("csrf", ""))
     if not secrets.compare_digest(supplied, request.state.session.csrf):
         raise HTTPException(403, 'Form expired. Reload the page.')
@@ -332,8 +332,18 @@ async def form(request: Request):
     if any(key not in data for key in required):
         raise HTTPException(400, 'Incomplete form')
     from starlette.datastructures import UploadFile
-    if any((key!='icon_file' or not accepts_icon) if isinstance(value,UploadFile) else (not isinstance(value,str) or len(value)>(240000 if key=='payload' and request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/')) else 10000)) for key,value in data.multi_items()):
-        raise HTTPException(400, 'Invalid or oversized field')
+    for key, value in data.multi_items():
+        if isinstance(value, UploadFile):
+            if (key != 'icon_file' and not (request.url.path == '/admin/settings' and key == 'icon_file_light')) or not accepts_icon:
+                raise HTTPException(400, 'Invalid or oversized field')
+            continue
+        if request.url.path == '/admin/mail-editor' and key == 'html':
+            if not isinstance(value, str) or len(value) > 50000:
+                raise HTTPException(400, 'Email template must contain at most 50,000 characters.')
+        else:
+            limit = 240000 if key == 'payload' and request.url.path.startswith(('/admin/design/','/admin/visual-howto/','/admin/visual-guide/')) else 10000
+            if not isinstance(value, str) or len(value) > limit:
+                raise HTTPException(400, 'Invalid or oversized field')
     if any(len(str(data.get(key, ""))) > 256 for key in ("current", "password", "confirm", "smtp_password")):
         raise HTTPException(400, 'Password too long')
     origin = request.headers.get("origin")
@@ -445,17 +455,19 @@ def render(request, template, **kwargs):
     from .themes import load as load_themes, logo_url as theme_logo_url
     selected_theme=load_themes(db,template=='themes.html')
     default_brand_logo_url=theme_logo_url(setup_values.get('preset',selected_theme['preset']))
-    logo_url=values.get('logo_url') or (default_brand_logo_url if values.get('app_name',settings.app_name)=='Gatearr' else '')
+    custom_dark=values.get('logo_url') or values.get('logo_url_light') or ''
+    custom_light=values.get('logo_url_light') or values.get('logo_url') or ''
+    logo_url=custom_dark or (default_brand_logo_url if values.get('app_name',settings.app_name)=='Gatearr' else '')
     brand_display=values.get('brand_display','auto')
     from .widgets import preference as library_preference
     from .tracearr import configured as tracearr_configured
     from .themes import load as load_themes
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
-        "captcha_assets":template in ("login.html","forgot.html") and __import__("app.captcha",fromlist=["enabled"]).enabled(db,"forgot" if template=="forgot.html" else "login"),"tracearr_available":tracearr_configured(db),"library_preference":lambda target:library_preference(db,target),"csp_nonce":getattr(request.state,"csp_nonce",""),"captcha_enabled":lambda purpose:__import__("app.captcha",fromlist=["enabled"]).enabled(db,purpose),"default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"mail_purposes":__import__("app.email_editor",fromlist=["purposes"]).purposes(db),"theme_policy":load_themes(db)['mode'],"allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
+        "captcha_assets":template in ("login.html","forgot.html") and __import__("app.captcha",fromlist=["enabled"]).enabled(db,"forgot" if template=="forgot.html" else "login"),"tracearr_available":tracearr_configured(db),"library_preference":lambda target:library_preference(db,target),"csp_nonce":getattr(request.state,"csp_nonce",""),"captcha_enabled":lambda purpose:__import__("app.captcha",fromlist=["enabled"]).enabled(db,purpose),"default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"mail_purposes":__import__("app.email_editor",fromlist=["purposes"]).purposes(db),"theme_policy":load_themes(db)['mode'],"guest_appearance":request.cookies.get("gatearr_appearance") if request.cookies.get("gatearr_appearance") in ("light","dark","auto") else "auto","allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
         "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"subtitle_admin_locks":lambda target:__import__("app.bazarr_subtitles",fromlist=["admin_lock_context"]).admin_lock_context(db,target),"editable_tools":__import__("app.tools_proxy",fromlist=["editable_tools"]).editable_tools(db),"tool_names":("radarr","sonarr","bazarr","tracearr","tdarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        "language_flag":i18n.language_flag,"language_policy":i18n.language_policy(db),"effective_language":lambda target:i18n.user_language(db,target),"default_brand_logo_url":default_brand_logo_url,"theme_logo_url":theme_logo_url,"browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(values.get('logo_url')) or not logo_url),
+        "language_flag":i18n.language_flag,"language_policy":i18n.language_policy(db),"effective_language":lambda target:i18n.user_language(db,target),"default_brand_logo_url":default_brand_logo_url,"theme_logo_url":theme_logo_url,"custom_logo_dark":custom_dark,"custom_logo_light":custom_light,"browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(custom_dark) or not logo_url),
         "global_footer":footer.display(db,footer_layout,locale,branded_name),
         "asset_version":str(max(p.stat().st_mtime_ns for p in Path("app/static").rglob("*") if p.is_file() and p.suffix in (".css",".js",".json"))), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
         "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,"_public":public_translator,
@@ -841,7 +853,10 @@ def admin_settings(request: Request, data=Depends(form)):
     from starlette.datastructures import FormData
     logo=icon_value(db,FormData([*[(key,value) for key,value in data.multi_items() if key!='icon_url'],('icon_url','' if data.get('remove_logo')=='on' else data.get('logo_url',config(db,'logo_url','')))]))
     if data.get('remove_logo')=='on':logo=''
-    values = {'default_locale':i18n.default_language(db),'app_name':name,'logo_url':logo,'browser_title':title,'brand_display':display,'public_url':public}
+    light_data=FormData([('icon_file',data.get('icon_file_light')),('icon_url',config(db,'logo_url_light',''))])
+    light=icon_value(db,light_data)
+    if data.get('remove_logo_light')=='on':light=''
+    values = {'default_locale':i18n.default_language(db),'app_name':name,'logo_url':logo,'logo_url_light':light,'browser_title':title,'brand_display':display,'public_url':public}
 
     for key, value in values.items():
         set_config(db, key, value)

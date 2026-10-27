@@ -361,8 +361,8 @@ body .subtitle-language-row[data-subtitle-locked] .guided-select-trigger:disable
 .release-series>summary>i{font-size:12px;color:var(--muted);transition:transform .18s ease}
 .release-series[open]>summary>i{transform:rotate(180deg)}
 .release-series-content{padding:0 20px 20px}
-.release-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;margin-bottom:24px}
-.release-feature{padding:14px 0;border-top:1px solid var(--line);min-width:0}
+.release-feature-grid{column-count:2;column-gap:24px;margin-bottom:24px}
+.release-feature{display:inline-block;width:100%;break-inside:avoid;padding:14px 0;border-top:1px solid var(--line);min-width:0}
 .release-feature h4{font-size:14px;margin:0 0 8px}
 .release-feature p{font-size:13px;line-height:1.65;color:var(--muted);margin:0 0 8px;overflow-wrap:anywhere}
 .release-feature p .hint{font-size:11px;white-space:nowrap}
@@ -372,7 +372,7 @@ body .subtitle-language-row[data-subtitle-locked] .guided-select-trigger:disable
 .release-series .release-entry:last-child{border-bottom:0}
 .update-feedback .builder-actions{display:flex;flex-wrap:wrap;gap:8px}
 .update-feedback .builder-actions .button{margin:0}
-@media(max-width:700px){.release-feature-grid{grid-template-columns:minmax(0,1fr)}.release-series>summary{flex-wrap:wrap;padding:16px;gap:12px}.release-series-content{padding:0 16px 16px}.release-series>summary>.installed-version{font-size:11px}.release-series-number{font-size:25px}.release-series-heading{min-width:140px}}
+@media(max-width:700px){.release-feature-grid{column-count:1}.release-series>summary{flex-wrap:wrap;padding:16px;gap:12px}.release-series-content{padding:0 16px 16px}.release-series>summary>.installed-version{font-size:11px}.release-series-number{font-size:25px}.release-series-heading{min-width:140px}}
 @media(prefers-reduced-motion:reduce){.release-series>summary>i{transition:none}}
 
 /* Align color controls by their lower edge, even when translated labels wrap. */
@@ -443,3 +443,29 @@ body .studio-inspector .image-width-fields>label{margin:14px 0}
 body .portal-service .service-symbol-watermark{display:grid;place-items:center;font-size:300px;color:var(--accent-label,var(--accent));filter:none}
 .service-symbol-watermark>i{font-size:inherit;line-height:1}
 @media(max-width:600px){body .portal-service .service-symbol-watermark{font-size:260px}}
+
+/* Custom identity variants follow the resolved theme, including automatic mode. */
+.custom-logo-variants{display:inline-block;max-width:100%}
+.custom-logo-variants img{max-width:100%;height:auto;object-fit:contain}
+.custom-logo-variants .custom-logo-dark{display:var(--custom-logo-dark-display,block)}
+.custom-logo-variants .custom-logo-light{display:var(--custom-logo-light-display,none)}
+.brand .custom-logo-variants img{max-width:220px;max-height:60px;width:auto}
+.design-logo.custom-logo-variants img{max-width:100%;max-height:150px}
+.branding-logo-variants{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.branding-logo-upload{min-width:0}
+@media(max-width:650px){.branding-logo-variants{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Gentle transitions between device choices and guide pages. */
+@media (prefers-reduced-motion:no-preference){
+ .guide-journey{animation:guide-arrive .24s cubic-bezier(.2,.7,.2,1) both}
+ .guide-journey .guide-choice,.guide-journey .guide-steps>li{animation:guide-item-arrive .3s cubic-bezier(.2,.7,.2,1) both}
+ .guide-journey .guide-choice:nth-child(2),.guide-journey .guide-steps>li:nth-child(2){animation-delay:.025s}
+ .guide-journey .guide-choice:nth-child(3),.guide-journey .guide-steps>li:nth-child(3){animation-delay:.05s}
+ .guide-journey .guide-choice:nth-child(4),.guide-journey .guide-steps>li:nth-child(4){animation-delay:.075s}
+ @keyframes guide-arrive{from{opacity:.8;transform:translateY(6px)}to{opacity:1;transform:none}}
+ @keyframes guide-item-arrive{from{opacity:.6;transform:translateY(8px)}to{opacity:1;transform:none}}
+}
+
+/* Keep a clear separation between the email subject and its visual editor. */
+.mail-studio #mail-editor-form .mail-subject{display:block;margin:0 0 24px}

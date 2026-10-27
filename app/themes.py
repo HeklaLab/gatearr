@@ -67,7 +67,7 @@ def css(db,user=None,draft=False):
         bg='linear-gradient('+str(p['angle'])+'deg,'+p['gradient_start']+','+p['gradient_end']+')' if p['gradient'] else p['bg']
         logo='brightness(0) invert(1)' if name=='dark' else 'brightness(0)'
         landscape_url='/theme-landscape.svg?bg='+(p['gradient_start'] if p['gradient'] else p['bg'])[1:]+'&accent='+p['accent'][1:]+'&end='+(p['gradient_end'] if p['gradient'] else p['bg'])[1:]+'&mode='+name+'&angle='+str(p['angle'])
-        return ':root{'+colors+'--landscape-image:url("'+landscape_url+'");--default-brand-logo:url("'+logo_url(value['preset'])+'");--logo-filter:'+logo+';color-scheme:'+name+';}body{background:'+bg+';}'
+        return ':root{'+colors+'--landscape-image:url("'+landscape_url+'");--default-brand-logo:url("'+logo_url(value['preset'])+'");--logo-filter:'+logo+';--custom-logo-dark-display:'+('block' if name=='dark' else 'none')+';--custom-logo-light-display:'+('block' if name=='light' else 'none')+';color-scheme:'+name+';}body{background:'+bg+';}'
     return rules(mode) if mode in ('light','dark') else rules('light')+'@media(prefers-color-scheme:dark){'+rules('dark')+'}'
 
 @router.get('/admin/branding/themes')
@@ -105,9 +105,13 @@ def save(request:Request,data=Depends(__import__('app.main',fromlist=['form']).f
 
 @router.post('/account/theme')
 def preference(request:Request,data=Depends(__import__('app.main',fromlist=['form']).form)):
-    from .main import require_user,redirect
-    user=require_user(request)
+    from .main import redirect
+    user=request.state.user
     if load(request.state.db)['mode']!='user' or data.get('theme') not in ('light','dark','auto'):raise ValueError('Theme is managed by the administrator')
-    user.theme_preference=data['theme'];request.state.db.commit()
-    response=redirect(data.get('next','/account') if str(data.get('next','')).startswith('/') and not str(data.get('next','')).startswith('//') else '/account')
-    return remember_appearance(request,response,user)
+    if user:
+        user.theme_preference=data['theme'];request.state.db.commit()
+    fallback='/account' if user else '/login'
+    response=redirect(data.get('next',fallback) if str(data.get('next','')).startswith('/') and not str(data.get('next','')).startswith('//') else fallback)
+    if user:return remember_appearance(request,response,user)
+    response.set_cookie('gatearr_appearance',data['theme'],max_age=31536000,httponly=True,secure=request.state.cookie_secure,samesite='lax',path='/')
+    return response

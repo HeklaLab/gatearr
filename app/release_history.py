@@ -32,7 +32,8 @@ def grouped(entries, installed):
         if features is None:
             features = [{'title': category, 'text': change} for category, changes in categories.items() if category in ('New features', 'Improvements') for change in changes]
         for feature in features:
-            group['features'].append({**feature, 'version': entry['version']})
+            if isinstance(feature, dict) and isinstance(feature.get('title'), str) and feature['title'].strip() and isinstance(feature.get('text'), str) and feature['text'].strip():
+                group['features'].append({**feature, 'version': entry['version']})
         fixes = entry.get('fixes')
         if fixes is None:
             fixes = [change for category, changes in categories.items() if category not in ('New features', 'Improvements') for change in changes] if categories else entry.get('changes', [])
@@ -51,5 +52,5 @@ def grouped(entries, installed):
     installed_date = unique.get(ceiling, {}).get('date') or ''
     archives = [entry for entry in entries if entry.get('archive') and re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(entry.get('date', ''))) and entry['date'] <= installed_date]
     if archives:
-        result.append({'version': 'Before 0.1', 'title': 'The beginnings of Gatearr', 'current': False, 'first': min(entry['date'] for entry in archives), 'last': max(entry['date'] for entry in archives), 'patches': [], 'features': [{'title': feature['title'], 'items': [{'text': feature['text'], 'version': entry['date']}]} for entry in archives for feature in entry.get('features', [])]})
+        result.append({'version': 'Before 0.1', 'title': 'The beginnings of Gatearr', 'current': False, 'first': min(entry['date'] for entry in archives), 'last': max(entry['date'] for entry in archives), 'patches': [], 'features': [{'title': feature['title'], 'items': [{'text': feature['text'], 'version': entry['date']}]} for entry in archives for feature in entry.get('features', []) if isinstance(feature, dict) and isinstance(feature.get('title'), str) and feature['title'].strip() and isinstance(feature.get('text'), str) and feature['text'].strip()]})
     return result

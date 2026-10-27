@@ -132,3 +132,24 @@ def test_identity_saves_without_legacy_login_field_and_keeps_login_content(clien
 def test_tdarr_native_credentials_are_scoped_for_both_http_and_websockets():
     values=tools_proxy.tdarr_headers({'cookie':'gatearr_session=PRIVATE; reverse_proxy_session=PRIVATE; gatearr_tdarr_native_token=native-token','authorization':'Bearer native-auth'})
     assert values=={'cookie':'token=native-token','authorization':'Bearer native-auth'}
+
+
+def test_disable_offline_integrations_preserves_configuration_and_does_not_probe(client, monkeypatch):
+    setup(client)
+    def no_probe(*args, **kwargs):
+        raise AssertionError('Disabling an integration must not contact the server')
+    monkeypatch.setattr('app.connection_health.probe', no_probe)
+    for service in ('seerr', 'radarr', 'sonarr', 'bazarr', 'tracearr', 'tdarr'):
+        key=encrypt('saved secret')
+        with SessionLocal() as db:
+            for field, value in {'enabled':'true', 'url':'http://offline.invalid/old-path', 'public_url':'https://public.example.test', 'api_key':key, 'interface_enabled':'true'}.items():
+                main.set_config(db,service+'_'+field,value)
+            db.commit()
+        result=post(client, '/admin/connections/'+service+'/save', {'url':'not a valid URL', 'public_url':'also invalid', 'tracearr_server_id':'invalid', 'interface_enabled':'on'}, '/admin')
+        assert result.status_code==303, service
+        with SessionLocal() as db:
+            assert main.config(db,service+'_enabled')=='false'
+            assert main.config(db,service+'_url')=='http://offline.invalid/old-path'
+            assert main.config(db,service+'_public_url')=='https://public.example.test'
+            assert main.config(db,service+'_api_key')==key
+            assert main.config(db,service+'_interface_enabled')=='true'

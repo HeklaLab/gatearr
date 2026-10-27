@@ -1,3 +1,20 @@
+# 0.4.4 — 27 October 2026
+
+## Improvements
+
+- Upload separate light and dark logos; existing single logos remain compatible.
+- Choose light, dark or automatic appearance before signing in when the administrator permits it.
+- Add smooth, accessible transitions to device choices and guides.
+- Group changelog highlights by topic in compact independent columns.
+- Review interface wording and fill missing translations across all 21 bundled language packs.
+
+## Fixes
+
+- Accept email templates up to 50,000 characters, retain sanitization and explain oversized input; improve subject/editor spacing.
+- Keep group Seerr permission switches compact and aligned.
+- Show unavailable embedded-tool access with an explanation while retaining direct links.
+- Allow disabling an offline integration without revalidating its saved settings.
+
 # 0.4.3 — 26 October 2026
 
 ## Improvements

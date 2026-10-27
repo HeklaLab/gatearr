@@ -16,7 +16,15 @@ def save(request:Request,service:str,data=Depends(form)):
         from .onboarding import connect_media
         connect_media(db,data)
     else:
-        active=data.get('enabled')=='on';base=url_ok(data.get('url',''),optional=not active)
+        active=data.get('enabled')=='on'
+        if not active and config(db,service+'_enabled')=='true':
+            # Disabling must work even if saved settings are stale or the server is offline.
+            # Keep the connection details intact for a later reactivation.
+            set_config(db,service+'_enabled','false')
+            from .connection_health import invalidate
+            invalidate(db,service);db.commit()
+            return redirect('/admin/integrations?connection='+service+'#connection-'+service)
+        base=url_ok(data.get('url',''),optional=not active)
         if service=='tdarr':
             from .connections import tdarr_upstream_url
             base=tdarr_upstream_url(base)

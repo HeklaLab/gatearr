@@ -138,7 +138,16 @@
   }
   if(app.opening_modes){
    const setBehavior=values=>{b.application_behaviors||={};b.application_behaviors[app.key]={...behavior(),...values};};
-   select(fields,'When clicked',behavior().mode,app.opening_modes.map(mode=>[mode,modeNames[mode]]),mode=>{change(()=>setBehavior({mode}));caption();settings();});
+   const modes=app.opening_modes.map(mode=>[mode,modeNames[mode]]);
+   // Keep unavailable integration-based access visible without making it selectable.
+   if(app.integration_configured===false)modes.push(['embedded',modeNames.embedded]);
+   const modeSelect=select(fields,'When clicked',behavior().mode,modes,mode=>{change(()=>setBehavior({mode}));caption();settings();});
+   if(app.integration_configured===false){
+    const option=[...modeSelect.options].find(item=>item.value==='embedded');
+    option.disabled=true;option.dataset.description=t('Not configured in Applications & API');
+    const hint=el('p','Not configured in Applications & API','hint');
+    fields.append(hint);
+   }
    if(behavior().mode==='direct'){
     const url=field(fields,'Public interface URL',behavior().url||app.direct_url||'',value=>change(()=>setBehavior({url:value})),'url');url.placeholder='https://application.example.com';
     if(!behavior().url&&!app.direct_url)fields.append(el('p','Public interface address required','hint'));

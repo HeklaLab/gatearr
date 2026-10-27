@@ -7,7 +7,7 @@ from .main import require_admin,form,redirect,set_config
 from .mailer import config
 router=APIRouter()
 PREFIXES=('portal_','footer_','login_draft','login_published','login_version','themes_','ui_translation_')
-KEYS={'logo_url','login_text','menu_version','browser_title','brand_display'}
+KEYS={'logo_url','logo_url_light','login_text','menu_version','browser_title','brand_display'}
 
 @router.post('/admin/updates/reset-content')
 def reset(request:Request,data=Depends(form)):

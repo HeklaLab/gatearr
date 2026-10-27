@@ -79,7 +79,7 @@ def test_preset_logos_follow_publication_and_keep_custom_uploads(client):
     assert custom.startswith('/media/icons/')
     assert post(client,'/admin/branding/themes',{'version':2,'preset':'neon-rose','action':'publish'},'/admin/branding/themes').status_code==303
     page=client.get('/home').text
-    assert 'class="custom-brand-logo" src="'+custom+'"' in page
+    assert 'class="custom-logo-dark" src="'+custom+'"' in page
     assert 'data-default-brand-logo' not in page
     assert themes.LOGOS['neon-rose'] in client.get('/theme.css').text
     with SessionLocal() as db:assert main.config(db,'logo_url')==custom
@@ -93,3 +93,37 @@ def test_bundled_preset_logo_allowlist_is_exact(client):
         assert client.get(path).headers['content-type']=='image/png'
     assert local_path('/static/branding-variants/other.png') is None
     assert local_path('/static/branding-variants/generation-prompts.txt') is None
+
+
+def test_custom_logos_for_both_themes_and_fallback(client):
+    setup(client)
+    data={'csrf':csrf(client,'/admin/branding'),'app_name':'Family','public_url':'http://testserver'}
+    images={'icon_file':('dark.png',png(2,2),'image/png'),'icon_file_light':('light.png',png(3,3),'image/png')}
+    result=client.post('/admin/settings',data=data,files=images,follow_redirects=False)
+    assert result.status_code==303, result.text
+    with SessionLocal() as db:
+        dark=main.config(db,'logo_url');light=main.config(db,'logo_url_light')
+        assert dark and light and dark!=light
+    for path in ('/home','/admin/branding','/login'):
+        page=client.get(path).text
+        assert dark in page and light in page
+    css=client.get('/theme.css').text
+    assert '--custom-logo-dark-display:block' in css
+    response=post(client,'/admin/settings',{'app_name':'Family','public_url':'http://testserver','remove_logo_light':'on'},'/admin/branding')
+    assert response.status_code==303
+    with SessionLocal() as db:assert main.config(db,'logo_url')==dark and not main.config(db,'logo_url_light')
+    page=client.get('/home').text
+    assert 'class="custom-logo-light" src="'+dark+'"' in page
+
+
+def test_custom_logo_legacy_and_light_only_fallback(client):
+    setup(client)
+    data={'csrf':csrf(client,'/admin/branding'),'app_name':'Family','public_url':'http://testserver'}
+    result=client.post('/admin/settings',data=data,files={'icon_file_light':('light.png',png(),'image/png')},follow_redirects=False)
+    assert result.status_code==303
+    with SessionLocal() as db:
+        assert not main.config(db,'logo_url')
+        light=main.config(db,'logo_url_light')
+    page=client.get('/home').text
+    assert 'class="custom-logo-dark" src="'+light+'"' in page
+    assert 'class="custom-logo-light" src="'+light+'"' in page
