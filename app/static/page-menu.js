@@ -1,0 +1,2 @@
+(()=>{if(window.GatearrPageMenu)return;window.GatearrPageMenu=true;document.addEventListener('click',event=>{const link=event.target.closest('[data-page-back]');if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;try{const previous=new URL(document.referrer);if(previous.origin===location.origin&&previous.href!==location.href&&history.length>1){event.preventDefault();history.back();}}catch{}// A direct visit or an external referrer uses the Home link.
+});})();

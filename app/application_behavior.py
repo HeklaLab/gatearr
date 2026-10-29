@@ -13,7 +13,7 @@ def validate(settings):
     for key, value in settings.items():
         if not KEY.fullmatch(key) or not isinstance(value, dict) or set(value) - {'mode', 'url', 'new_tab'}:
             raise ValueError('Invalid application behavior')
-        modes = ('direct', 'embedded') if key in TOOLS else ('direct', 'guide')
+        modes = ('direct','embedded','guide') if key=='tracearr' else ('direct','embedded') if key in TOOLS else ('direct','guide')
         if value.get('mode') not in modes or type(value.get('new_tab', False)) is not bool:
             raise ValueError('Invalid application behavior')
         url = value.get('url', '')
@@ -32,7 +32,7 @@ def describe(db, app):
     if key in TOOLS:
         from .connection_health import configured
         ready = configured(db, key) and (key not in ('tracearr', 'tdarr') or config(db, key + '_interface_enabled', 'true') == 'true')
-        app.update(opening_modes=['embedded', 'direct'] if ready else ['direct'], default_mode='embedded' if ready else 'direct', direct_url=config(db, key + '_public_url'), integration_configured=ready)
+        app.update(opening_modes=(['embedded','direct'] if ready else ['direct']), default_mode='embedded' if ready else 'direct', direct_url=config(db, key + '_public_url'), integration_configured=ready)
     else:
         service = db.get(AccessService, app['howto']) if app.get('howto') else None
         direct = service.browser_url if service else app['href']
@@ -76,6 +76,7 @@ def destination(db, app, behavior, publishing=False):
     mode = value['mode']
     # Legacy embedded cards stay dormant if their integration is removed.
     # They must never silently become external links or grant proxy access.
+    if app['key']=='tracearr' and mode=='guide' and not app.get('can_embed',True):return dict(app,href='')
     if mode == 'embedded' and app['key'] in TOOLS and (not app.get('integration_configured') or not app.get('can_embed', True)):
         return dict(app, href='')
     if mode not in app['opening_modes']:

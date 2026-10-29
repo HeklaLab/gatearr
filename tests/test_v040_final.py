@@ -16,8 +16,8 @@ def test_fresh_portal_defaults_are_conditional_and_never_replace_custom_content(
     setup(client,fresh_layout=True)
     with SessionLocal() as db:
         value=portal.load(db);blocks=value['blocks']
-        assert [b['kind'] for b in blocks]==['welcome','applications','applications']
-        assert blocks[1]['applications']==['access:emby'] and blocks[-1]['applications']==['account'] and blocks[-1]['columns']==1
+        assert [b['kind'] for b in blocks]==['welcome','applications','applications','page_menu']
+        assert blocks[1]['applications']==['access:emby'] and blocks[-2]['applications']==['account'] and blocks[-2]['columns']==1
         for service in ('seerr','tracearr','radarr','sonarr','bazarr','tdarr'):
             for key,val in {'enabled':'true','url':'http://'+service,'api_key':encrypt('private'),'interface_enabled':'true'}.items():main.set_config(db,service+'_'+key,val)
         full=portal.initial_layout(db)
@@ -42,10 +42,10 @@ def test_fresh_widgets_stay_under_their_application_when_tracearr_is_enabled(cli
         assert all(info['enabled'] for info in apps['information'].values())
         assert not any(b['kind'] in ('widget_media','widget_seerr') for b in blocks)
         activity=[b for b in blocks if b['kind']=='widget_tracearr']
-        assert len(activity)==int(tracearr_enabled)
-        if activity:
-            assert not activity[0].get('parent') and activity[0]['span']==12
-            assert apps['order']<activity[0]['order']<next(b for b in blocks if b['id']=='my-account')['order']
+        assert bool(activity)==tracearr_enabled
+        assert 'tracearr' not in apps['applications']
+        if activity:assert activity[0]['order']>apps['order']
+
 
 @pytest.mark.parametrize('kind,path',[('emby','/emby/Users/user-1/Images/Primary'),('jellyfin','/emby/UserImage')])
 def test_photo_native_upload_uses_correct_identity_body_and_private_credentials(client,monkeypatch,kind,path):

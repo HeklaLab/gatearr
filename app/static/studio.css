@@ -73,3 +73,103 @@ body:has(.studio) .shell{display:block;max-width:1800px;width:100%;box-sizing:bo
  #page-studio .studio-workspace{grid-template-columns:190px minmax(0,1fr) 300px}
  #page-studio .studio-inspector{grid-column:auto;border-left:1px solid var(--studio-border);border-top:0}
 }
+
+/* Guide instructions and device choices have separate published snapshots. */
+.journey-publication{padding:14px 18px;border:1px solid var(--line);border-top:0;color:var(--muted);font-size:13px;line-height:1.6;min-width:0;overflow-wrap:anywhere}
+.journey-publication p{margin:0}.journey-publication>strong{color:var(--text);display:block;margin-bottom:4px}.journey-publication-group{margin-top:12px}.journey-publication-group>strong{color:var(--text);font-weight:600}.journey-publication ul{list-style:none;margin:6px 0 0;padding:0}.journey-publication li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0}.journey-publication li>span{min-width:0}.journey-publication small{display:block}.journey-publication .button{flex-shrink:0;font-size:12px;min-height:32px;padding:6px 10px;margin:0}.journey-publication.publication-needed{border-inline-start:3px solid var(--accent)}
+@media(max-width:480px){.journey-publication li{align-items:flex-start;flex-direction:column;gap:4px}}
+
+.pages-heading,.page-edit-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:28px 0;flex-wrap:wrap}.page-directory{display:grid;gap:16px}.page-directory-item{display:flex;align-items:center;gap:20px;padding:24px}.page-directory-item h3,.page-directory-item p{margin:4px 0}.page-directory-item>.studio-buttons{margin-inline-start:auto}.page-directory-icon{width:56px;height:56px;display:grid;place-items:center;color:var(--accent);font-size:28px;flex-shrink:0}.page-directory-icon img{width:100%;height:100%;object-fit:contain}.page-create{margin-top:32px;padding:28px}.page-create .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:20px}.page-audience{margin:24px 0;padding:16px;border:1px solid var(--line);border-radius:16px}.page-audience .check{display:flex;align-items:center;justify-content:space-between;min-height:44px;gap:16px}.page-audience input[type=checkbox]{flex:none;width:44px}.accordion-editor{padding:16px;margin:20px 0;border:1px solid var(--line);border-radius:16px}.accordion-editor button{margin:4px}.page-edit-heading h2{margin:0}@media(max-width:700px){.page-directory-item{flex-wrap:wrap}.page-directory-item>.studio-buttons{width:100%;margin:0}.pages-heading>a{width:100%}}
+
+.page-icon-picker{margin:20px 0}.page-icon-picker>button{display:flex;gap:12px;align-items:center}.page-icon-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;max-height:280px;overflow:auto;margin:12px 0}.page-icon-grid button{padding:10px;font-size:18px}
+
+.page-archive-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 0}
+/* Desktop iteration: no additional mobile/tablet behavior is introduced here. */
+.page-group{margin:36px 0}.page-group>h2{margin-bottom:12px}.page-group>.hint{margin:0 0 18px}
+.accordion-editor .editor-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.accordion-editor .editor-tools button{font-size:12px;padding:8px 10px}
+.accordion-visual-settings{margin:16px 0 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0}.accordion-visual-settings>summary{cursor:pointer;font-weight:600}.accordion-visual-settings[open]>summary{margin-bottom:18px}
+.accordion-text-color{display:flex;align-items:center;gap:7px;margin:0;font-size:12px}.accordion-text-color input[type=color]{width:34px;height:32px;padding:3px;margin:0;border-radius:8px}
+
+/* Compact formatting icons; translated action names remain available to assistive tools. */
+.studio .editor-tools .rich-tool-button,.studio .editor-tools .rich-tool-color{display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px;width:30px;height:30px;min-height:30px;box-sizing:border-box;padding:0;margin:0!important;font-size:13px;line-height:1;border-radius:8px}
+.studio .editor-tools{align-items:center;gap:5px;margin:10px 0}
+.studio .editor-tools .rich-tool-color{position:relative;border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer;overflow:hidden}
+.studio .rich-tool-color>i{padding-bottom:4px;border-bottom:3px solid var(--format-color);pointer-events:none}
+.studio .rich-tool-color input[type=color]{position:absolute;inset:0;display:block;width:100%;height:100%;min-height:0;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
+.studio .rich-tool-color:focus-within{outline:2px solid var(--accent);outline-offset:2px}.studio .rich-tool-color:hover{border-color:var(--accent)}
+
+/* Page directory: one shared surface per category with compact, separated rows. */
+.page-group.page-group-compact{margin:20px 0;padding:0 20px;overflow:hidden}
+.page-group-compact>h2{font-size:16px;margin:18px 0 0}
+.page-group-compact>.hint{margin:6px 0 14px;font-size:12px}
+.page-group-compact .page-directory{display:block;margin:12px 0 0}
+.page-group-compact .page-directory-item{display:flex;flex-wrap:nowrap;gap:14px;padding:16px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:none;box-shadow:none;margin:0;min-height:0}
+.page-group-compact .page-directory-icon{width:36px;height:36px;font-size:24px}
+.page-group-compact .page-directory-copy{min-width:0;flex:1}
+.page-group-compact .page-directory-copy h3{font-size:14px;margin:0 0 5px;line-height:1.4}
+.page-group-compact .page-directory-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:0;font-size:11px;line-height:1.5}
+.page-group-compact .page-directory-item>.studio-buttons{width:auto;flex:none;margin:0;gap:8px}
+.page-group-compact .studio-buttons .button,.page-group-compact .studio-buttons button{margin:0;padding:8px 12px;font-size:12px;min-height:34px}
+.page-group-compact .studio-buttons form{margin:0}
+
+/* Home has a single fixed page: no redundant category header or divider. */
+.page-group-compact[data-page-group=home] .page-directory{margin:0}
+.page-group-compact[data-page-group=home] .page-directory-item{border-top:0;padding:18px 0}
+.page-group-compact[data-page-group=system] .page-directory{margin:0}
+.page-group-compact[data-page-group=system] .page-directory-item:first-child{border-top:0}
+.page-home-lock{font-size:10px;color:var(--muted);margin-inline-start:6px;vertical-align:middle}
+
+.page-group-compact .page-guide-usage{display:flex;align-items:baseline;gap:7px;color:var(--status-warn,#d5b777);font-size:11px;line-height:1.5;margin:6px 0 0}
+.page-group-compact .page-guide-draft{font-size:11px;line-height:1.5;margin:4px 0 0}
+/* Desktop functional review: compact, shared controls; no mobile overrides. */
+.system-page-tabs{display:flex;gap:10px;margin:22px 0}.system-page-tabs [aria-current=page],.audience-chips [aria-pressed=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--surface));color:var(--text)}
+.block-audience,.text-appearance{border:1px solid var(--line);border-radius:12px;margin:20px 0;padding:12px;min-width:0}.block-audience legend,.text-appearance legend{font-weight:650;font-size:12px;padding:0 5px}.audience-chips{display:flex;gap:7px;flex-wrap:wrap}.audience-chips button{padding:7px 10px;font-size:12px;min-height:32px;margin:0}.audience-test{margin-top:12px;font-size:12px}.audience-test p{margin:8px 0}.audience-test i{width:18px}
+.page-create .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 190px;align-items:start;gap:22px}.page-create label{margin:0;min-width:0}.page-create>.hint{margin:18px 0}.page-field-error{display:block;color:var(--status-bad);font-size:12px;line-height:1.5;margin-top:7px;min-height:18px}.page-create input[aria-invalid=true]{border-color:var(--status-bad)}
+.account-completeness{margin:18px 0;padding:16px 18px;border:1px solid var(--status-warn,#d5b777);border-radius:12px;background:color-mix(in srgb,var(--status-warn,#d5b777) 7%,var(--surface));font-size:13px}.account-completeness[hidden]{display:none}.account-completeness strong{color:var(--status-warn,#d5b777)}.account-completeness p{margin:7px 0 12px;line-height:1.6}.account-completeness button{padding:7px 12px;font-size:12px}.account-feature-placeholder{border-style:dashed}
+.studio #account-completeness{max-width:none;width:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:20px;align-items:center}
+.studio #account-completeness[hidden]{display:none}
+#account-completeness>strong,#account-completeness>p{grid-column:1}
+#account-completeness>p{margin:5px 0 0}
+#account-completeness>.studio-buttons{grid-column:2;grid-row:1/3;margin:0}
+/* Four consistent action groups: guide, edit/view, publication, deletion. */
+.page-group-compact .page-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.page-group-compact .page-row-actions .page-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;min-height:34px;box-sizing:border-box;padding:0 11px;margin:0;border-radius:999px;line-height:1;font-size:12px;white-space:nowrap;box-shadow:none;transform:none}
+.page-row-actions .page-action i{font-size:11px;flex:none}
+.page-row-actions .page-action-pair{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:transparent;flex:none}
+.page-group-compact .page-row-actions .page-action-pair .page-action{border:0;border-radius:0;background:transparent;height:32px;min-height:32px}
+.page-row-actions .page-action-pair>form{display:flex;margin:0}
+.page-row-actions .page-action-pair>*+*{border-inline-start:1px solid var(--line)}
+.page-group-compact .page-row-actions .page-action-pair .is-current{color:var(--text);background:color-mix(in srgb,var(--accent) 15%,var(--surface));opacity:1}
+.page-row-actions .page-action:disabled:not(.is-current){opacity:.4;cursor:not-allowed}
+.page-row-actions .page-action-pair .page-action:not(:disabled):hover{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+/* Stable desktop action columns, independent of labels and publication state. */
+.page-group-compact .page-row-actions{display:grid;grid-template-columns:104px 132px 170px 78px;gap:8px;flex-shrink:0}
+.page-group-compact .page-row-actions.page-home-actions{display:flex}
+.page-row-actions .page-guide-action{width:104px}
+.page-row-actions .page-action-pair{display:flex;width:100%;box-sizing:border-box}
+.page-row-actions .page-action-pair>*{flex:1;min-width:0}
+.page-row-actions .page-action-pair>form>.page-action{width:100%}
+.page-row-actions>form{margin:0}
+.page-row-actions>form>.page-action{width:100%}
+.page-directory-copy{min-width:0;flex:1}
+
+.page-group-compact .page-row-actions.page-deleted-actions{grid-template-columns:110px 170px}.page-group-compact[data-page-group=deleted] .page-directory-icon{opacity:.7}
+.page-group-compact .page-directory-address{display:flex;align-items:baseline;gap:7px;margin:3px 0 6px;color:var(--muted);font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.page-directory-address code{padding:0;background:none;color:inherit;font-size:inherit}
+.page-directory-address>i{font-size:10px;flex:none}
+.page-group-compact .page-directory-published-address{margin-top:-3px;font-size:10px}
+/* Keep page names readable and all actions reachable on narrow screens. */
+@media(max-width:1000px){
+ .page-group-compact .page-directory-item{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;align-items:start}
+ .page-group-compact .page-directory-icon{width:40px;height:40px;align-self:start}
+ .page-group-compact .page-row-actions,.page-group-compact .page-row-actions.page-home-actions,.page-group-compact .page-row-actions.page-deleted-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;width:100%;min-width:0;margin:0;gap:8px}
+ .page-row-actions .page-action-pair{width:auto;flex:0 0 auto}
+ .page-row-actions .page-guide-action[aria-hidden=true]{display:none}
+ .page-directory-copy{overflow-wrap:anywhere}
+ .system-page-tabs{flex-wrap:wrap}
+}
+@media(max-width:650px){
+ .page-create .grid{grid-template-columns:minmax(0,1fr)}
+ #account-completeness{display:block}
+ #account-completeness>.studio-buttons{margin-top:12px;flex-wrap:wrap}
+}

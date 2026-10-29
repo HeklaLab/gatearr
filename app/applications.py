@@ -16,6 +16,7 @@ def catalog(db,user=None,editor=False,locale='en'):
     menu_rows=list(db.scalars(select(MenuItem).order_by(MenuItem.position,MenuItem.id)))
     attached={m.access_service for m in menu_rows if m.access_service}
     for s in db.scalars(select(AccessService).order_by(AccessService.name)):
+        if s.key.startswith('service-') and s.key not in attached:continue
         if s.key in ('radarr','sonarr','bazarr','tracearr','tdarr') or s.key in attached and s.key not in ('emby','seerr'):continue
         if s.key=='seerr' and not can_seerr:continue
         href=access_href(db,s.key)
@@ -31,8 +32,9 @@ def catalog(db,user=None,editor=False,locale='en'):
         href=access_href(db,key) if key else item.url
         result.append(dict(key='menu:'+str(item.id),name=content(db,'menu:'+str(item.id)+':label',item.label,locale),href=href,image=item.icon_url or default_icon(key or item.label,media),icon=item.icon,external=item.new_tab and not key,howto=key or '',menu_key=item.menu_key))
     for tool in ('radarr','sonarr','bazarr','tracearr','tdarr'):
+        if tool=='tracearr' and not editor and not (user and user.admin):continue
         grants = json.loads(user.tool_access) if user else []
-        if editor or tool in tools or user and (user.admin or tool in grants and tool not in ('tracearr','tdarr')):
+        if editor or tool in tools or user and (user.admin or tool in grants and tool!='tdarr'):
             result.append(dict(key=tool,name=tool.capitalize(),href='/tools/'+tool,image=default_icon(tool,media),icon='gears',external=False,howto='',can_embed=editor or tool in tools))
     if media=='jellyfin':
         for application in result:
@@ -82,4 +84,5 @@ def normalize(layout,db):
     value['blocks']=rows
     from .application_information import migrate
     from .application_behavior import freeze
-    return freeze(migrate(value),{app['key']:app for app in apps})
+    from .tracearr_presentation import normalize as separate_statistics
+    return freeze(separate_statistics(migrate(value),db),{app['key']:app for app in apps})

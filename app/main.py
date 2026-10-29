@@ -401,6 +401,22 @@ templates.env.filters['bitand']=lambda value,bit:int(value)&int(bit)
 
 def render(request, template, **kwargs):
     db = request.state.db
+    if template=='account.html':
+        from .visual_builder import load as account_layout
+        kwargs.setdefault('layout',account_layout(db,'account'))
+    if template in ('login.html','forgot.html','reset.html'):
+        from .visual_builder import load as system_layout
+        system_page={'login.html':'login','forgot.html':'forgot','reset.html':'reset'}[template]
+        kwargs.setdefault('layout',system_layout(db,system_page))
+        template='system_page.html'
+    from .page_builder import guide_row,enforce_guide,catalog as page_catalog,allowed as page_allowed,HOME_SETTINGS,embedded_context
+    if template in ('access.html','guide.html') and not kwargs.get('guide_preview'):
+        service=kwargs['service'];enforce_guide(db,request.state.user,service.key)
+        envelope=guide_row(db,service.key)
+        if envelope and envelope.published:
+            kwargs['layout']=dict(__import__('json').loads(envelope.published),page='p-'+str(envelope.id))
+            kwargs['journey_context']=dict(kwargs,template='access_content.html' if template=='access.html' else 'guide_content.html',guide_base='/access/'+service.key+'?view=guide')
+            template='home.html'
     media_service=db.get(AccessService,'emby')
     kwargs.setdefault('media_browser_url',media_service.browser_url if media_service else '')
     request.state.button_feedback=not kwargs.get("visual_preview",False)
@@ -412,7 +428,7 @@ def render(request, template, **kwargs):
     base_translations = i18n.overrides(db,source_locale)
     from .connections import media_kind
     media_name="Jellyfin" if media_kind(db)=="jellyfin" else "Emby"
-    values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and not row.key.endswith("_api_key") and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","login_draft","login_published","login_version","footer_","release_","ui_translation_","_i18n_","themes_"))}
+    values = {row.key: row.value for row in db.scalars(select(Config)) if row.key not in SECRET_CONFIG and not row.key.endswith("_api_key") and row.key != "setup_owner_digest" and not row.key.startswith(("portal_","login_draft","login_published","login_version","forgot_","reset_draft","reset_published","reset_version","account_draft","account_published","account_version","footer_","header_","release_","ui_translation_","_i18n_","themes_"))}
     setup_values=kwargs.get('setup_values',getattr(request.state,'form_values',{}))
     if request.url.path.startswith(('/setup','/admin/setup/')):
         values.update({key:('true' if key.endswith('_enabled') and value=='on' else value) for key,value in setup_values.items()})
@@ -425,6 +441,12 @@ def render(request, template, **kwargs):
             from .visual_builder import load as load_design
             layout=load_design(db,'login')
         else:layout=portal.load(db)
+    journey=kwargs.get('journey_context') or {}
+    device_selection_href=journey.get('guide_base',request.url.path)
+    device_selection_active=bool(journey.get('article') or journey.get('crumbs') or request.query_params.get('device') or request.query_params.get('guide'))
+    if kwargs.get('visual_preview') and layout.get('page','').startswith('p-'):
+        from .page_builder import row_for,descriptor
+        device_selection_href=descriptor(row_for(db,layout['page']),layout)['href']
     menus = {}
     for item in db.scalars(select(MenuItem).order_by(MenuItem.position, MenuItem.id)):
         menus.setdefault(item.menu_key, []).append(item)
@@ -449,8 +471,10 @@ def render(request, template, **kwargs):
     from datetime import datetime, timezone
     release_status = versioning.status(db) if request.state.user and request.state.user.admin else {}
     footer_layout = kwargs.pop("footer_layout",None) or footer.load(db)
+    from . import header
+    header_design=kwargs.pop('header_layout',None) or header.load(db)
     branded_name = i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale)
-    raw_title=config(db,'browser_title','')
+    raw_title=header_design.get('browser_title',config(db,'browser_title',''))
     browser_title=i18n.content(db,'branding:browser_title',raw_title,locale).replace('${app_name}',branded_name) if raw_title else branded_name+' '+translator('· Your space')
     from .themes import load as load_themes, logo_url as theme_logo_url
     selected_theme=load_themes(db,template=='themes.html')
@@ -464,11 +488,11 @@ def render(request, template, **kwargs):
     from .themes import load as load_themes
     from .tools_proxy import allowed_tools
     return templates.TemplateResponse(request=request, name=template, context={
-        "captcha_assets":template in ("login.html","forgot.html") and __import__("app.captcha",fromlist=["enabled"]).enabled(db,"forgot" if template=="forgot.html" else "login"),"tracearr_available":tracearr_configured(db),"library_preference":lambda target:library_preference(db,target),"csp_nonce":getattr(request.state,"csp_nonce",""),"captcha_enabled":lambda purpose:__import__("app.captcha",fromlist=["enabled"]).enabled(db,purpose),"default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"mail_purposes":__import__("app.email_editor",fromlist=["purposes"]).purposes(db),"theme_policy":load_themes(db)['mode'],"guest_appearance":request.cookies.get("gatearr_appearance") if request.cookies.get("gatearr_appearance") in ("light","dark","auto") else "auto","allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
+        "captcha_assets":template in ("login.html","forgot.html","system_page.html") and __import__("app.captcha",fromlist=["enabled"]).enabled(db,"forgot" if layout.get("page")=="forgot" else "login"),"tracearr_available":tracearr_configured(db),"library_preference":lambda target:library_preference(db,target),"csp_nonce":getattr(request.state,"csp_nonce",""),"captcha_enabled":lambda purpose:__import__("app.captcha",fromlist=["enabled"]).enabled(db,purpose),"default_language":source_locale,"setup_languages":{code:name for code,name in i18n.languages(db,all=True).items() if code in i18n.CATALOGS},"password_policy":password_policy(db),"clean_accordion_answer":__import__("app.accordion",fromlist=["clean_answer"]).clean_answer,"clean_content_html":footer.clean_html,"is_page_view":template in ("home.html","login.html","footer_preview.html","system_page.html","account.html"),"style_css":__import__("app.page_design",fromlist=["style_css"]).style_css,"mail_purposes":__import__("app.email_editor",fromlist=["purposes"]).purposes(db),"theme_policy":load_themes(db)['mode'],"guest_appearance":request.cookies.get("gatearr_appearance") if request.cookies.get("gatearr_appearance") in ("light","dark","auto") else "auto","allowed_tools":allowed_tools(db,request.state.user),"support_active":bool(getattr(request.state,'support',None)),
         "setup_error":kwargs.pop("setup_error",getattr(request.state,"setup_error","")),"setup_values":setup_values,"subtitle_admin_locks":lambda target:__import__("app.bazarr_subtitles",fromlist=["admin_lock_context"]).admin_lock_context(db,target),"editable_tools":__import__("app.tools_proxy",fromlist=["editable_tools"]).editable_tools(db),"tool_names":("radarr","sonarr","bazarr","tracearr","tdarr"),"app_version":VERSION,"build_revision":BUILD_REVISION,"update_status":release_status,
         "release_checked_at":datetime.fromtimestamp(release_status.get("checked_at",0),timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "language_flag":i18n.language_flag,"language_policy":i18n.language_policy(db),"effective_language":lambda target:i18n.user_language(db,target),"default_brand_logo_url":default_brand_logo_url,"theme_logo_url":theme_logo_url,"custom_logo_dark":custom_dark,"custom_logo_light":custom_light,"browser_title":browser_title,"brand_logo_url":logo_url,"brand_show_logo":bool(logo_url) and brand_display!='name',"brand_show_name":(brand_display!='logo' or not logo_url) and (brand_display in ('name','both') or bool(custom_dark) or not logo_url),
-        "global_footer":footer.display(db,footer_layout,locale,branded_name),
+        "header_design":header_design,"header_regions":portal.for_display(header_design,locale,None if kwargs.get("anonymous_preview") else request.state.user,db,editor=bool(kwargs.get("header_preview")),page_title=portal.display_page_title(layout,locale,db)),"global_footer":footer.display(db,footer_layout,locale,branded_name),
         "asset_version":str(max(p.stat().st_mtime_ns for p in Path("app/static").rglob("*") if p.is_file() and p.suffix in (".css",".js",".json"))), "user": request.state.user, "csrf": request.state.session.csrf, "cfg": values,
         "media_name": media_name, "app_name": i18n.content(db,"branding:app_name",values.get("app_name",settings.app_name),locale), "app_name_source":values.get("app_name",settings.app_name), "locale": locale, "languages": i18n.languages(db), "language_names": i18n.languages(db), "_": translator,"_public":public_translator,
         "avatar_url":lambda target:__import__("app.avatars",fromlist=["url"]).url(db,target),"wizard_active":request.url.path.startswith(("/setup","/admin/setup")),"notification_services":__import__("app.preferences",fromlist=["available_notifications"]).available_notifications(db,request.state.user),"account_label_defaults": i18n.ACCOUNT_LABEL_DEFAULTS, "account_labels": {key: translator(i18n.ACCOUNT_LABEL_KEYS[key]) for key in i18n.ACCOUNT_LABEL_KEYS},
@@ -476,8 +500,8 @@ def render(request, template, **kwargs):
         "seerr_access":access_href(db,"seerr") if seerr_public else "",
         "seerr_in_menu":any(item.access_service=="seerr" or item.label.casefold()=="seerr" or (seerr_public and item.url.rstrip("/")==seerr_public.rstrip("/")) for entries in menus.values() for item in entries),
         "ui_catalog":{key:translator(key) for key in i18n.CATALOGS["en"]},"default_service_icon":lambda key:__import__("app.service_assets",fromlist=["default_icon"]).default_icon(key,media_name.lower()),"font_icon_class":__import__("app.icons",fromlist=["icon_class"]).icon_class, "service_font":lambda key:(db.get(AccessService,key).icon if db.get(AccessService,key) else "link"), "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: __import__("app.service_assets",fromlist=["service_icon"]).service_icon(db,key,media_name.lower()), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
-        "footer_regions":portal.for_display(global_footer_design,locale,request.state.user,db) if (global_footer_design:=footer_layout.get("design")) else None,"layout": layout, "regions": portal.for_display(layout, locale, None if kwargs.get("anonymous_preview") else request.state.user,db,editor=bool(kwargs.get("visual_preview"))) if template in ("home.html","login.html","footer_preview.html") else {}, "menus": menus, "mail_locale": mail_locale,
-        "content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
+        "footer_regions":portal.for_display(global_footer_design,locale,request.state.user,db,page_title=portal.display_page_title(layout,locale,db)) if (global_footer_design:=footer_layout.get("design")) else None,"layout": layout, "regions": portal.for_display(layout, locale, None if kwargs.get("anonymous_preview") else request.state.user,db,editor=bool(kwargs.get("visual_preview"))) if template in ("home.html","login.html","footer_preview.html","system_page.html","account.html") else {}, "menus": menus, "mail_locale": mail_locale,
+        "device_selection_href":device_selection_href,"device_selection_active":device_selection_active,"can_view_home":page_allowed(db,request.state.user,portal.load(db).get("page_settings",HOME_SETTINGS)),"page_navigation":[p for p in page_catalog(db,request.state.user) if p.get("navigation") and p["key"]!="home"],"embedded_journey":lambda key:embedded_context(db,request.state.user,locale,key,request.url.path,request.query_params.get("device",""),request.query_params.get("guide"),bool(kwargs.get("visual_preview"))),"content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
 
 def setup_error(request,message,status):
     values=getattr(request.state,'form_values',{})
@@ -957,6 +981,11 @@ def menu_save(request: Request, data=Depends(form)):
     item.icon_url = local_icon_value(db,data)
     from .icons import font_icon
     item.icon = font_icon(data.get('icon','link')) if not item.icon_url else 'link'
+    if service_key.startswith('service-'):
+        service=db.get(AccessService,service_key)
+        previous=service.browser_url
+        service.name=item.label;service.browser_url=item.url;service.icon=item.icon;service.icon_url=item.icon_url
+        if service.server_url in ('',previous):service.server_url=item.url
     item.position = int(data["position"])
     item.new_tab = data.get("new_tab") == "on"
     menu_key = str(data.get("menu_key", "main"))
@@ -1109,3 +1138,6 @@ app.include_router(integration_ui_router)
 
 from .library_updates import router as library_updates_router
 app.include_router(library_updates_router)
+
+from .page_builder import router as page_builder_router
+app.include_router(page_builder_router)

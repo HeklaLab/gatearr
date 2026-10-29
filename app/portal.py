@@ -10,14 +10,14 @@ from .security import url_ok
 from . import i18n
 
 REGIONS = ('login', 'header', 'sidebar', 'main', 'footer')
-KINDS = ('welcome', 'text', 'image', 'button', 'menu', 'services', 'account', 'guides', 'spacer', 'columns', 'login_form', 'logo', 'divider', 'application', 'applications','widget_media','widget_seerr','widget_tracearr','widget_library')
+KINDS = ('header_container', 'header_navigation', 'header_account', 'welcome', 'title', 'text', 'image', 'button', 'services', 'account', 'spacer', 'columns', 'login_form', 'forgot_form', 'reset_form', 'account_form', 'account_intro', 'account_email', 'account_password', 'account_notifications', 'account_language', 'account_subtitles', 'account_photo', 'logo', 'divider', 'application', 'applications','widget_media','widget_seerr','widget_tracearr','widget_library','page_menu','accordion','guide_embed')
 DEFAULT = {'nav_position': 'top', 'sidebar_position': 'left', 'theme': {'accent': '#159eff', 'button_hover':'#45cdf4', 'bg': '#edf4ff', 'surface': '#ffffff', 'text': '#12234a', 'muted': '#526789', 'ink':'#051c40'}, 'blocks': [{'id': 'welcome', 'kind': 'welcome', 'region': 'main', 'order': 10, 'span': 12, 'title': 'Welcome, {username}.', 'body': 'All your services, one place.', 'alt': ''}, {'id': 'services', 'kind': 'services', 'region': 'main', 'order': 20, 'span': 12, 'menu_key': 'main', 'include_emby': True, 'title': '', 'body': '', 'alt': ''}, {'id': 'account', 'kind': 'account', 'region': 'main', 'order': 30, 'span': 12, 'title': 'My account', 'body': 'Manage your details and password.', 'alt': ''}]}
 
 def load(db, draft=False):
     raw = config(db, 'portal_draft' if draft else 'portal_published')
     if not raw:
         from .applications import normalize
-        return normalize(DEFAULT,db)
+        return normalize(initial_layout(db,seed_pages=False),db)
     from .applications import normalize
     return validate(normalize(json.loads(raw),db))
 
@@ -44,8 +44,11 @@ def validate(layout):
         for field in ('title','body','alt'):
             if not isinstance(block.get(field, ''), str) or len(block.get(field, '')) > 5000:
                 raise ValueError('Block text too long')
+        if block['kind'] in ('header_container','header_navigation','header_account') and layout.get('page')!='header':raise ValueError('Header blocks are only available in the header builder.')
+        if block['kind']=='title' and block.get('body',''):raise ValueError('Title blocks only contain a title.')
         from .page_design import asset_url,link_url,validate_style
         validate_style(block.get('style',{}))
+        if 'audience' in block:__import__('app.block_audience',fromlist=['validate']).validate(block['audience'])
         if block['kind']=='spacer' and (type(block.get('size',32)) is not int or not 0<=block.get('size',32)<=2000):raise ValueError('Invalid spacing size')
         if block['kind'].startswith('widget_'):
             from .widgets import validate as validate_widget
@@ -61,11 +64,33 @@ def validate(layout):
             if not isinstance(selected,list) or len(selected)>100 or any(not isinstance(k,str) or not re.fullmatch(r'(?:access:[a-z0-9_-]{1,80}|menu:[0-9]+|account|radarr|sonarr|bazarr|tracearr|tdarr)',k) for k in selected) or len(set(selected))!=len(selected):raise ValueError('Invalid application selection')
             if len(selected)>block.get('columns',3):raise ValueError('Select no more applications than the configured number')
             if block.get('columns',3) not in (1,2,3,4,5,6) or block['span']!=12 or block.get('parent') or block['region']!='main':raise ValueError('Applications use a full row in the main content')
+        if block['kind']=='page_menu':
+            selected=block.get('page_ids',[])
+            if not isinstance(selected,list) or len(selected)>100 or any(not isinstance(k,str) or not re.fullmatch(r'(home|p-[1-9][0-9]*)',k) for k in selected):raise ValueError('Invalid page selection')
+            if block.get('menu_layout','cards') not in ('cards','tiles','list','pills'):raise ValueError('Invalid menu layout')
+            if type(block.get('show_back',False)) is not bool:raise ValueError('Invalid back navigation')
+            if block.get('menu_source','selected') not in ('selected','navigation'):raise ValueError('Invalid page selection')
+        if block['kind']=='accordion':
+            items=block.get('items',[])
+            if not isinstance(items,list) or len(items)>30 or type(block.get('multiple',False)) is not bool:raise ValueError('Use up to 30 accordion items')
+            seen=set()
+            for item in items:
+                if not isinstance(item,dict) or not re.fullmatch(r'[a-zA-Z0-9_-]{1,40}',str(item.get('id',''))) or item['id'] in seen:raise ValueError('Invalid accordion item')
+                seen.add(item['id'])
+                if any(not isinstance(item.get(k,''),str) or len(item.get(k,''))>(500 if k=='question' else 10000) for k in ('question','answer')):raise ValueError('Accordion text is too long')
+                from .accordion import validate_item
+                validate_item(item)
+        if block['kind']=='guide_embed' and layout.get('page') in ('home','login','footer'):raise ValueError('Access guide blocks are only available on subpages.')
+        if block['kind']=='guide_embed' and not re.fullmatch(r'[a-z0-9_-]{1,80}',str(block.get('service_key',''))):raise ValueError('Select an application journey')
         if block['kind']=='image':
             asset_url(block.get('url',''),optional=True)
             from .image_blocks import validate as validate_image
             validate_image(block)
-        if block['kind']=='button':link_url(block.get('url',''),layout.get('page')=='login')
+        if block['kind']=='button':
+            action=block.get('button_action','link')
+            if action not in ('link','choose_device') or type(block.get('after_device',True)) is not bool:raise ValueError('Invalid button action')
+            if action=='link':link_url(block.get('url',''),layout.get('page')=='login')
+            elif layout.get('page') in ('home','login','footer'):raise ValueError('Device navigation buttons belong on an access guide subpage.')
         if block['kind']=='columns' and block.get('columns',2) not in (1,2,3):raise ValueError('Choose one, two or three columns')
         if block.get('visibility','everyone') not in ('everyone','admins','members'):raise ValueError('Invalid visibility')
         if not re.fullmatch(r'[a-z0-9_-]{1,40}', block.get('menu_key', 'main')):
@@ -78,7 +103,7 @@ def validate(layout):
         parent=block.get('parent','');seen={block['id']}
         if parent:
             owner=indexed.get(parent)
-            if not owner or owner['kind']!='columns' or type(block.get('slot',0)) is not int or not 0<=block.get('slot',0)<owner.get('columns',2):raise ValueError('Invalid column')
+            if not owner or owner['kind'] not in ('columns','header_container') or type(block.get('slot',0)) is not int or not 0<=block.get('slot',0)<owner.get('columns',1 if owner['kind']=='header_container' else 2):raise ValueError('Invalid column')
         for _ in range(4):
             if not parent:break
             if parent in seen or parent not in indexed:raise ValueError('Invalid nested block')
@@ -89,6 +114,10 @@ def validate(layout):
 def localized(block,name,locale,db=None):
     source=block.get(name,'')
     if not db:return source
+    if block.get('kind') in ('forgot_form','reset_form') or block.get('kind','').startswith('account_'):
+        from .models import ContentTranslation
+        row=db.get(ContentTranslation,(locale,block.get('_scope','block')+':'+block['id']+':'+name,i18n.source_hash(source)))
+        return row.value if row and row.value else source
     if block['id']=='login-intro' and name=='body':
         from .models import ContentTranslation
         primary=db.get(ContentTranslation,(locale,'login-block:login-intro:body',i18n.source_hash(source)))
@@ -98,13 +127,23 @@ def localized(block,name,locale,db=None):
     if block['id']=='login-intro' and name=='body' and translated==source:translated=i18n.content(db,'branding:login_text',source,locale)
     return translated
 
-def for_display(layout,locale,user=None,db=None,editor=False):
+def display_page_title(layout,locale,db=None):
+    page=layout.get('page','home')
+    labels={'home':'Home','login':'Sign in','forgot':'Password recovery','reset':'New password','account':'My account','footer':'Footer','header':'Header'}
+    source=labels.get(page,layout.get('page_settings',{}).get('title',''))
+    if db is not None and page.startswith('p-'):
+        return i18n.content(db,'page:'+page[2:]+':title',source,locale)
+    return i18n.translate(source,locale)
+
+
+def for_display(layout,locale,user=None,db=None,editor=False,page_title=None):
     from .image_blocks import normalize as normalize_images
-    layout=normalize_images(layout);regions={key:[] for key in REGIONS};indexed={}
+    layout=normalize_images(layout);page_title=display_page_title(layout,locale,db) if page_title is None else page_title;regions={key:[] for key in REGIONS};indexed={}
     from .widgets import choose,display as widget_display,TYPES
     visible_widgets=choose(db,layout['blocks'],user,editor) if db is not None else set()
     for block in sorted(layout['blocks'],key=lambda block:(block['order'],block['id'])):
         if block['kind'] in TYPES and block['id'] not in visible_widgets:continue
+        if not editor and block['kind'].startswith('account_') and not __import__('app.account_blocks',fromlist=['visible']).visible(db,user,block['kind']):continue
         if block['kind']=='image' and block.get('url')=='/static/services/emby.png' and db is not None:
             from .service_assets import default_icon
             from .connections import media_kind
@@ -113,22 +152,32 @@ def for_display(layout,locale,user=None,db=None,editor=False):
         if block['kind']=='application' and block.get('service_key') in ('radarr','sonarr','bazarr','tracearr','tdarr') and db is not None:
             from .tools_proxy import allowed_tools
             if block['service_key'] not in allowed_tools(db,user):continue
-        visibility=block.get('visibility','everyone')
-        if not editor and visibility=='admins' and (not user or not user.admin):continue
-        if not editor and visibility=='members' and (not user or user.admin):continue
-        block['_scope']={'login':'login-block','footer':'footer-block'}.get(layout.get('page'),'block')
+        if not editor and not __import__('app.block_audience',fromlist=['eligible']).eligible(db,user,block):continue
+        block['_scope']=('page:'+layout['page'][2:] if layout.get('page','').startswith('p-') else {'login':'login-block','forgot':'forgot-block','reset':'reset-block','account':'account-block','footer':'footer-block','header':'header-block'}.get(layout.get('page'),'block'))
         for field in ('title','body','alt'):block[field]=localized(block,field,locale,db).replace('{username}',user.name if user else '')
+        if block['kind']=='title':block['title']=block['title'].replace('{page_title}',page_title)
         if block.get('rich'):
             from .footer import clean_html
             block['body']=clean_html(block['body'])
+        if block['kind']=='accordion':
+            from .accordion import validate_item
+            for item in block.get('items',[]):
+                for field in ('question','answer'):
+                    item[field]=i18n.content(db,block['_scope']+':'+block['id']+':item:'+item['id']+':'+field,item.get(field,''),locale) if db else item.get(field,'')
+                validate_item(item,db)
         if block['kind'] in TYPES:
             block['widget']=widget_display(db,user,block,editor)
             if not block['widget']:continue
-        block['slots']=[[] for _ in range(block.get('columns',2))] if block['kind']=='columns' else []
+        block['slots']=[[] for _ in range(block.get('columns',2))] if block['kind'] in ('columns','header_container') else []
         indexed[block['id']]=block
     from .applications import catalog
     available={a['key']:a for a in catalog(db,user,editor=editor,locale=locale)} if db is not None else {}
     for b in indexed.values():
+        if b['kind'] in ('page_menu','guides') and db is not None:
+            from .page_builder import catalog as page_catalog
+            pages=page_catalog(db,user,editor,locale=locale)
+            b['page_cards']=[p for p in pages if ((p.get('navigation') and p['key']!='home' if b.get('menu_source')=='navigation' else p['key'] in b.get('page_ids',[])) if b['kind']=='page_menu' else p['system'].startswith('guide:'))]
+        if b['kind']=='page_menu':b['show_back']=b.get('show_back',False) and layout.get('page','home')!='home'
         if b['kind']=='applications':
             b['cards']=[dict(available[key],subtitle=i18n.content(db,'block:'+b['id']+':application-subtitle:'+key,b.get('subtitles',{}).get(key,{'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}.get(key,'Open application')),locale)) for key in b.get('applications',[]) if key in available]
             from .application_information import display as application_information
@@ -175,7 +224,7 @@ def block_from_form(data):
         'menu_key': str(data.get('menu_key','main')), 'new_tab': data.get('new_tab') == 'on', 'include_emby': data.get('include_emby') == 'on',
     }
 
-def initial_layout(db):
+def initial_layout(db,seed_pages=True):
     """Fresh-install layout only. Never replace an administrator's saved design."""
     from .connection_health import configured
     value=deepcopy(DEFAULT);blocks=[deepcopy(DEFAULT['blocks'][0])]
@@ -183,11 +232,17 @@ def initial_layout(db):
     applications=['access:emby']+(['access:seerr'] if configured(db,'seerr') else [])
     blocks.append(dict(id='main-applications',kind='applications',region='main',order=20,span=12,columns=len(applications),applications=applications,title='',body=''))
     blocks[-1]['information']={key:{'enabled':True} for key in applications}
-    if configured(db,'tracearr'):
-        blocks.append(dict(id='tracearr-statistics',kind='widget_tracearr',region='main',order=40,span=12,metrics=['watch_time','favorite'],show_logo=False,title='',body=''))
+    from .tracearr import configured as statistics_configured
+    if statistics_configured(db):
+        from .tracearr_presentation import statistics_block
+        blocks.append(statistics_block())
     tools=[tool for tool in ('radarr','sonarr','bazarr','tracearr','tdarr') if configured(db,tool) and (tool not in ('tracearr','tdarr') or config(db,tool+'_interface_enabled')=='true')]
     if tools:blocks.append(dict(id='admin-applications',kind='applications',region='main',order=50,span=12,columns=min(6,len(tools)),applications=tools,visibility='admins',title='',body=''))
     blocks.append(dict(id='my-account',kind='applications',region='main',order=60,span=12,columns=1,applications=['account'],title='',body=''))
+    from .page_builder import ensure_defaults,catalog as page_catalog
+    if seed_pages:ensure_defaults(db,fresh=True)
+    ids=['p-'+str(r.id) for r in db.scalars(__import__('sqlalchemy').select(__import__('app.models',fromlist=['ContentPage']).ContentPage)) if r.system_key=='faq']
+    blocks.append(dict(id='page-links',kind='page_menu',region='main',order=70,span=12,page_ids=ids,menu_layout='cards',title='Explore your space',body=''))
     value['blocks']=blocks
     return validate(value)
 

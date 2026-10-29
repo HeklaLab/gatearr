@@ -42,15 +42,16 @@ def choose(db,blocks,user,editor=False):
     for b in blocks:
         if b['kind'] not in TYPES:continue
         v=b.get('visibility','everyone')
-        if not editor and (not available(db,b['kind']) or (v=='admins' and not user.admin) or (v=='members' and user.admin) or (b.get('groups') and group not in b['groups'])):continue
+        from .block_audience import eligible,specificity
+        if not editor and (not available(db,b['kind']) or not eligible(db,user,b)):continue
         if not editor:
             parent=b.get('parent');index={x['id']:x for x in blocks};hidden=False
             while parent and parent in index:
                 owner=index[parent];parent_visibility=owner.get('visibility','everyone')
-                if (parent_visibility=='admins' and not user.admin) or (parent_visibility=='members' and user.admin):hidden=True;break
+                if not eligible(db,user,owner):hidden=True;break
                 parent=owner.get('parent')
             if hidden:continue
-        rank=(2 if b.get('groups') else 1 if v!='everyone' else 0,b.get('priority',0),-b['order'])
+        rank=(specificity(b),b.get('priority',0),-b['order'])
         if editor or b['kind'] not in chosen or rank>chosen[b['kind']][0]:chosen[b['kind']]=(rank,b['id'])
     return {b['id'] for b in blocks if editor and b['kind'] in TYPES} if editor else {v[1] for v in chosen.values()}
 
@@ -172,7 +173,12 @@ def display(db,user,block,editor=False):
         metrics=[{'label':k,'value':v} for k,v in sample[block['kind']]]
         if block['kind']=='widget_media':metrics=[{'label':METRICS['widget_media'][k],'value':media_count(v,block)} for k,v in [('movies',2604),('series',284),('episodes',14239)] if k in block.get('metrics',['movies','series'])]
         if block['kind']=='widget_seerr':metrics=[quota_metric(k,{'limit':7 if k=='movies_left' else 3,'remaining':5 if k=='movies_left' else 2,'days':7}) if k in ('movies_left','series_left') else {'label':METRICS['widget_seerr'][k],'value':7} for k in block.get('metrics',['movies_left','series_left'])]
-        return {'period_start':start.date().isoformat(),'period_end':end.date().isoformat(),'metrics':metrics,'events':[{'title':'The Batman','detail':'Your request is now available.','href':'#','kind':'request'}] if block['kind']=='widget_library' else [],'preview':True}
+        chart=[]
+        if block['kind']=='widget_tracearr':
+            values={'watch_time':'12 h 40','plays':8,'favorite':'Severance','direct':6,'transcoded':2,'bandwidth':'4.20 GB','comparison':'+2.5 h'}
+            metrics=[{'label':METRICS['widget_tracearr'][k],'value':values[k]} for k in block.get('metrics',['watch_time','favorite']) if k!='activity']
+            if 'activity' in block.get('metrics',[]):chart=[{'day':start.date().isoformat(),'hours':2.5}]
+        return {'period_start':start.date().isoformat(),'period_end':end.date().isoformat(),'chart':chart,'metrics':metrics,'events':[{'title':'The Batman','detail':'Your request is now available.','href':'#','kind':'request'}] if block['kind']=='widget_library' else [],'preview':True}
     if not user or not user.active or user.emby_missing:return None
     try:
         policy=emby.user(user.emby_id).get('Policy',{})
@@ -207,6 +213,13 @@ def conflicts(blocks):
     for i,a in enumerate(widgets):
         for b in widgets[i+1:]:
             if a['kind']!=b['kind'] or a.get('priority',0)!=b.get('priority',0):continue
+            if 'audience' in a or 'audience' in b:
+                def audience(x):return x.get('audience',dict(everyone=x.get('visibility','everyone')=='everyone' and not x.get('groups'),admins=x.get('visibility')=='admins',groups=x.get('groups',[])))
+                from .block_audience import specificity
+                if specificity(a)!=specificity(b):continue
+                aa,bb=audience(a),audience(b)
+                if aa.get('everyone') or bb.get('everyone') or (aa.get('admins') and bb.get('admins')) or set(aa.get('groups',[]))&set(bb.get('groups',[])):return True
+                continue
             ga,gb=set(a.get('groups',[])),set(b.get('groups',[]));va,vb=a.get('visibility','everyone'),b.get('visibility','everyone')
             if ga and gb and ga&gb and (va==vb or 'everyone' in (va,vb)):return True
             if not ga and not gb and va==vb:return True

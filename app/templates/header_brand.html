@@ -1,0 +1,6 @@
+{% from 'default_logo.html' import logo,custom_logo with context %}
+{% set mode=block.get('logo_mode','logo') %}{% set show_logo=mode in ('logo','both') or (mode=='auto' and brand_show_logo) %}{% set show_name=mode in ('name','both') or (mode=='auto' and brand_show_name) %}
+<a class="brand header-brand" href="/" aria-label="{{ app_name }}" style="--header-logo-width:{{ block.get('logo_width',180) }}px">
+{% if show_logo %}{% if custom_logo_dark or custom_logo_light %}{{ custom_logo(app_name,'custom-brand-logo') }}{% else %}{{ logo(app_name,'brand-symbol-only' if show_name else '') }}{% endif %}{% endif %}
+{% if show_name %}<span class="header-brand-text">{{ (block.title or '{app_name}').replace('{app_name}',app_name) }}</span>{% endif %}
+</a>

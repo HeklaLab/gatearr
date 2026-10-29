@@ -1,0 +1,2 @@
+<p class="page-directory-address"><i class="fa-solid fa-link" aria-hidden="true"></i><code>{{ page.address }}</code>{% if page.published_address %}<span>{{ _('Draft') }}</span>{% endif %}</p>
+{% if page.published_address %}<p class="page-directory-address page-directory-published-address"><span>{{ _('Published') }} ·</span><code>{{ page.published_address }}</code></p>{% endif %}

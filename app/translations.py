@@ -54,8 +54,9 @@ def source_link(key):
     parts=key.split(':')
     if parts[0]=='mail':return '/admin/mail-editor?purpose='+parts[1]
     if parts[0]=='guide':return '/admin/guides/'+parts[1]
-    if parts[0]=='journey':return '/admin/access/'+parts[1]
-    return {'policy-label':'/admin/users','footer':'/admin/footer','branding':'/admin/branding','menu':'/admin/services','block':'/admin/portal','login-block':'/admin/design/login','footer-block':'/admin/design/footer','service':'/admin/guides'}.get(parts[0],'/admin')
+    if parts[0]=='journey':return '/admin/design/home/howto/'+parts[1]
+    if parts[0]=='page':return '/admin/design/p-'+parts[1]
+    return {'policy-label':'/admin/users','footer':'/admin/footer','branding':'/admin/branding','menu':'/admin/services','block':'/admin/portal','login-block':'/admin/design/login','footer-block':'/admin/design/footer','forgot-block':'/admin/design/forgot','reset-block':'/admin/design/reset','account-block':'/admin/design/account','service':'/admin/guides'}.get(parts[0],'/admin')
 
 @router.get('/admin/translations')
 def translations(request:Request):
@@ -80,8 +81,8 @@ def translations(request:Request):
         for entry in sources(db):
             if entry['key'].startswith('mail:') and locale not in i18n.languages(db):continue
             if scope!='all' and (entry['key'].startswith('mail:'))!=(scope=='email'):continue
-            key=entry['key'];stamp=i18n.source_hash(entry['source']);value=stored.get((key,stamp),i18n.CATALOGS.get(locale,{}).get(entry['source'],''))
-            rows.append({**entry,'reference':i18n.content(db,key,entry['source'],source_locale),'hash':stamp,'value':value,'default':'','custom':bool(value),'translated':bool(value) or locale==source_locale,'edit_href':source_link(key),'scope':'email' if key.startswith('mail:') else 'content','stale':any(resource==key and old_hash!=stamp for resource,old_hash in stored) and not value})
+            key=entry['key'];stamp=i18n.source_hash(entry['source']);value=stored.get((key,stamp),i18n.builtin_content(db,entry['source'],locale))
+            rows.append({**entry,'reference':i18n.content(db,key,entry['source'],source_locale),'hash':stamp,'value':value,'default':'','custom':bool(stored.get((key,stamp))),'translated':bool(value) or locale==source_locale,'edit_href':source_link(key),'scope':'email' if key.startswith('mail:') else 'content','stale':any(resource==key and old_hash!=stamp for resource,old_hash in stored) and not value})
     # Equal subtitles are independent resources, but one editor can update them together.
     # Keep differing existing translations separate and never merge unrelated blocks.
     grouped={};display_rows=[]
@@ -162,7 +163,10 @@ def save(request:Request,data=Depends(form)):
         entry=next((item for item in sources(db) if item['key']==key and i18n.source_hash(item['source'])==data.get('source_hash')),None)
         if not entry or (key.startswith('mail:'))!=(scope=='email'):raise HTTPException(409,'The source text has changed. Reload the translation page.')
         if len(raw)>entry['maximum']:raise ValueError('Translation is too long')
-        if entry['kind']=='footer_html':
+        if entry['kind']=='accordion_html':
+            from .accordion import clean_answer
+            value=clean_answer(validated_value(key,locale,raw,entry['source']))
+        elif entry['kind']=='footer_html':
             from .footer import clean_html
             value=clean_html(raw)
         elif entry['kind'] in ('html','subject','mail'):value=rich_mail.validate(raw,html=entry['kind']=='html',subject=entry['kind']=='subject') if raw else ''

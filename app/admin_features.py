@@ -17,6 +17,8 @@ router = APIRouter()
 @router.get('/home')
 def home(request: Request):
     require_user(request)
+    from .page_builder import enforce_home
+    enforce_home(request.state.db,request.state.user)
     return render(request, 'home.html', preview=False)
 
 @router.get('/theme.css')

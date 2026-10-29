@@ -2,6 +2,7 @@
 import re
 
 TITLES = {
+    '0.5': 'Page builder',
     '0.4': 'Personalization and user experience',
     '0.3': 'Visual studio and administration',
     '0.2': 'Administration, assistance and integrations',

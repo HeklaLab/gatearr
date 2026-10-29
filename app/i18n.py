@@ -85,7 +85,7 @@ def content(db,resource,source,locale):
         if source==config(db,'login_text','Access your services and manage your account with ease.'):
             old=db.get(ContentTranslation,(locale,'branding:login_text',source_hash(source)))
             if old and old.value:return old.value
-    translated=CATALOGS.get(locale,{}).get(source)
+    translated=builtin_content(db,source,locale)
     if translated:return translated
     base=default_language(db)
     if base!=locale:
@@ -93,6 +93,18 @@ def content(db,resource,source,locale):
         if fallback and fallback.value:return fallback.value
         return CATALOGS.get(base,{}).get(source,source)
     return source
+
+def builtin_content(db,source,locale):
+    if source in ('{page_title}','{app_name}'):return source
+    translated=CATALOGS.get(locale,{}).get(source)
+    if translated:return translated
+    if source.endswith(' access guides'):
+        from .models import AccessService
+        name=source[:-len(' access guides')]
+        if db.scalar(select(AccessService.key).where(AccessService.name==name)):
+            return translate('{app} access guides',locale,app=name)
+    return ''
+
 
 def store_content(db,resource,source,locale,value):
     key=(locale,resource,source_hash(source));row=db.get(ContentTranslation,key)

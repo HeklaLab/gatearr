@@ -66,6 +66,9 @@ def save(request:Request,service:str,data=Depends(form)):
         if 'icon' in data:
             from .icons import local_icon_value,font_icon
             row.icon_url=local_icon_value(db,data);row.icon=font_icon(data.get('icon','link'))
+    if service=='tracearr':
+        from .application_guides import tracearr_service
+        tracearr_service(db).browser_url=public
     if service=='seerr':
         mode=data.get('notification_mode','unmanaged')
         if mode not in ('unmanaged','optional','forced'):raise ValueError('Invalid notification mode')

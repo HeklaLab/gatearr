@@ -1,0 +1,1 @@
+<span class="eyebrow">{{ _("MY SPACE") }}</span><h1>{{ _('Hello, {name}.',name=user.name) if block.title=='Hello, {name}.' else _(block.title or 'My account').replace('{name}',user.name) }}</h1><p class="lead">{{ _(block.body) }}</p>

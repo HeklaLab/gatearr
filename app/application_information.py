@@ -2,7 +2,7 @@
 from copy import deepcopy
 from . import widgets
 
-KINDS={'access:emby':'widget_media','access:seerr':'widget_seerr'}
+KINDS={'access:emby':'widget_media','access:seerr':'widget_seerr','tracearr':'widget_tracearr'}
 
 def validate(settings):
     if not isinstance(settings,dict) or set(settings)-set(KINDS):raise ValueError('Invalid application information')
@@ -16,7 +16,7 @@ def validate(settings):
             widgets.validate(dict(rule,kind=KINDS[key]))
 
 def display(db,user,key,settings,editor=False):
-    if key not in KINDS or not settings.get('enabled',True):return None
+    if key=='tracearr' or key not in KINDS or not settings.get('enabled',True):return None
     options={k:v for k,v in settings.items() if k not in ('enabled','rules')}
     if 'rules' in settings:
         rules=[dict(rule,id='application-info-'+str(i),kind=KINDS[key],order=rule.get('order',10)) for i,rule in enumerate(settings['rules'])]
@@ -26,11 +26,12 @@ def display(db,user,key,settings,editor=False):
         # Current card controls supersede migrated defaults, while audiences stay intact.
         options={**rule,**options}
     result=widgets.display(db,user,dict(options,kind=KINDS[key]),editor)
-    return result if result and (result.get('metrics') or result.get('message')) else None
+    if result and key=='tracearr':result['period']=options.get('period','week')
+    return result if result and (result.get('metrics') or result.get('chart') or result.get('message')) else None
 
 def migrate(layout):
     index={b['id']:b for b in layout['blocks']}
-    legacy={key:[b for b in layout['blocks'] if b['kind']==kind] for key,kind in KINDS.items()}
+    legacy={key:[b for b in layout['blocks'] if b['kind']==kind] for key,kind in KINDS.items() if key!='tracearr'}
     # Keep audiences even if their application is temporarily absent from the layout.
     retained=layout.setdefault('application_information_defaults',{})
     for key,rows in legacy.items():
@@ -50,7 +51,7 @@ def migrate(layout):
         if block['kind']!='applications':continue
         settings=block.setdefault('information',{})
         for key in block.get('applications',[]):
-            if key in KINDS and key not in settings:settings[key]=deepcopy(retained.get(key,{'enabled':True}))
+            if key in KINDS and key!='tracearr' and key not in settings:settings[key]=deepcopy(retained.get(key,{'enabled':True}))
     removed={b['id'] for rows in legacy.values() for b in rows}
     parents={b.get('parent') for rows in legacy.values() for b in rows}
     layout['blocks']=[b for b in layout['blocks'] if b['id'] not in removed]

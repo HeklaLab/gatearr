@@ -254,7 +254,7 @@ def test_linked_admin_uses_normal_email_recovery(client):
 def test_health_and_migration_schema(client):
     assert client.get('/healthz').json() == {'status': 'ok'}
     with SessionLocal() as db:
-        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0027'
+        assert db.execute(main.text('SELECT version_num FROM alembic_version')).scalar() == '0034'
 
 
 def test_form_limits_and_null_origin(client):

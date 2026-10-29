@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="studio">
+{% include 'studio_heading.html' %}{% include 'studio_pages.html' %}
+<div class="pages-heading"><h2>{{ _('System pages') }}</h2></div>
+<section class="card page-group page-group-compact" data-page-group="system">
+<div class="page-directory">
+{% for page in system_pages %}
+<article class="page-directory-item">
+<div class="page-directory-icon"><i class="fa-solid fa-{{ page.icon }}" aria-hidden="true"></i></div>
+<div class="page-directory-copy"><h3>{{ _(page.title) }}</h3>
+<p class="page-directory-address"><i class="fa-solid fa-link" aria-hidden="true"></i><code>{{ page.href }}</code></p>
+<p class="hint page-directory-meta">{{ _('Unpublished changes') if page.changes else _('Published') }}</p></div>
+<div class="studio-buttons page-row-actions page-home-actions"><div class="page-action-pair" role="group" aria-label="{{ _(page.title) }}">
+<a class="button secondary page-action" href="/admin/design/{{ page.key }}" aria-label="{{ _('Edit page') }} · {{ _(page.title) }}"><i class="fa-solid fa-pen" aria-hidden="true"></i>{{ _('Edit') }}</a>
+<a class="button secondary page-action" href="/admin/system-pages/{{ page.key }}/preview" aria-label="{{ _('View page') }} · {{ _(page.title) }}"><i class="fa-solid fa-eye" aria-hidden="true"></i>{{ _('View') }}</a>
+</div></div>
+</article>
+{% endfor %}
+</div></section></section>
+{% endblock %}
+{% block styles %}<link rel="stylesheet" href="/static/studio.css?v={{ asset_version }}">{% endblock %}

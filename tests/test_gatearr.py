@@ -81,7 +81,13 @@ def test_builder_draft_publish_preview_escape_and_menu_positions(client):
     assert 'Mon portail unique' in published and 'nav-right' in published and 'sidebar-right' in published
     assert '#123456' in client.get('/theme.css').text
     assert post(client,'/admin/menu',{'label':'Tracearr','url':'https://tracearr.example.com','icon':'link','position':'1','menu_key':'side'},'/admin').status_code==303
-    assert builder_post(client,'/admin/portal/block',{'kind':'menu','region':'sidebar','order':'1','span':'12','menu_key':'side'}).status_code==303
+    assert builder_post(client,'/admin/portal/block',{'kind':'menu','region':'sidebar','order':'1','span':'12','menu_key':'side'}).status_code==400
+    with SessionLocal() as db:
+        from app.models import MenuItem
+        app=db.scalar(select(MenuItem).where(MenuItem.label=='Tracearr'))
+        layout=portal.load(db,True)
+        layout['blocks'].append(dict(id='custom-app',kind='applications',region='main',order=90,span=12,columns=1,applications=['menu:'+str(app.id)]))
+        portal.save(db,layout,portal.version(db))
     assert builder_post(client,'/admin/portal/publish',{}).status_code==303
     assert 'Tracearr' in client.get('/home').text
     logout(client)
@@ -216,7 +222,7 @@ def test_catalogs_match_and_builder_english(client):
     assert {'en','fr','es','de'}<=set(CATALOGS)
     setup(client)
     post(client,'/language',{'locale':'en','next':'/admin'},'/admin')
-    for path,expected in [('/admin/portal','Make it yours.'),('/admin/integrations','API connections and notifications')]:
+    for path,expected in [('/admin/portal','Customize your pages'),('/admin/integrations','API connections and notifications')]:
         page=client.get(path)
         assert page.status_code==200 and i18n.translate(expected,'en') in unescape(page.text)
 

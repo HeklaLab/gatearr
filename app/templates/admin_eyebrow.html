@@ -3,7 +3,7 @@
 {%- if path.startswith('/admin/branding/themes') -%}{% set label='Theme' %}
 {%- elif path.startswith('/admin/branding') -%}{% set label='Identity' %}
 {%- elif path.startswith('/admin/footer') -%}{% set label='Footer builder' %}
-{%- elif path.startswith(('/admin/portal','/admin/design/')) -%}{% set label='Portal builder' %}
+{%- elif path.startswith(('/admin/pages','/admin/portal','/admin/design/')) -%}{% set label='Page builder' %}
 {%- elif path.startswith(('/admin/access','/admin/guides','/admin/visual-howto','/admin/visual-guide')) -%}{% set label='Access guides' %}
 {%- elif path.startswith('/admin/security/captcha') -%}{% set label='Captcha' %}
 {%- elif path.startswith('/admin/security') -%}{% set label='Security' %}

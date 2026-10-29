@@ -18,10 +18,19 @@ def attribute(tag,name,value):
     if name in ('width','height') and (not value.isdigit() or not 1<=int(value)<=1200):return None
     return value
 
+def normalize_blocks(value):
+    # HTML5 closes p before nested block elements, losing the p's alignment.
+    import re
+    def paragraph(match):
+        fragment=match.group(0)
+        if not re.search(r'<(?:div|ul|ol|blockquote|h[1-6])\b',fragment,re.I):return fragment
+        return re.sub(r'^<p\b','<div',re.sub(r'</p\s*>$','</div>',fragment,flags=re.I),flags=re.I)
+    return re.sub(r'<p\b[^>]*>.*?</p\s*>',paragraph,value,flags=re.I|re.S)
+
 def clean(value):
     # Sanitization and variable substitution can expand an already validated template.
     if len(value)>300000:raise ValueError('Template too long or invalid subject')
-    return nh3.clean(value,tags=TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attribute,url_schemes={'https','http'},url_relative=lambda value:value if value=='${link}' or __import__('app.image_sources',fromlist=['local_path']).local_path(value) else None,filter_style_properties={'color','background-color','text-align','font-size','font-weight','font-style','text-decoration','line-height','max-width','display','margin-left','margin-right','padding','border-radius'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
+    return nh3.clean(normalize_blocks(value),tags=TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attribute,url_schemes={'https','http'},url_relative=lambda value:value if value=='${link}' or __import__('app.image_sources',fromlist=['local_path']).local_path(value) else None,filter_style_properties={'color','background-color','text-align','font-size','font-weight','font-style','text-decoration','line-height','max-width','display','margin-left','margin-right','padding','border-radius'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
 
 class PlainText(HTMLParser):
     def __init__(self):super().__init__();self.parts=[]

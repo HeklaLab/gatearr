@@ -1,0 +1,16 @@
+<div class="studio-buttons page-row-actions {{ 'page-home-actions' if page.key=='home' }}">
+{% if page.system.startswith('guide:') %}<a class="button secondary page-action page-guide-action" href="/admin/design/home/howto/{{ page.system[6:] }}"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>{{ _('Edit guide') }}</span></a>{% elif page.key!='home' %}<span class="page-guide-action" aria-hidden="true"></span>{% endif %}
+<div class="page-action-pair" role="group" aria-label="{{ _('Page') }}">
+<a class="button secondary page-action" href="/admin/design/{{ page.key }}" aria-label="{{ _('Edit page') }}"><i class="fa-solid fa-pen" aria-hidden="true"></i><span>{{ _('Edit') }}</span></a>
+{% if page.published and page.enabled %}<a class="button secondary page-action" href="{{ page.href }}" aria-label="{{ _('View page') }}"><i class="fa-solid fa-eye" aria-hidden="true"></i><span>{{ _('View') }}</span></a>{% else %}<button type="button" class="secondary page-action" disabled aria-label="{{ _('View page') }}"><i class="fa-solid fa-eye" aria-hidden="true"></i><span>{{ _('View') }}</span></button>{% endif %}
+</div>
+{% if page.key!='home' %}
+<div class="page-action-pair page-publication-pair" role="group" aria-label="{{ _('Page visibility') }}">
+{% set active=page.published and page.enabled %}
+{% for target,label,icon in [(true,('Enabled' if active else 'Enable'),'eye'),(false,('Disable' if active else 'Disabled'),'eye-slash')] %}
+{% if target==active or (target and not page.published) %}<button type="button" class="secondary page-action {{ 'is-current' if target==active }}" disabled aria-pressed="{{ 'true' if target==active else 'false' }}"{% if not page.published %} title="{{ _('Publish this page from the builder before enabling it.') }}"{% endif %}><i class="fa-solid fa-{{ icon }}" aria-hidden="true"></i><span>{{ _(label) }}</span></button>{% else %}<form method="post" action="/admin/pages/{{ page.key }}/{{ 'enable' if target else 'disable' }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="version" value="{{ page.version }}"><button class="secondary page-action" aria-pressed="false"><i class="fa-solid fa-{{ icon }}" aria-hidden="true"></i><span>{{ _(label) }}</span></button></form>{% endif %}
+{% endfor %}
+</div>
+<form data-page-delete="{{ _('Delete this page? You can restore it from Deleted pages.') }}" method="post" action="/admin/pages/{{ page.key }}/archive"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="version" value="{{ page.version }}"><button class="danger page-action"><i class="fa-solid fa-trash-can" aria-hidden="true"></i><span>{{ _('Delete') }}</span></button></form>
+{% endif %}
+</div>

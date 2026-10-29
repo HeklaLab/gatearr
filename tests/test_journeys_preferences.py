@@ -111,7 +111,7 @@ def test_preference_permissions_queue_and_forced_seerr(client):
         assert user.seerr_notifications
         main.set_config(db,'seerr_notification_mode','forced');db.commit()
     assert post(client,'/account/preferences',{'service':'seerr'},'/account').status_code==403
-    assert 'Your administrator requires these notifications.' in client.get('/account').text
+    assert __import__('app.i18n',fromlist=['translate']).translate('Your administrator requires these notifications.','en') in client.get('/account').text
     assert client.post('/account/preferences',data={'csrf':'bad','service':'tracearr'}).status_code==403
     with SessionLocal() as db:
         user=db.scalar(select(User).where(User.emby_id=='user-1'));user.email=None;db.commit()

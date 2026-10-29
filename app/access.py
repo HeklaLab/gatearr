@@ -84,14 +84,16 @@ def visible_nodes(db,service,nodes):
 
 def public_access(request,key,node_id=''):
     user=require_user(request)
-    from .group_access import seerr_allowed
-    if key=='seerr' and not seerr_allowed(request.state.db,user):raise HTTPException(403,'Seerr access is not granted')
+    from .page_builder import service_allowed
+    if not service_allowed(request.state.db,user,key):raise HTTPException(403,'Application access is not granted')
     db=request.state.db;service=service_or_404(db,key)
     forced_guide=request.query_params.get('view')=='guide'
     if service.entry_mode=='direct' and not forced_guide:
         url=service_url(db,service)
         if not url:raise HTTPException(404,'Service not found')
         return redirect(url)
+    from .page_builder import enforce_guide
+    enforce_guide(db,user,key)
     from .application_behavior import guide_href
     if not node_id and '/guide/' in (href:=(guide_href(db,key) if forced_guide else access_href(db,key))):return redirect(href)
     nodes=visible_nodes(db,service,load(service));indexed={node['id']:node for node in nodes}

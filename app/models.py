@@ -313,3 +313,15 @@ class UserPhoto(Base):
     content: Mapped[bytes | None] = mapped_column(LargeBinary)
     mime: Mapped[str] = mapped_column(String(30),default='image/png')
     checked_at: Mapped[int] = mapped_column(Integer,default=0)
+
+
+class ContentPage(Base):
+    __tablename__ = "content_pages"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    slug: Mapped[str] = mapped_column(String(80), unique=True)
+    system_key: Mapped[str | None] = mapped_column(String(100), unique=True)
+    draft: Mapped[str] = mapped_column(Text)
+    published: Mapped[str | None] = mapped_column(Text)
+    version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")

@@ -182,14 +182,11 @@ def test_builder_submenu_is_shared_by_all_pages_and_guide_levels(client):
     guide=howto(client,'emby','new-guide',{'title':'Navigation test'})
     assert guide.status_code==200
     gid=guide.json()['id']
-    destinations=['/admin/design/login','/admin/design/home','/admin/access-guides','/admin/design/footer']
-    pages=[(destinations[0],destinations[0]),(destinations[1],destinations[1]),(destinations[3],destinations[3]),
-           ('/admin/access-guides',destinations[2]),('/admin/design/home/howto/emby',destinations[2]),
-           ('/admin/design/home/howto/emby?parent=default_computer',destinations[2]),
-           (f'/admin/design/home/guide/{gid}',destinations[2])]
+    destinations=['/admin/pages','/admin/system-pages','/admin/design/header','/admin/design/footer']
+    pages=[('/admin/pages','/admin/pages'),('/admin/system-pages','/admin/system-pages'),('/admin/design/login','/admin/system-pages'),('/admin/design/home','/admin/pages'),('/admin/design/header','/admin/design/header'),('/admin/design/footer','/admin/design/footer'),('/admin/access-guides','/admin/pages'),('/admin/design/home/howto/emby','/admin/pages'),('/admin/design/home/howto/emby?parent=default_computer','/admin/pages'),(f'/admin/design/home/guide/{gid}','/admin/pages')]
     headings=set()
     for route,active in pages:
-        response=client.get(route)
+        response=client.get(route,follow_redirects=True)
         assert response.status_code==200
         menus=re.findall(r'<nav class="studio-pages".*?</nav>',response.text,re.S)
         assert len(menus)==1,route
@@ -198,7 +195,7 @@ def test_builder_submenu_is_shared_by_all_pages_and_guide_levels(client):
         assert ('id="studio-preset"' in response.text)==(route=='/admin/design/home')
         heading=re.search(r'<div class="studio-heading">.*?</div></div>',response.text,re.S)[0]
         headings.add(heading)
-        assert 'Customize your portal' in heading
-        assert 'Administration' in heading and 'Portal builder' in heading
+        assert 'Customize your pages' in heading
+        assert 'Administration' in heading and 'Page builder' in heading
         assert 'Drag a block onto the page. Click anything to edit it.' in heading
     assert len(headings)==1

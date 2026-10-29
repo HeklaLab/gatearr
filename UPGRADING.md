@@ -1,3 +1,17 @@
+## Upgrading to 0.5.0 — public beta
+
+Back up the complete `/data` volume, including `bootstrap.json` or your configured encryption key. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.5.0` (or `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+Migrations 0028–0034 add content pages, editable guide-page layouts, optional device navigation, explicit page activation and editable page menus. Accounts, permissions, API credentials, SMTP settings, uploads, custom URL applications and independently saved draft/published content are retained. Existing guide addresses remain supported. Review page audiences, guide-page layouts and application destinations after updating; new presets do not replace your authored pages.
+
+Page activation and publishing are separate: Enable/Disable controls access to the existing published snapshot; Publish in the builder applies draft edits. Home remains required. Page/block audiences use the same Everyone / Administrators / Groups selector; explicit page audiences also filter navigation and direct URLs.
+
+Native Tracearr is now an administrator tool. Its former member cards are presented as an administrator tool plus a standalone Statistics widget when the API is configured, preserving chosen statistics settings and existing widgets. A legacy member/group tool grant no longer authorizes the Tracearr interface; the Statistics widget does not need that grant. Custom URL applications named Tracearr remain independent.
+
+Header and My account blocks can be removed intentionally; the builder reports missing functional controls so they can be restored. Reset customized content permanently removes custom pages and URL applications and restores presentation presets, while retaining users, groups, permissions, configured native integrations and SMTP settings. Use it only when you intend to discard custom content.
+
+After schema migrations, roll back by restoring the matching full data backup with the previous container image. See [Page builder](docs/page-builder.md) for the new editing workflow.
+
 ## Upgrading to 0.4.3 — public beta
 
 Back up the complete `/data` volume, including `bootstrap.json` or the configured encryption key. Pin `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.4.3` (or use `latest`), then run `docker compose pull` and `docker compose up -d --wait`.

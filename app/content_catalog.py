@@ -13,23 +13,37 @@ def sources(db):
         if source:rows[(key,i18n.source_hash(source))]={'key':key,'source':source,'context':context,'kind':kind,'maximum':maximum}
     add('branding:browser_title',config(db,'browser_title',''),'Branding',maximum=200)
     add('branding:app_name',config(db,'app_name','Gatearr'),'Branding',maximum=80)
-    for draft in (False,True):
-        for block in portal.load(db,draft)['blocks']:
-            for field in ('title','body','alt'):add('block:'+block['id']+':'+field,block.get(field,''),'Block '+block['id']+(' · draft' if draft else ' · published'),'footer_html' if block.get('rich') and field=='body' else 'text')
+    def blocks(value,scope,context):
+        for block in value['blocks']:
+            prefix=scope+':'+block['id']
+            for field in ('title','body','alt'):
+                add(prefix+':'+field,block.get(field,''),context+' · '+block['id'],'footer_html' if block.get('rich') and field=='body' else 'text',10000 if block.get('rich') else 5000)
+            if block['kind']=='accordion':
+                for item in block.get('items',[]):
+                    for field in ('question','answer'):
+                        add(prefix+':item:'+item['id']+':'+field,item.get(field,''),context+' · '+block['id']+' · '+item['id'],'accordion_html' if field=='answer' and item.get('rich') else 'text',10000)
             if block['kind']=='applications':
                 defaults={'access:emby':'Access medias','access:seerr':'Request new movies & series','account':'Manage my account'}
                 for key in block.get('applications',[]):
-                    add('block:'+block['id']+':application-subtitle:'+key,block.get('subtitles',{}).get(key,defaults.get(key,'Open application')),'Application subtitle · '+block['id'],maximum=300)
                     source=block.get('subtitles',{}).get(key,defaults.get(key,'Open application'))
-                    if source:
-                        entry=rows[('block:'+block['id']+':application-subtitle:'+key,i18n.source_hash(source))]
-                        entry['target']=('My account' if key=='account' else key.split(':')[-1].capitalize())
+                    add(prefix+':application-subtitle:'+key,source,'Application subtitle · '+block['id'],maximum=300)
+                    if source:rows[(prefix+':application-subtitle:'+key,i18n.source_hash(source))]['target']=('My account' if key=='account' else key.split(':')[-1].capitalize())
     from . import footer
     from .visual_builder import load as load_design
-    for page in ('login','footer'):
+    for draft in (False,True):
+        blocks(portal.load(db,draft),'block','Home · '+('draft' if draft else 'published'))
+    for page in ('login','forgot','reset','account','footer','header'):
         for draft in (False,True):
-            for block in load_design(db,page,draft)['blocks']:
-                for field in ('title','body','alt'):add(page+'-block:'+block['id']+':'+field,block.get(field,''),page.capitalize()+' page','footer_html' if block.get('rich') and field=='body' else 'text',10000 if block.get('rich') else 5000)
+            if page=='header':add('branding:browser_title',load_design(db,page,draft).get('browser_title',''),'Header',maximum=200)
+            blocks(load_design(db,page,draft),page+'-block',page.capitalize()+' page · '+('draft' if draft else 'published'))
+    from .models import ContentPage
+    for page in db.scalars(select(ContentPage).where(ContentPage.archived.is_(False))):
+        for field in ('draft','published'):
+            raw=getattr(page,field)
+            if not raw:continue
+            value=json.loads(raw);scope='page:'+str(page.id);context='Page '+str(page.id)+' · '+field
+            for name in ('title','description'):add(scope+':'+name,value.get('page_settings',{}).get(name,''),context)
+            blocks(value,scope,context)
     for draft in (False,True):
         for item in footer.load(db,draft)['items']:add('footer:'+item['id']+':text',item['text'],'Footer · '+('draft' if draft else 'published'),maximum=2000)
     for draft in (False,True):
@@ -55,23 +69,6 @@ def sources(db):
         for part in ('subject','body','html'):
             source=html_source(db,purpose) if part=='html' else config(db,purpose+'_'+part,DEFAULTS[purpose+'_'+part])
             add('mail:'+purpose+':'+part,source,'Email · '+purpose,'html' if part=='html' else 'subject' if part=='subject' else 'mail',50000 if part=='html' else 300 if part=='subject' else 10000)
-    # Keep native admin translations separate from editable public content.
-    public_blocks=set(); public_subtitles=set()
-    for draft in (False,True):
-        blocks=portal.load(db,draft)['blocks'];by_id={b['id']:b for b in blocks}
-        for block in blocks:
-            ancestor=block;admin_only=False;seen=set()
-            while ancestor and ancestor['id'] not in seen:
-                seen.add(ancestor['id']);admin_only|=ancestor.get('visibility')=='admins';ancestor=by_id.get(ancestor.get('parent'))
-            if admin_only:continue
-            public_blocks.add(block['id'])
-            for app in block.get('applications',[]):
-                if app not in ('radarr','sonarr','bazarr','tdarr','tracearr'):public_subtitles.add('block:'+block['id']+':application-subtitle:'+app)
-    def public(entry):
-        key=entry['key']
-        if key.startswith('policy-label:'):return False
-        if key.startswith('block:'):
-            if key.split(':')[1] not in public_blocks:return False
-            if ':application-subtitle:' in key:return key in public_subtitles
-        return True
-    return [entry for entry in rows.values() if public(entry)]
+    # Authored block content remains editable regardless of its audience.
+    # Native administration/permission labels are not authored content.
+    return [entry for entry in rows.values() if not entry['key'].startswith('policy-label:')]

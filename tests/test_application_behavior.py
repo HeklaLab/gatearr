@@ -71,6 +71,8 @@ def test_native_tools_offer_direct_and_embedded_cards_without_extending_permissi
         db.commit()
     layout, version = state()
     layout['blocks'] = [row('tool-frame', tool, 'embedded'), row('tool-direct', tool, 'direct')]
+    if tool=='tracearr':
+        for block in layout['blocks']:block['visibility']='admins'
     assert write(client, layout, version).status_code == 200
     home = client.get('/home').text
     assert card_href(home, 'tool-frame') == '/tools/' + tool
@@ -172,6 +174,7 @@ def test_unconfigured_admin_tool_is_direct_only_and_does_not_enable_proxy(client
         assert app['opening_modes'] == ['direct'] and not app['direct_url']
     layout, version = state()
     layout['blocks'] = [row('direct-tool', tool, 'direct', url='https://public.example.test:9443/' + tool)]
+    if tool=='tracearr':layout['blocks'][0]['visibility']='admins'
     assert write(client, layout, version).status_code == 200
     assert card_href(client.get('/home').text, 'direct-tool') == 'https://public.example.test:9443/' + tool
     assert client.get('/tools/' + tool).status_code == 403

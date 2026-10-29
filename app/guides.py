@@ -15,6 +15,7 @@ router = APIRouter()
 DEVICES = ('mobile', 'tv', 'tablet', 'desktop', 'other')
 
 def service_url(db, service):
+    if service.key=='tracearr':return '/tools/tracearr' if config(db,'tracearr_enabled')=='true' and config(db,'tracearr_interface_enabled','true')=='true' and config(db,'tracearr_public_url') else ''
     if service.key=='emby' and service.browser_url:return '/services/emby/open'
     if service.key=='seerr':
         from .seerr_login import enabled,public_url
@@ -125,6 +126,9 @@ def read_guide(request: Request, guide_id: int, key: str | None = None):
     if not raw:
         raise HTTPException(404,'Guide not found')
     service = db.get(AccessService,guide.service_key)
+    from .page_builder import service_allowed,enforce_guide
+    if not preview and not service_allowed(db,request.state.user,service.key):raise HTTPException(403,'Application access is not granted')
+    if not preview:enforce_guide(db,request.state.user,service.key)
     return render(request,'guide.html',guide=guide,service=service,article=display(raw,service,request.state.user,request.state.locale,db),guide_preview=preview)
 
 @router.get('/admin/guides')

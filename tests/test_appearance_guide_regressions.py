@@ -45,6 +45,7 @@ def test_guest_without_remembered_choice_uses_system_and_invalid_cookie_is_ignor
 
 def test_intermediate_guide_groups_offer_device_return_above_and_below(client):
     setup(client)
+    client.get('/admin/pages')
     with SessionLocal() as db:
         service=db.get(AccessService,'emby');service.entry_mode='direct'
         service.access_published=json.dumps([

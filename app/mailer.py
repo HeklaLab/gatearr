@@ -37,6 +37,14 @@ def compose(db, recipient, purpose, values):
     if html:
         rendered=interpolate(html,values)
         msg.set_content(plain(rendered))
+        from .image_sources import local_path
+        from html import escape
+        import re
+        base=config(db,'public_url').rstrip('/')
+        def image(match):
+            path=local_path(match.group(1),db)
+            return 'src="'+escape(base+path,quote=True)+'"' if path and base else match.group(0)
+        rendered=re.sub(r'src="([^"]+)"',image,rendered)
         msg.add_alternative(document(rendered),subtype="html")
     return msg
 

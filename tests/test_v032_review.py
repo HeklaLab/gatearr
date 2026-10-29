@@ -126,8 +126,8 @@ def test_spacing_is_validated_and_guide_navigation_is_separate(client):
     assert post(client,'/admin/design/home/preview',{'payload':json.dumps(value)},'/admin/portal').status_code==400
     page=client.get('/admin/portal').text
     assert page.index('data-command="page-settings"')<page.index('id="studio-palette"')
-    assert 'builder-howtos' not in page and '/admin/access-guides' in page
-    assert client.get('/admin/access-guides').status_code==200
+    assert 'builder-howtos' not in page and '/admin/pages' in page
+    assert client.get('/admin/access-guides',follow_redirects=False).status_code==303
 
 
 def test_builder_logs_are_readable_and_reset_requires_admin_and_csrf(client):
@@ -142,10 +142,10 @@ def test_builder_logs_are_readable_and_reset_requires_admin_and_csrf(client):
 
 def test_review_navigation_group_counts_and_admin_tools(client):
     setup(client)
-    page=client.get('/admin/access-guides').text
+    page=client.get('/admin/pages').text
     tabs=re.search(r'<div class="admin-sidebar-children">(.*?)</div>',page,re.S).group(1)
     assert 'Access guide' not in tabs and 'Footer' not in tabs
-    assert tabs.count('aria-current="page"')==1 and 'Portal builder' in tabs
+    assert tabs.count('aria-current="page"')==1 and 'Page builder' in tabs
     with SessionLocal() as db:
         uid=db.scalar(select(User.id).where(User.emby_id=='user-1'))
         empty=PermissionGroup(name='Empty group');populated=PermissionGroup(name='Populated group')

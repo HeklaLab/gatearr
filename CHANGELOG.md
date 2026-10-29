@@ -1,3 +1,26 @@
+# 0.5.0 — 29 October 2026
+
+## New features
+
+- **Page builder:** Create pages with shared blocks, FAQ accordions, compact titles and page menus; manage drafts, visibility and deleted pages.
+- **Access guides:** Build application guides inside editable pages, with optional device-navigation buttons and guides for custom URL applications.
+- **System pages:** Customize the header, footer, sign-in, password recovery and My account pages; restore missing functional blocks from the builder.
+- **Permissions:** Use one audience selector for pages, blocks and widgets, combining administrators and selected groups; menus follow the same access rules.
+- **Statistics:** Keep Emby and Seerr in the user row, place configured Tracearr statistics below, and reserve native Tracearr access for administrators.
+
+## Fixes
+
+- Explain which unpublished guide blocks access-guide publication, while keeping draft content private.
+- Preserve text alignment in edited email templates, previews and sent messages, including multiline email addresses.
+- Keep image alignment, saved upload previews and pixel/percentage sizing consistent in the builder and published pages.
+- Keep application-card destinations independent and distinguish native applications from custom URL applications with the same name.
+- Separate page activation from publishing drafts; show the correct relative guide addresses and flag guides unused by Home.
+- Provide clear duplicate-address errors and safe page deletion, restoration and permanent deletion with confirmation.
+- Reset custom content and presets completely while retaining accounts, permissions, configured integrations and SMTP settings.
+- Use the same compact rich-text toolbar for page content and guide steps, with underline, lists, colour and alignment.
+- Prevent clipped page actions, translation filters, Seerr permission statuses and guest-header controls on phone and tablet layouts; keep switches at a fixed width.
+- Expose shared-header navigation labels in Translations and retain localized page, accordion, account and header content across all bundled languages.
+
 # 0.4.4 — 27 October 2026
 
 ## Improvements

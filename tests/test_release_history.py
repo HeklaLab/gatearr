@@ -39,12 +39,12 @@ def test_shipped_history_classification_preserves_every_original_note():
 def test_updates_future_notes_are_hidden_and_roadmap_link_is_available(client, monkeypatch):
     setup(client)
     monkeypatch.setattr(versioning, 'CHANGELOG', [
-        {'version': '0.4.5', 'changes': ['Do not display this future fix']},
+        {'version': '0.5.1', 'changes': ['Do not display this future fix']},
         {'version': '0.4.2', 'changes': ['Installed fix']},
     ])
     page = client.get('/admin/updates').text
     assert 'Do not display this future fix' not in page
-    assert 'data-release-version="0.4.5"' not in page
+    assert 'data-release-version="0.5.1"' not in page
     assert 'https://github.com/HeklaLab/gatearr/blob/main/ROADMAP.md' in page
 
 
