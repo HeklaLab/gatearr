@@ -87,7 +87,7 @@ def block_move(request: Request, data=Depends(form)):
 def theme_save(request: Request, data=Depends(form)):
     require_admin(request)
     draft = portal.load(request.state.db, True)
-    draft['nav_position'] = data['nav_position']
+    # Navigation is arranged in the Header builder; preserve legacy saved layout.
     draft['sidebar_position'] = data.get('sidebar_position', draft.get('sidebar_position','left'))
     draft['theme'] = {key: data.get(key,draft['theme'].get(key,default)) for key,default in portal.DEFAULT['theme'].items()}
     portal.save(request.state.db, draft, int(data['version']))

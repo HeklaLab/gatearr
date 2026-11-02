@@ -48,12 +48,16 @@ def validate(layout):
         if block['kind']=='title' and block.get('body',''):raise ValueError('Title blocks only contain a title.')
         from .page_design import asset_url,link_url,validate_style
         validate_style(block.get('style',{}))
+        if block.get('journey_scope','all') not in ('all','landing'):raise ValueError('Invalid guide display scope')
+        if block['kind']=='guide_embed' and block.get('journey_scope','all')!='all':raise ValueError('Keep the Access guide block visible throughout the journey.')
         if 'audience' in block:__import__('app.block_audience',fromlist=['validate']).validate(block['audience'])
         if block['kind']=='spacer' and (type(block.get('size',32)) is not int or not 0<=block.get('size',32)<=2000):raise ValueError('Invalid spacing size')
         if block['kind'].startswith('widget_'):
             from .widgets import validate as validate_widget
             validate_widget(block)
         if block['kind']=='applications':
+            for key in ('show_status','warn_on_problem'):
+                if type(block.get(key,False)) is not bool:raise ValueError('Invalid application status setting')
             from .application_behavior import validate as validate_behavior
             validate_behavior(block.get('application_behaviors',{}))
             from .application_information import validate as validate_information
@@ -88,8 +92,10 @@ def validate(layout):
             validate_image(block)
         if block['kind']=='button':
             action=block.get('button_action','link')
-            if action not in ('link','choose_device') or type(block.get('after_device',True)) is not bool:raise ValueError('Invalid button action')
+            if action not in ('link','page','choose_device') or type(block.get('after_device',True)) is not bool:raise ValueError('Invalid button action')
             if action=='link':link_url(block.get('url',''),layout.get('page')=='login')
+            elif action=='page':
+                if not re.fullmatch(r'(?:home|p-[1-9][0-9]*)',str(block.get('page_key',''))):raise ValueError('Select a page')
             elif layout.get('page') in ('home','login','footer'):raise ValueError('Device navigation buttons belong on an access guide subpage.')
         if block['kind']=='columns' and block.get('columns',2) not in (1,2,3):raise ValueError('Choose one, two or three columns')
         if block.get('visibility','everyone') not in ('everyone','admins','members'):raise ValueError('Invalid visibility')
@@ -173,6 +179,10 @@ def for_display(layout,locale,user=None,db=None,editor=False,page_title=None):
     from .applications import catalog
     available={a['key']:a for a in catalog(db,user,editor=editor,locale=locale)} if db is not None else {}
     for b in indexed.values():
+        if b['kind']=='button' and b.get('button_action')=='page':
+            from .page_builder import catalog as page_catalog
+            target=next((p for p in page_catalog(db,user,editor,locale=locale) if p['key']==b.get('page_key')),None) if db is not None else None
+            b['page_href']=target['href'] if target else ''
         if b['kind'] in ('page_menu','guides') and db is not None:
             from .page_builder import catalog as page_catalog
             pages=page_catalog(db,user,editor,locale=locale)
@@ -186,6 +196,10 @@ def for_display(layout,locale,user=None,db=None,editor=False,page_title=None):
             if not editor:b['cards']=[card for card in b['cards'] if card['href']]
             for card in b['cards']:
                 card['information']=application_information(db,user,card['key'],b.get('information',{}).get(card['key'],{}),editor)
+                from .connection_health import public_status
+                from .application_status import service_key
+                service=service_key(card['key'])
+                card['health']=public_status(db,service) if service else None
             b['visible_columns']=min(b.get('columns',3),max(1,len(b['cards'])))
     for block in indexed.values():
         if block.get('parent'):

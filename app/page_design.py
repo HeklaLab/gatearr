@@ -4,7 +4,7 @@ from .security import url_ok
 COLORS=('accent','button_hover','bg','surface','text','muted','ink','gradient_start','gradient_end')
 
 def validate_style(value):
-    if not isinstance(value,dict) or set(value)-set(COLORS)-{'gradient','angle','align','padding','radius','background_mode','background_image','border_mode','border_color','border_width'}:raise ValueError('Invalid visual style')
+    if not isinstance(value,dict) or set(value)-set(COLORS)-{'gradient','angle','align','padding','radius','background_mode','background_image','border_mode','border_color','border_width','padding_vertical','padding_horizontal'}:raise ValueError('Invalid visual style')
     for key in COLORS:
         if key in value and not re.fullmatch(r'#[0-9a-fA-F]{6}',str(value[key])):raise ValueError('Invalid color: use #RRGGBB')
     if 'gradient' in value and type(value['gradient']) is not bool:raise ValueError('Invalid gradient')
@@ -14,7 +14,7 @@ def validate_style(value):
     if value.get('background_image'):
         from .image_sources import require_image
         require_image(value['background_image'])
-    for key,maximum in [('angle',360),('padding',100),('radius',80),('border_width',12)]:
+    for key,maximum in [('angle',360),('padding',100),('padding_vertical',100),('padding_horizontal',100),('radius',80),('border_width',12)]:
         if key in value and (type(value[key]) is not int or not 0<=value[key]<=maximum):raise ValueError('Invalid visual style')
     if value.get('align','left') not in ('left','center','right'):raise ValueError('Invalid alignment')
     return value
@@ -27,6 +27,8 @@ def style_css(value):
     if 'text' in value:css+='color:'+value['text']+';'
     if 'align' in value:css+='text-align:'+value['align']+';--block-justify:'+{'left':'flex-start','center':'center','right':'flex-end'}[value['align']]+';'
     if 'padding' in value:css+='padding:'+str(value['padding'])+'px;'
+    if 'padding_vertical' in value:css+='padding-block:'+str(value['padding_vertical'])+'px;'
+    if 'padding_horizontal' in value:css+='padding-inline:'+str(value['padding_horizontal'])+'px;'
     if 'radius' in value:css+='border-radius:'+str(value['radius'])+'px;'
     mode=value.get('background_mode','default')
     if mode=='transparent':css+='background:transparent;box-shadow:none;'

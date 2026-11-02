@@ -50,13 +50,16 @@ def plain(value):
 def interpolate(value,values):
     return clean(Template(value).substitute({key:escape(str(item),quote=True) for key,item in values.items()}))
 
-def validate(value,html=False,subject=False):
+def requires_link(purpose):
+    return purpose in ('invite','verify','reset')
+
+def validate(value,html=False,subject=False,purpose=None):
     if len(value)>(50000 if html else 10000) or (subject and (not value.strip() or len(value)>300 or '\r' in value or '\n' in value)):
         raise ValueError('Template too long or invalid subject')
     try:Template(value).substitute(app_name='Gatearr',username='Member',link='https://example.com/verify-email?token=example',minutes='30',title='Series',season='5')
     except (ValueError,KeyError):raise ValueError('Allowed variables: ${app_name}, ${username}, ${link}, ${minutes}, ${title}, ${season}')
     value=clean(value) if html else value
-    if not subject and '${link}' not in (plain(value) if html else value):raise ValueError('The message body must contain ${link}')
+    if not subject and (purpose is None or requires_link(purpose)) and '${link}' not in (plain(value) if html else value):raise ValueError('The message body must contain ${link}')
     return value
 
 

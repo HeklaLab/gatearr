@@ -1,3 +1,19 @@
+# 0.5.1 — 2 November 2026
+
+## Improvements
+
+- **Text editing:** Use shared font-size and colour controls, reapply colours to new selections and adjust text-block spacing.
+- **Application status:** Show optional connection indicators and compact warnings, with automatic checks every minute.
+- **Page links:** Choose Gatearr pages directly in buttons; links follow address changes and page permissions.
+
+## Fixes
+
+- Save notification emails without a link; keep action links required for invitations, verification and password recovery.
+- Keep breadcrumbs through the final device and choose whether guide-page blocks appear only at the start or throughout the guide.
+- Use consistent button styling and spacing; remove redundant page-creation and navigation controls.
+- Restrict shared header and footer editing to their own builders; remove Accordion from the footer palette.
+- Refine interface wording and complete new labels in all 21 bundled languages.
+
 # 0.5.0 — 29 October 2026
 
 ## New features

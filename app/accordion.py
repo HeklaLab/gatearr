@@ -11,7 +11,7 @@ def clean_answer(value):
     def attribute(tag,name,value):
         if name=='color':return value if re.fullmatch(r'#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?',value) else None
         return value
-    return nh3.clean(value,tags=TAGS,attributes={'*':{'style'},'font':{'color'}},attribute_filter=attribute,filter_style_properties={'color','font-weight','font-style','text-decoration'},clean_content_tags={'script','style','iframe','object','svg','math','form','template','video','audio','picture'})
+    return nh3.clean(value,tags=TAGS,attributes={'*':{'style'},'font':{'color'}},attribute_filter=attribute,filter_style_properties={'color','font-weight','font-style','font-size','text-decoration'},clean_content_tags={'script','style','iframe','object','svg','math','form','template','video','audio','picture'})
 
 def validate_item(item,db=None):
     if type(item.get('rich',False)) is not bool or type(item.get('watermark',False)) is not bool:raise ValueError('Invalid accordion appearance')

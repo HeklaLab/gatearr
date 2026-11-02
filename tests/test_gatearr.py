@@ -78,7 +78,7 @@ def test_builder_draft_publish_preview_escape_and_menu_positions(client):
     assert '#123456' not in client.get('/theme.css').text
     assert builder_post(client,'/admin/portal/publish',{}).status_code==303
     published=client.get('/home').text
-    assert 'Mon portail unique' in published and 'nav-right' in published and 'sidebar-right' in published
+    assert 'Mon portail unique' in published and 'nav-top' in published and 'sidebar-right' in published
     assert '#123456' in client.get('/theme.css').text
     assert post(client,'/admin/menu',{'label':'Tracearr','url':'https://tracearr.example.com','icon':'link','position':'1','menu_key':'side'},'/admin').status_code==303
     assert builder_post(client,'/admin/portal/block',{'kind':'menu','region':'sidebar','order':'1','span':'12','menu_key':'side'}).status_code==400

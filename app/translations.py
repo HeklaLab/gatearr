@@ -169,7 +169,7 @@ def save(request:Request,data=Depends(form)):
         elif entry['kind']=='footer_html':
             from .footer import clean_html
             value=clean_html(raw)
-        elif entry['kind'] in ('html','subject','mail'):value=rich_mail.validate(raw,html=entry['kind']=='html',subject=entry['kind']=='subject') if raw else ''
+        elif entry['kind'] in ('html','subject','mail'):value=rich_mail.validate(raw,html=entry['kind']=='html',subject=entry['kind']=='subject',purpose=key.split(':')[1] if key.startswith('mail:') else None) if raw else ''
         else:value=validated_value(key,locale,raw,entry['source'])
         related=list(dict.fromkeys(data.getlist('related_key') or [key]))
         if key not in related or len(related)>100:raise HTTPException(400,'Invalid translation group')

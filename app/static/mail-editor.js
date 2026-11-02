@@ -22,7 +22,7 @@
   const walker=document.createTreeWalker(doc,NodeFilter.SHOW_TEXT);while(walker.nextNode())walker.currentNode.textContent=replace(walker.currentNode.textContent);
   preview.srcdoc='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:24px;background:white;color:#222;font:15px/1.6 Arial"><div style="max-width:640px;margin:auto">'+doc.innerHTML+'</div></body></html>';
  }
- function field(label,value,fn,type='text'){const l=make('label',label),i=make('input');i.type=type;i.value=value??'';i.oninput=()=>{fn(i.value,i);sync();};l.append(i);props.append(l);return i;}
+ function field(label,value,fn,type='text'){const l=make('label',label),i=make('input');i.type=type;i.value=type==='color'?window.GatearrColor.toHex(value):value??'';i.oninput=()=>{fn(i.value,i);sync();};l.append(i);props.append(l);return i;}
  function valid(v){try{const u=new URL(v);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password;}catch{return false;}}
  function kind(b){return b.tagName==='IMG'?'image':b.tagName==='HR'?'divider':b.tagName==='A'?'button':/^H[123]$/.test(b.tagName)?'heading':b.tagName==='DIV'&&!b.textContent.trim()&&b.style.lineHeight?'spacer':'text';}
  function select(b){
@@ -38,8 +38,8 @@
   else if(type==='button'){field('Button label',b.textContent,v=>b.textContent=v);field('Link URL',b.getAttribute('href'),(v,i)=>{const ok=v==='${link}'||valid(v);i.setCustomValidity(ok?'':form.dataset.invalidUrl);if(ok)b.setAttribute('href',v);});}
   else{
    const l=make('div'),box=make('div');box.className='mail-text-edit';box.contentEditable='true';box.setAttribute('role','textbox');box.setAttribute('aria-label',t('Text'));box.innerHTML=b.innerHTML;box.oninput=()=>{b.innerHTML=box.innerHTML;sync();};
-   box.onpaste=e=>{e.preventDefault();const s=window.getSelection();if(!s.rangeCount)return;const r=s.getRangeAt(0);if(!box.contains(r.commonAncestorContainer))return;r.deleteContents();const text=document.createTextNode(e.clipboardData.getData('text/plain'));r.insertNode(text);r.setStartAfter(text);r.collapse(true);s.removeAllRanges();s.addRange(r);b.innerHTML=box.innerHTML;sync();};box.ondrop=e=>e.preventDefault();box.onclick=e=>{if(e.target.closest('a'))e.preventDefault();};
-   const formatting=make('div');formatting.className='editor-tools';for(const [label,command]of[['Bold','bold'],['Italic','italic'],['Underline','underline'],['Bullet list','insertUnorderedList'],['Numbered list','insertOrderedList']]){const control=button(label,()=>{box.focus();document.execCommand(command,false,null);b.innerHTML=box.innerHTML;sync();});control.onmousedown=e=>e.preventDefault();formatting.append(control);}l.append(formatting,box);props.append(l);
+   box.onclick=e=>{if(e.target.closest('a'))e.preventDefault();};
+   const formatting=make('div');formatting.className='editor-tools';window.GatearrFormatting.mount(box,formatting,t,value=>{b.innerHTML=value;sync();});l.append(formatting,box);props.append(l);
   }
   if(type==='button')field('Background color',b.style.backgroundColor||'#167cdb',v=>b.style.backgroundColor=v,'color');
   if(!['image','divider','spacer'].includes(type))field('Text color',b.style.color||'#222222',v=>b.style.color=v,'color');

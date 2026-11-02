@@ -112,7 +112,9 @@ def public_access(request,key,node_id=''):
         kind=node['kind'];href='/access/'+key+'/'+node['id']+('?view=guide' if forced_guide else '')
         if kind=='browser':href=service_url(db,service)
         elif kind=='link':href=node['url']
-        elif kind=='guide':href='/access/'+key+'/guide/'+str(node['guide_id'])
+        elif kind=='guide':
+            href='/access/'+key+'/guide/'+str(node['guide_id'])
+            if sum(n['kind']=='guide' and n.get('guide_id')==node['guide_id'] for n in nodes)>1:href+='?choice='+node['id']
         entries.append({**node,'icon':category_icon(node),'title':local(node,'title',request.state.locale,db),'href':href,'external':kind in ('link','browser')})
     return render(request,'access.html',service=service,entries=entries,crumbs=crumbs,current_title=local(current,'title',request.state.locale,db) if current else i18n.content(db,"service:"+service.key+":name",service.name,request.state.locale))
 

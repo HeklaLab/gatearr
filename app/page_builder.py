@@ -151,7 +151,7 @@ def save(db,page,value,expected,publish=False):
     except IntegrityError:
         db.rollback();raise HTTPException(400,'This page address is already in use. Choose another address.')
 
-def embedded_context(db,user,locale,key,base,device='',guide_id=None,editor=False):
+def embedded_context(db,user,locale,key,base,device='',guide_id=None,editor=False,choice=''):
     from .access import load,visible_nodes,category_icon,local
     from .guides import display,service_url
     from .models import Guide
@@ -163,7 +163,8 @@ def embedded_context(db,user,locale,key,base,device='',guide_id=None,editor=Fals
     if guide_id:
         guide=db.get(Guide,int(guide_id)) if str(guide_id).isdigit() else None
         if not guide or guide.service_key!=key or not guide.published:raise HTTPException(404,'Guide not found')
-        context.update(guide=guide,article=display(guide.published,service,user,locale,db),template='guide_content.html')
+        from .guides import guide_crumbs
+        context.update(guide=guide,article=display(guide.published,service,user,locale,db),crumbs=guide_crumbs(db,service,guide.id,locale,base=base,choice=choice),template='guide_content.html')
         return context
     nodes=visible_nodes(db,service,load(service));indexed={n['id']:n for n in nodes}
     current=indexed.get(device) if device else None
@@ -177,7 +178,9 @@ def embedded_context(db,user,locale,key,base,device='',guide_id=None,editor=Fals
     for node in sorted(nodes,key=lambda n:(n['position'],n['id'])):
         if node.get('parent','')!=device:continue
         kind=node['kind'];url=href('device',node['id'])
-        if kind=='guide':url=href('guide',node['guide_id'])
+        if kind=='guide':
+            url=href('guide',node['guide_id'])
+            if sum(n['kind']=='guide' and n.get('guide_id')==node['guide_id'] for n in nodes)>1:url+='&choice='+node['id']
         if kind=='browser':url=service_url(db,service)
         if kind=='link':url=node['url']
         context['entries'].append(dict(node,icon=category_icon(node),title=local(node,'title',locale,db),href=url,external=kind in ('link','browser')))

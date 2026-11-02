@@ -1,5 +1,40 @@
 [
   {
+    "version": "0.5.1",
+    "date": "2026-11-02",
+    "changes": [
+      "Use shared font-size and colour controls, reapply colours to new selections and adjust text-block spacing.",
+      "Show optional connection indicators and compact warnings, with automatic checks every minute.",
+      "Choose Gatearr pages directly in buttons; links follow address changes and page permissions.",
+      "Save notification emails without a link; keep action links required for invitations, verification and password recovery.",
+      "Keep breadcrumbs through the final device and choose whether guide-page blocks appear only at the start or throughout the guide.",
+      "Use consistent button styling and spacing; remove redundant page-creation and navigation controls.",
+      "Restrict shared header and footer editing to their own builders; remove Accordion from the footer palette.",
+      "Refine interface wording and complete new labels in all 21 bundled languages."
+    ],
+    "features": [
+      {
+        "title": "Text editing",
+        "text": "Use shared font-size and colour controls, reapply colours to new selections and adjust text-block spacing."
+      },
+      {
+        "title": "Application status",
+        "text": "Show optional connection indicators and compact warnings, with automatic checks every minute."
+      },
+      {
+        "title": "Page links",
+        "text": "Choose Gatearr pages directly in buttons; links follow address changes and page permissions."
+      }
+    ],
+    "fixes": [
+      "Save notification emails without a link; keep action links required for invitations, verification and password recovery.",
+      "Keep breadcrumbs through the final device and choose whether guide-page blocks appear only at the start or throughout the guide.",
+      "Use consistent button styling and spacing; remove redundant page-creation and navigation controls.",
+      "Restrict shared header and footer editing to their own builders; remove Accordion from the footer palette.",
+      "Refine interface wording and complete new labels in all 21 bundled languages."
+    ]
+  },
+  {
     "version": "0.5.0",
     "date": "2026-10-29",
     "changes": [

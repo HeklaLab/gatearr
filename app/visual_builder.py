@@ -82,6 +82,9 @@ def validate(db,page,value):
     if page=='account' and any(b['kind'] in ACCOUNT_KINDS and b.get('region')=='login' for b in value.get('blocks',[])):raise ValueError('Place account blocks in a visible page region.')
     if any(sum(b['kind']==kind for b in value.get('blocks',[]))>1 for kind in ACCOUNT_KINDS):raise ValueError('Use each account block only once.')
     portal.validate(value)
+    if page=='footer':
+        legacy_accordions={b['id'] for b in load(db,page,True)['blocks'] if b['kind']=='accordion'}
+        if any(b['kind']=='accordion' and b['id'] not in legacy_accordions for b in value['blocks']):raise ValueError('Accordion blocks are not available in the footer.')
     if page!='home' and any(b['kind'] in ('applications','services','application','account') for b in value['blocks']):raise ValueError('Application blocks are only available on Home.')
     if access_page and any(b['kind'].startswith('widget_') for b in value['blocks']):raise ValueError('Widgets are not available on Access guide pages.')
     from .image_blocks import normalize as normalize_images

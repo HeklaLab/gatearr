@@ -31,6 +31,20 @@ def local(value,field,locale,db=None):
     source=value.get(field,'')
     return i18n.content(db,value['_i18n_key']+':'+field,source,locale) if db and value.get('_i18n_key') else source
 
+def guide_crumbs(db,service,guide_id,locale,base=None,choice=''):
+    """Published choice titles and parent links, never the legacy device enum."""
+    from .access import load,visible_nodes,local as local_choice
+    nodes=visible_nodes(db,service,load(service));indexed={n['id']:n for n in nodes}
+    candidates=[n for n in nodes if n['kind']=='guide' and n.get('guide_id')==guide_id]
+    current=next((n for n in candidates if n['id']==choice),None) or next(iter(sorted(candidates,key=lambda n:(n['position'],n['id']))),None)
+    result=[];seen=set()
+    while current and current['id'] not in seen:
+        seen.add(current['id'])
+        href=(base+('&' if '?' in base else '?')+'device='+current['id']) if base else '/access/'+service.key+'/'+current['id']+'?view=guide'
+        result.insert(0,dict(title=local_choice(current,'title',locale,db),href=href if current['kind']=='group' else ''))
+        current=indexed.get(current.get('parent',''))
+    return result
+
 def normalize(db,value,guide_id):
     prefix='guide:'+str(guide_id);value['_i18n_key']=prefix
     i18n.normalize_fields(db,value,prefix,('title','summary'))
@@ -129,7 +143,7 @@ def read_guide(request: Request, guide_id: int, key: str | None = None):
     from .page_builder import service_allowed,enforce_guide
     if not preview and not service_allowed(db,request.state.user,service.key):raise HTTPException(403,'Application access is not granted')
     if not preview:enforce_guide(db,request.state.user,service.key)
-    return render(request,'guide.html',guide=guide,service=service,article=display(raw,service,request.state.user,request.state.locale,db),guide_preview=preview)
+    return render(request,'guide.html',guide=guide,service=service,article=display(raw,service,request.state.user,request.state.locale,db),crumbs=guide_crumbs(db,service,guide.id,request.state.locale,choice=request.query_params.get('choice','')),guide_preview=preview)
 
 @router.get('/admin/guides')
 def admin_guides(request: Request):

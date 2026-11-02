@@ -1,3 +1,15 @@
+## Upgrading to 0.5.1 — public beta
+
+Back up the complete `/data` volume, including `bootstrap.json` or your configured encryption key. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.5.1` (or `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
+
+No new schema migration is needed compared with 0.5.0. Existing accounts, permissions, integration credentials, SMTP settings, uploads and draft/published content are retained. Button page targets use stable page identifiers, so changing a page address does not break those links.
+
+Application connection checks now run every minute in the background. Enable connection indicators and/or compact warning banners in each Applications block if desired. Public status never exposes private diagnostics. Text and other guide-page blocks can be limited to the guide landing page; existing blocks retain their previous entire-journey behaviour until changed.
+
+The shared header and footer are edited only in their respective builders. New footer accordions are unavailable; existing ones are retained until removed. Device-navigation buttons use the same appearance and spacing as other Button blocks. Customized block colours remain intact.
+
+Notification email links are optional for email-change, password-change and new-season messages. Invitations, email verification and password recovery still require their action links.
+
 ## Upgrading to 0.5.0 — public beta
 
 Back up the complete `/data` volume, including `bootstrap.json` or your configured encryption key. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.5.0` (or `latest`), then run `docker compose pull` and `docker compose up -d --wait`.

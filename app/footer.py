@@ -22,7 +22,7 @@ def clean_html(value):
         if name in ('src','href') and re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(png|svg)',value):return value
         return rich_mail.attribute(tag,name,value)
     if len(value)>10000:raise ValueError('Footer column too long')
-    return nh3.clean(value,tags=rich_mail.TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attr,url_schemes={'https','http'},url_relative=lambda value:value if re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(png|svg)',value) else None,filter_style_properties={'color','text-align','font-weight','font-style','text-decoration'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
+    return nh3.clean(value,tags=rich_mail.TAGS,attributes={'*':{'style'},'a':{'href','title'},'img':{'src','alt','width','height'}},attribute_filter=attr,url_schemes={'https','http'},url_relative=lambda value:value if re.fullmatch(r'/media/icons/[a-f0-9]{64}\.(png|svg)',value) else None,filter_style_properties={'color','text-align','font-weight','font-style','font-size','text-decoration'},clean_content_tags={'script','style','iframe','object','svg','math','form','template'})
 
 def validate(value):
     if 'design' in value:

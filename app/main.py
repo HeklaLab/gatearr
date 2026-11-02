@@ -180,12 +180,12 @@ async def lifespan(app):
     if settings.secure_cookie and urlsplit(settings.public_url).scheme != "https":
         raise RuntimeError("COOKIE_SECURE=true nécessite une PUBLIC_URL HTTPS")
     task = asyncio.create_task(scheduled())
-    yield
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
+    from .connection_health import monitor
+    health_task = asyncio.create_task(monitor())
+    try:yield
+    finally:
+        for running in (task,health_task):running.cancel()
+        await asyncio.gather(task,health_task,return_exceptions=True)
     from .captcha import shutdown as stop_captcha
     stop_captcha()
 
@@ -325,7 +325,7 @@ async def form(request: Request):
         "/admin/portal/block": ("version", "kind", "region", "order", "span"),
         "/admin/portal/delete": ("version", "block_id"),
         "/admin/portal/move": ("version", "block_id", "direction"),
-        "/admin/portal/theme": ("version", "nav_position"),
+        "/admin/portal/theme": ("version",),
         "/admin/portal/publish": ("version",),
         "/admin/portal/reset": ("version",),
     }.get(request.url.path, ())
@@ -501,7 +501,7 @@ def render(request, template, **kwargs):
         "seerr_in_menu":any(item.access_service=="seerr" or item.label.casefold()=="seerr" or (seerr_public and item.url.rstrip("/")==seerr_public.rstrip("/")) for entries in menus.values() for item in entries),
         "ui_catalog":{key:translator(key) for key in i18n.CATALOGS["en"]},"default_service_icon":lambda key:__import__("app.service_assets",fromlist=["default_icon"]).default_icon(key,media_name.lower()),"font_icon_class":__import__("app.icons",fromlist=["icon_class"]).icon_class, "service_font":lambda key:(db.get(AccessService,key).icon if db.get(AccessService,key) else "link"), "fa_icons":__import__("app.icons",fromlist=["FA_ICONS"]).FA_ICONS,"service_icon": lambda key: __import__("app.service_assets",fromlist=["service_icon"]).service_icon(db,key,media_name.lower()), "access_href": lambda key: access_href(db, key), "access_services": list(db.scalars(select(AccessService).order_by(AccessService.name))),
         "footer_regions":portal.for_display(global_footer_design,locale,request.state.user,db,page_title=portal.display_page_title(layout,locale,db)) if (global_footer_design:=footer_layout.get("design")) else None,"layout": layout, "regions": portal.for_display(layout, locale, None if kwargs.get("anonymous_preview") else request.state.user,db,editor=bool(kwargs.get("visual_preview"))) if template in ("home.html","login.html","footer_preview.html","system_page.html","account.html") else {}, "menus": menus, "mail_locale": mail_locale,
-        "device_selection_href":device_selection_href,"device_selection_active":device_selection_active,"can_view_home":page_allowed(db,request.state.user,portal.load(db).get("page_settings",HOME_SETTINGS)),"page_navigation":[p for p in page_catalog(db,request.state.user) if p.get("navigation") and p["key"]!="home"],"embedded_journey":lambda key:embedded_context(db,request.state.user,locale,key,request.url.path,request.query_params.get("device",""),request.query_params.get("guide"),bool(kwargs.get("visual_preview"))),"content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
+        "device_selection_href":device_selection_href,"device_selection_active":device_selection_active,"can_view_home":page_allowed(db,request.state.user,portal.load(db).get("page_settings",HOME_SETTINGS)),"page_navigation":[p for p in page_catalog(db,request.state.user) if p.get("navigation") and p["key"]!="home"],"embedded_journey":lambda key:embedded_context(db,request.state.user,locale,key,request.url.path,request.query_params.get("device",""),request.query_params.get("guide"),bool(kwargs.get("visual_preview")),choice=request.query_params.get("choice","")),"content": lambda key,source:i18n.content(db,key,source,locale), "message": translator(kwargs.pop("message", "")), **kwargs})
 
 def setup_error(request,message,status):
     values=getattr(request.state,'form_values',{})
@@ -925,7 +925,7 @@ def mail_templates(request: Request, data=Depends(form)):
             Template(value).substitute(values)
         except (ValueError, KeyError):
             raise ValueError('Allowed variables: ${app_name}, ${username}, ${link}, ${minutes}')
-        if key.endswith("body") and "${link}" not in value:
+        if key.endswith("body") and rich_mail.requires_link(key.removesuffix('_body')) and "${link}" not in value:
             raise ValueError('The message body must contain ${link}')
         if mail_locale=='en' and i18n.default_language(request.state.db)=='en':
             set_config(request.state.db,key,value)
@@ -1141,3 +1141,5 @@ app.include_router(library_updates_router)
 
 from .page_builder import router as page_builder_router
 app.include_router(page_builder_router)
+from .application_status import router as application_status_router
+app.include_router(application_status_router)

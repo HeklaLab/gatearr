@@ -33,7 +33,7 @@ def editor(request,purpose,locale,subject=None,html=None,notice=''):
     html=clean(html)
     sample={'app_name':config(db,'app_name',settings.app_name),'username':'Alex','minutes':'30','title':'Fargo','season':'5','link':config(db,'public_url',settings.public_url)+('/reset?token=preview' if purpose=='reset' else '/library/open/preview' if purpose=='new_season' else '/verify-email?token=preview')}
     preview=document(interpolate(html,sample))
-    return render(request,'mail_editor.html',edit_locale=locale,mail_languages=i18n.languages(db),purpose=purpose,purposes=purposes(db),subject=subject,html=html,mail_preview=preview,notice=notice,edit_language_name=i18n.languages(db)[locale],source_stamp=i18n.source_hash(config(db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(db,purpose)))
+    return render(request,'mail_editor.html',edit_locale=locale,mail_languages=i18n.languages(db),purpose=purpose,purposes=purposes(db),subject=subject,html=html,mail_preview=preview,notice=notice,edit_language_name=i18n.languages(db)[locale],mail_link_required=__import__('app.rich_mail',fromlist=['requires_link']).requires_link(purpose),source_stamp=i18n.source_hash(config(db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(db,purpose)))
 
 @router.get('/admin/mail-editor')
 def page(request:Request):
@@ -53,7 +53,7 @@ def save(request:Request,data=Depends(form)):
     stamp=i18n.source_hash(config(request.state.db,purpose+'_subject',DEFAULTS[purpose+'_subject'])+'\n'+html_source(request.state.db,purpose))
     if data.get('source_hash') and data['source_hash']!=stamp:raise HTTPException(409,'The source text has changed. Reload the translation page.')
     subject=validate(str(data.get('subject','')),subject=True)
-    html=validate(str(data.get('html','')),html=True)
+    html=validate(str(data.get('html','')),html=True,purpose=purpose)
     if len(html)>50000:
         raise HTTPException(400,'Email template must contain at most 50,000 characters after formatting.')
     action=data.get('action','save')

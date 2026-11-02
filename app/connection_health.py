@@ -1,5 +1,5 @@
 """Read-only, authenticated probes. Store only safe diagnostics, never remote bodies."""
-import time,json,socket,ssl,smtplib
+import time,json,socket,ssl,smtplib,threading,logging
 from urllib.parse import urlsplit
 from concurrent.futures import ThreadPoolExecutor
 import httpx
@@ -73,13 +73,19 @@ def probe(service,values):
     finally:diagnostics.setdefault('response_ms',round((time.perf_counter()-started)*1000,1))
 
 
+_check_lock=threading.RLock()
+
 def checks(db,refresh=False):
+    with _check_lock:
+        return _checks(db,refresh)
+
+def _checks(db,refresh=False):
     current=int(time.time());pending={};result={}
     for service in ('emby','seerr','radarr','sonarr','bazarr','tracearr','tdarr'):
         row=db.get(ConnectionCheck,service)
         if not configured(db,service):
             result[service]={'state':'unconfigured','detail':'Connection not configured','checked_at':None};continue
-        if refresh is True or refresh==service or not row or current-row.checked_at>60:
+        if refresh is True or refresh==service or not row or current-row.checked_at>=60:
             base,key=emby_connection() if service=='emby' else (config(db,service+'_url'),decrypt(config(db,service+'_api_key')))
             pending[service]={'url':base,'key':key,'kind':media_kind(db)}
         else:result[service]={'state':row.state,'detail':row.detail,'checked_at':row.checked_at}
@@ -98,6 +104,27 @@ def checks(db,refresh=False):
     for service,check in result.items():check['diagnostics']=read_diagnostics(db,'connection_diagnostics_'+service) if check['state']!='unconfigured' else {}
     for check in result.values():check['checked_label']=time.strftime('%Y-%m-%d %H:%M:%S UTC',time.gmtime(check['checked_at'])) if check['checked_at'] else ''
     return result
+
+
+async def monitor():
+    """One independent, bounded refresh cycle per minute, even without visitors."""
+    import asyncio
+    from starlette.concurrency import run_in_threadpool
+    def cycle():
+        with SessionLocal() as db:checks(db,refresh=True)
+    while True:
+        started=time.monotonic()
+        try:await run_in_threadpool(cycle)
+        except Exception:logging.getLogger(__name__).warning('Application status refresh failed')
+        await asyncio.sleep(max(1,60-(time.monotonic()-started)))
+
+
+def public_status(db,service):
+    """Cached, coarse state only. Rendering never performs a network probe."""
+    if not configured(db,service):return 'unknown'
+    row=db.get(ConnectionCheck,service)
+    if not row or time.time()-row.checked_at>150:return 'unknown'
+    return 'online' if row.state=='connected' else 'offline' if row.state=='error' else 'unknown'
 
 
 def invalidate(db,service):
