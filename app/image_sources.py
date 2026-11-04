@@ -3,7 +3,7 @@ import re
 from urllib.parse import urlsplit
 from .settings import settings
 UPLOAD=re.compile(r'/media/icons/[a-f0-9]{64}\.(?:png|svg)')
-BUNDLED=re.compile(r'/static/(?:gatearr-logo\.png|branding-variants/gatearr-(?:electric-lime|neon-rose)\.png|services/(?:emby|jellyfin|seerr|radarr|sonarr|bazarr|tracearr|tdarr)\.png)')
+BUNDLED=re.compile(r'/static/(?:gatearr-logo\.png|branding-variants/gatearr-(?:electric-lime|neon-rose|pumpkin-glow|mocha-latte|electric-terminal|graphite-shades|purple-haze|bloody-mary)\.png|services/(?:emby|jellyfin|seerr|radarr|sonarr|bazarr|tracearr|tdarr)\.png)')
 def local_path(value,db=None):
     if not isinstance(value,str) or not value or any(c in value for c in '\r\n'):return None
     parsed=urlsplit(value)

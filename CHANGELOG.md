@@ -1,5 +1,18 @@
 # 0.5.1 — 2 November 2026
 
+## 0.6.0 — 2026-11-04
+
+### New features
+
+- **Themes:** Six new light and dark themes with matching Gatearr logos and a visual preset gallery.
+- **Text editing:** Insert guide and email variables at the cursor with convenient buttons.
+
+### Fixes
+
+- Keep theme previews separate from saved palettes and prevent overlapping theme saves.
+- Preserve the selected appearance mode when applying and publishing a theme.
+
+
 ## Improvements
 
 - **Text editing:** Use shared font-size and colour controls, reapply colours to new selections and adjust text-block spacing.

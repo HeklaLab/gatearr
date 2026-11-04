@@ -1,5 +1,10 @@
 ## Upgrading to 0.5.1 — public beta
 
+## Upgrading to 0.6.0
+
+Back up the complete `/data` volume and encryption key. Pull `ghcr.io/heklalab/gatearr:0.6.0` or `latest` and restart Gatearr. No new database migrations are required; existing settings, custom logos and content are preserved.
+
+
 Back up the complete `/data` volume, including `bootstrap.json` or your configured encryption key. Set `GATEARR_IMAGE=ghcr.io/heklalab/gatearr:0.5.1` (or `latest`), then run `docker compose pull` and `docker compose up -d --wait`.
 
 No new schema migration is needed compared with 0.5.0. Existing accounts, permissions, integration credentials, SMTP settings, uploads and draft/published content are retained. Button page targets use stable page identifiers, so changing a page address does not break those links.

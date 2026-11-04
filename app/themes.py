@@ -12,10 +12,31 @@ def palette(colors):return {**colors,'gradient_start':colors['bg'],'gradient_end
 PRESETS={'boreal':{'name':'Blue Boréal','dark':palette(DARK),'light':palette(LIGHT)},
 'electric-lime':{'name':'Electric Lime','dark':palette({**DARK,'accent':'#c5f52c','button_hover':'#d4ff5e','bg':'#0d1311','surface':'#171e1a','text':'#f0f5f1','muted':'#abb9ae','ink':'#172000'}),'light':palette({**LIGHT,'accent':'#c5f52c','button_hover':'#d4ff5e','bg':'#f6f8f3','text':'#111c15','muted':'#526354','ink':'#172000'})},
 'neon-rose':{'name':'Neon Rose','dark':palette({**DARK,'accent':'#fb65c5','button_hover':'#ff9bda','bg':'#151216','surface':'#211c24','text':'#f7eff9','muted':'#c0b2c7','ink':'#2e0522'}),'light':palette({**LIGHT,'accent':'#f331af','button_hover':'#fa83cd','bg':'#fbf7fa','text':'#241623','muted':'#715c70','ink':'#290320'})}}
+# Additional visual presets for the theme preview demo.
+def themed(name, dark, light):
+    return {'name':name, 'dark':palette({**DARK, **dark}), 'light':palette({**LIGHT, **light})}
+PRESETS.update({
+ 'pumpkin-glow':themed('Pumpkin Glow', {'accent':'#ff8a00','button_hover':'#ffb13b','bg':'#211008','surface':'#32190f','text':'#fff4e4','muted':'#e5c3a6','ink':'#301200'}, {'accent':'#bc4800','button_hover':'#aa4500','bg':'#fff6e9','surface':'#fffaf2','text':'#31190c','muted':'#795a45','ink':'#ffffff'}),
+ 'mocha-latte':themed('Mocha Latte', {'accent':'#d9a17c','button_hover':'#edc2a4','bg':'#100705','surface':'#21100b','text':'#fff2e9','muted':'#d2b4a4','ink':'#28140e'}, {'accent':'#69351e','button_hover':'#884a2b','bg':'#f6e8dc','surface':'#fff8f2','text':'#2f1912','muted':'#795d50','ink':'#ffffff'}),
+ 'electric-terminal':themed('Electric Terminal', {'accent':'#ffe500','button_hover':'#fff266','bg':'#0c0c08','surface':'#1b1b13','text':'#fffef2','muted':'#c9c7ae','ink':'#161400'}, {'accent':'#796800','button_hover':'#665900','bg':'#fffdf0','surface':'#ffffff','text':'#18170d','muted':'#625f4c','ink':'#ffffff'}),
+ 'graphite-shades':themed('Graphite Shades', {'accent':'#c5cad2','button_hover':'#e2e5e9','bg':'#101114','surface':'#1c1e23','text':'#f2f3f5','muted':'#adb2bb','ink':'#17191c'}, {'accent':'#505761','button_hover':'#626a76','bg':'#f0f1f3','surface':'#ffffff','text':'#202329','muted':'#626a76','ink':'#ffffff'}),
+ 'purple-haze':themed('Purple Haze', {'accent':'#c879ff','button_hover':'#e0abff','bg':'#160a20','surface':'#281535','text':'#faf0ff','muted':'#d0b5df','ink':'#260c39'}, {'accent':'#7e25c1','button_hover':'#8939be','bg':'#f8f0ff','surface':'#fffaff','text':'#291334','muted':'#795c88','ink':'#ffffff'}),
+ 'bloody-mary':themed('Bloody Mary', {'accent':'#ff554b','button_hover':'#ff7070','bg':'#200909','surface':'#190808','text':'#fff0f2','muted':'#dfb2ba','ink':'#350611'}, {'accent':'#b51419','button_hover':'#dc3436','bg':'#fff3f3','surface':'#fffbfb','text':'#35151b','muted':'#806068','ink':'#ffffff'})
+})
+for _key in ('pumpkin-glow','mocha-latte','electric-terminal','graphite-shades','purple-haze','bloody-mary'):
+    for _mode in ('dark','light'):
+        _p=PRESETS[_key][_mode]
+        _p.update(gradient=True, gradient_start=_p['bg'], gradient_end=_p['surface'])
 PRESETS['boreal']['dark'].update(gradient=True,gradient_start='#0a1222',gradient_end='#04060b')
 LOGOS={'boreal':'/static/gatearr-logo.png',
        'electric-lime':'/static/branding-variants/gatearr-electric-lime.png',
-       'neon-rose':'/static/branding-variants/gatearr-neon-rose.png'}
+       'neon-rose':'/static/branding-variants/gatearr-neon-rose.png',
+       'pumpkin-glow':'/static/branding-variants/gatearr-pumpkin-glow.png',
+       'mocha-latte':'/static/branding-variants/gatearr-mocha-latte.png',
+       'electric-terminal':'/static/branding-variants/gatearr-electric-terminal.png',
+       'graphite-shades':'/static/branding-variants/gatearr-graphite-shades.png',
+       'purple-haze':'/static/branding-variants/gatearr-purple-haze.png',
+       'bloody-mary':'/static/branding-variants/gatearr-bloody-mary.png'}
 def logo_url(preset):
     return LOGOS.get(preset,LOGOS['boreal'])
 

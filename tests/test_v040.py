@@ -16,9 +16,9 @@ def cfg(db,**values):
     db.commit()
 def member(db):return db.scalar(select(User).where(User.emby_id=='user-1'))
 
-def test_six_presets_preserve_customizations_and_css_policy(client):
+def test_theme_presets_preserve_customizations_and_css_policy(client):
     setup(client)
-    assert len(themes.PRESETS)==3
+    assert len(themes.PRESETS)==9
     with SessionLocal() as db:
         for p in themes.PRESETS.values():themes.validate({'mode':'user','preset':'boreal','dark':p['dark'],'light':p['light']})
         v=themes.load(db);v['mode']='user';v['light']['accent']='#123456';cfg(db,themes_published=json.dumps(v))
@@ -284,3 +284,20 @@ def test_tracearr_period_caption_matches_the_actual_query(client,monkeypatch,per
         html=main.templates.env.get_template('widget.html').render(block=b,_=lambda text:text)
         assert label in html
         assert 'datetime="'+start[:10]+'"' in html and 'datetime="2026-11-01"' in html
+
+def test_theme_gallery_preset_and_appearance_policy(client):
+    setup(client)
+    page=client.get('/admin/branding/themes').text
+    assert page.count('class="theme-preset-card"')==9
+    assert 'name="mode" value="user"' in page
+    assert 'name="preset" value="bloody-mary"' in page
+    assert post(client,'/admin/branding/themes',{'version':0,'preset':'bloody-mary','mode':'light'},'/admin/branding/themes').status_code==303
+    with SessionLocal() as db:
+        draft=themes.load(db,True)
+        assert draft['preset']=='bloody-mary' and draft['mode']=='light'
+        assert draft['dark']==themes.PRESETS['bloody-mary']['dark']
+        assert draft['light']==themes.PRESETS['bloody-mary']['light']
+    assert post(client,'/admin/branding/themes',{'version':1,'mode':'user','action':'publish'},'/admin/branding/themes').status_code==303
+    with SessionLocal() as db:
+        published=themes.load(db)
+        assert published['mode']=='user' and published['preset']=='bloody-mary'

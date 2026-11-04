@@ -39,7 +39,9 @@
   else{
    const l=make('div'),box=make('div');box.className='mail-text-edit';box.contentEditable='true';box.setAttribute('role','textbox');box.setAttribute('aria-label',t('Text'));box.innerHTML=b.innerHTML;box.oninput=()=>{b.innerHTML=box.innerHTML;sync();};
    box.onclick=e=>{if(e.target.closest('a'))e.preventDefault();};
-   const formatting=make('div');formatting.className='editor-tools';window.GatearrFormatting.mount(box,formatting,t,value=>{b.innerHTML=value;sync();});l.append(formatting,box);props.append(l);
+   const formatting=make('div');formatting.className='editor-tools';const editor=window.GatearrFormatting.mount(box,formatting,t,value=>{b.innerHTML=value;sync();});l.append(formatting,box);props.append(l);
+   const variables=make('div');variables.className='preset-variables';variables.setAttribute('aria-label',t('Variables'));
+   for(const key of ['app_name','username','link','minutes','title','season']){const control=button('${'+key+'}',()=>editor.insertText('${'+key+'}'));control.onmousedown=e=>e.preventDefault();variables.append(control);}props.append(variables);
   }
   if(type==='button')field('Background color',b.style.backgroundColor||'#167cdb',v=>b.style.backgroundColor=v,'color');
   if(!['image','divider','spacer'].includes(type))field('Text color',b.style.color||'#222222',v=>b.style.color=v,'color');

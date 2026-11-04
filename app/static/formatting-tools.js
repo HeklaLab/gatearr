@@ -38,4 +38,8 @@ window.GatearrFormatting={mount(box,tools,t,onchange,{basic=false}={}){
  const update=()=>{remember();sync();};box.addEventListener('keyup',update);box.addEventListener('mouseup',update);box.addEventListener('input',()=>{update();onchange(box.innerHTML);});
  const onSelection=()=>{if(!box.isConnected){document.removeEventListener('selectionchange',onSelection);return;}if(box.contains(getSelection().anchorNode))update();};document.addEventListener('selectionchange',onSelection);
  box.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,e.clipboardData.getData('text/plain'));});box.addEventListener('drop',e=>e.preventDefault());
+ return {insertText(text){
+  if(!restore()){box.focus();const selection=getSelection(),end=document.createRange();end.selectNodeContents(box);end.collapse(false);selection.removeAllRanges();selection.addRange(end);}
+  document.execCommand('insertText',false,text);remember();sync();onchange(box.innerHTML);
+ }};
 }};
