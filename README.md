@@ -32,102 +32,50 @@ Complete setup privately. For access from other devices or the internet, configu
 
 [Windows instructions](#windows--docker-desktop) · [Full Docker instructions](#start-with-docker) · [Upgrade an existing installation](UPGRADING.md) · [Community on Reddit](https://www.reddit.com/r/gatearr/)
 
-## Interface preview — Gatearr 0.4.3
+## Interface preview — Gatearr 0.6.0
 
-Real screenshots of Gatearr 0.4.3 running locally with the **Blue Boréal** theme and the original Gatearr logo. The reset demo uses fictional people, sample libraries and simulated integrations; no production accounts or credentials appear below.
+Screenshots from the released 0.6.0 interface, using a local demonstration with fictional accounts, example server addresses and simulated services.
 
 ### Your portal
 
-The standard member portal combines Emby library counts, Seerr request quotas and personal viewing activity. Clear purpose labels and large diffuse service artwork keep application cards easy to recognize.
+Members see their accessible applications, request quotas and personal viewing activity in one place.
 
-![Gatearr 0.4.3 default Blue Boréal portal](screenshots/gatearr-home-v043.jpg)
+![Gatearr 0.6.0 member portal](screenshots/gatearr-home-member-v060.jpg)
 
-### Administration and people
+### Themes and appearance
 
-A compact administration directory and persistent sidebar organize appearance, users, applications, emails and activity. Search fictional accounts and manage individual or shared group permissions from structured profiles.
+Choose from nine presets, each with light and dark palettes. Preview a theme before applying it, customize its colors and choose whether users control their appearance.
 
-![Gatearr 0.4.3 administration](screenshots/gatearr-admin-v043.jpg)
+![Gatearr 0.6.0 theme gallery](screenshots/gatearr-themes-v060.jpg)
 
-![Gatearr 0.4.3 users with fictional accounts](screenshots/gatearr-users-v043.jpg)
+### Pages and access guides
 
-![Gatearr 0.4.3 structured user profile](screenshots/gatearr-user-profile-v043.jpg)
+Create and organize pages with the visual page builder, then publish when ready. Access guides help members choose a device and follow connection instructions with their own account.
 
-### Visual portal builder
+![Gatearr 0.6.0 page builder](screenshots/gatearr-builder-v060.jpg)
 
-Customize login, portal, access guides and footer from one workspace. Add application cards, statistics, columns, text and images; configure each card’s opening behavior independently and size images in pixels or percent.
+![Choose a device in a Gatearr access guide](screenshots/gatearr-devices-v060.jpg)
 
-![Gatearr 0.4.3 portal builder](screenshots/gatearr-builder-v043.jpg)
+![A Windows connection guide with example server details](screenshots/gatearr-guide-v060.jpg)
 
-### Connection guides
+### Administration
 
-Help members connect their devices without knowing the underlying applications. They choose a computer, phone or Smart TV, then follow a guide with the application link, server address and sign-in instructions. The example below shows the complete Smart TV guide using a fictional server and account.
+Manage users, integrations, permissions and email templates from the administration area.
 
-![Choose a device to access your media in Gatearr 0.4.3](screenshots/gatearr-devices-v043.jpg)
+![Gatearr 0.6.0 administration](screenshots/gatearr-admin-v060.jpg)
 
-![Complete Smart TV connection guide in Gatearr 0.4.3](screenshots/gatearr-guide-v043.jpg)
-
-### Applications and appearance
-
-Service status and connection settings share one overview. Blue Boréal is shown here; Electric Lime and Neon Rose remain available as alternate presets.
-
-![Gatearr 0.4.3 application connection overview](screenshots/gatearr-integrations-v043.jpg)
-
-![Gatearr 0.4.3 appearance settings with Blue Boréal selected](screenshots/gatearr-themes-v043.jpg)
-
-### Groups and translations
-
-Manage members, native permissions and library access through shared groups. Enabled languages are displayed with flags and a clear editing language.
-
-![Gatearr 0.4.3 group permissions](screenshots/gatearr-group-review-v043.jpg)
-
-![Gatearr 0.4.3 translation center](screenshots/gatearr-languages-v043.jpg)
-
-### Updates
-
-Browse release history by version series, with shared feature highlights followed by fixes for each patch release. A shortcut opens the public roadmap.
-
-![Gatearr 0.4.3 release history grouped by series](screenshots/gatearr-updates-v043.jpg)
-
-### First installation
-
-The setup assistant configures portal identity, language, initial theme and media-server access.
-
-![Gatearr 0.4.3 first installation](screenshots/gatearr-setup-v043.jpg)
+![Gatearr 0.6.0 page directory](screenshots/gatearr-pages-v060.jpg)
 
 <details>
-<summary>More screenshots: mobile portal, account, guide builder, emails and sign-in</summary>
+<summary>More screenshots: mobile, account, email editor and sign-in</summary>
 
-### Mobile portal
+![Gatearr member portal on mobile](screenshots/gatearr-home-mobile-v060.jpg)
 
-![Gatearr 0.4.3 mobile Blue Boréal portal](screenshots/gatearr-home-mobile-v043.jpg)
+![Gatearr account settings](screenshots/gatearr-account-v060.jpg)
 
-### Account and user groups
+![Gatearr invitation email editor](screenshots/gatearr-emails-v060.jpg)
 
-Members manage their personal account and preferences, while administrators organize shared access through user groups.
-
-![Gatearr 0.4.3 account settings](screenshots/gatearr-account-v043.jpg)
-
-![Gatearr 0.4.3 user groups](screenshots/gatearr-groups-v043.jpg)
-
-### Guide builder
-
-Build device journeys with clickable choice tiles, separate reorder controls and the shared Portal builder navigation.
-
-![Gatearr 0.4.3 guide builder with complete device breadcrumbs](screenshots/gatearr-guide-editor-v043.jpg)
-
-### Invitation template
-
-Edit the invitation email visually and preview its content using the portal’s default branding.
-
-![Gatearr 0.4.3 invitation email editor](screenshots/gatearr-emails-v043.jpg)
-
-### Sign-in and account recovery
-
-A consistent sign-in and password-recovery experience uses the same Gatearr identity and Blue Boréal appearance.
-
-![Gatearr 0.4.3 sign-in page](screenshots/gatearr-login-v043.jpg)
-
-![Gatearr 0.4.3 password recovery](screenshots/gatearr-password-reset-v043.jpg)
+![Gatearr sign-in screen](screenshots/gatearr-login-v060.jpg)
 
 </details>
 
@@ -151,7 +99,7 @@ A consistent sign-in and password-recovery experience uses the same Gatearr iden
 - Keep native Tracearr administrator-only and display member statistics through its standalone widget.
 - Improve guide publication feedback, rich-text consistency, edited email alignment, translations and narrow-screen controls.
 
-See [release notes](RELEASE_NOTES.md), [upgrade instructions](UPGRADING.md), the [Page builder guide](docs/page-builder.md) and the [roadmap](ROADMAP.md). The gallery above shows the 0.4.3 interface.
+See [release notes](RELEASE_NOTES.md), [upgrade instructions](UPGRADING.md), the [Page builder guide](docs/page-builder.md) and the [roadmap](ROADMAP.md). The gallery above shows Gatearr 0.6.0.
 
 ## Features introduced in 0.4.0
 
@@ -166,11 +114,11 @@ See [release notes](RELEASE_NOTES.md), [upgrade instructions](UPGRADING.md), the
 
 Read the [full changelog](CHANGELOG.md), [upgrade instructions](UPGRADING.md), [validation results](VALIDATION.md) and [security boundaries](SECURITY_REVIEW.md).
 
-## 0.4.0 configuration
+## Configuration overview
 
-- **Appearance → Theme:** apply Blue Boréal, Electric Lime or Neon Rose; edit both light and dark palettes. Publishing a preset replaces colors, not layouts or content. An administrator can force a variant or allow the personal Dark/Light/Auto capsule.
+- **Appearance → Theme:** choose one of nine presets and edit both light and dark palettes. Publishing a preset replaces colors, not layouts or content. An administrator can force a variant or allow the personal Dark/Light/Auto capsule.
 - **Applications & API:** unified reachability/authentication diagnostics for Emby/Jellyfin, Seerr, Radarr, Sonarr, Bazarr, Tracearr and Tdarr. Saving and testing are separate actions. No private key is sent to a browser.
-- **Portal builder:** add compact Media, Seerr, Tracearr and Library updates blocks. Logos are optional administrator settings. Media counts automatically use the current user’s native library/content permissions, without an administrator library selector. Distinct copies remain distinct if both are authorized; this is not title-based deduplication. Audiences can target roles or groups; group-specific blocks outrank roles, which outrank general blocks. Use distinct priorities for otherwise overlapping blocks.
+- **Page builder:** add application cards, Statistics and Library updates blocks. Logos are optional administrator settings. Media counts automatically use the current user’s native library/content permissions, without an administrator library selector. Distinct copies remain distinct if both are authorized; this is not title-based deduplication. Audiences can target roles or groups; group-specific blocks outrank roles, which outrank general blocks. Use distinct priorities for otherwise overlapping blocks.
 - **Tracearr:** public API v2 with identity correlation is required. Select the corresponding Tracearr server ID when multiple Emby/Jellyfin servers are monitored. A username is never used to identify a person. A feature fails closed when the required API/identity is missing.
 - **Library updates:** completed Seerr requests and new seasons of previously watched series. The first successful synchronization establishes a baseline and sends no historical notifications. Personal feeds check library access. New-season emails require Tracearr, SMTP, a verified address and the user's opt-in. Configure their template in the email builder while Tracearr is enabled.
 - **Native interfaces:** Radarr/Sonarr/Bazarr retain the protected path proxy and required native URL Base. Tracearr and Tdarr use their configured browser-reachable public interface address; their own authentication and frame restrictions remain in force. Tdarr has no job-management integration and is restricted to explicitly authorized Gatearr administrators.
@@ -188,7 +136,7 @@ Sharing a media server with family or friends can turn its owner into the help d
 | Repeated account configuration | User groups managing libraries, Emby permissions, Seerr permissions/quotas and Gatearr/admin-tool access. Each user belongs to at most one group. |
 | Permission management | Edit supported media policy fields: streams, downloads, subtitles, remote access and more. Read-back indicators distinguish verified, pending, different and failed values. |
 | Helping users connect | Visual **Access guides** with nested device choices, illustrated steps and store/download links. Starter Emby guides cover browser, Windows, Mac, Linux, Android, iPhone and Smart TV. |
-| A portal that looks like your own | Drag-and-drop **Login screen**, **Portal** and **Footer** builders, live previews, application rows, rich text, uploaded logos/images, menus, colors, gradients, button/hover styles and editable light/dark presets. |
+| A portal that looks like your own | A drag-and-drop **Page builder** for Home, custom pages, system pages, header and footer; live previews, application cards, rich text, menus and editable light/dark themes. |
 | Seerr integration | Optional request quotas per user/group, access and permissions, email/language/notification synchronization and independent request/quota widgets for administrators and members. |
 | Native administration tools | Individually granted Radarr, Sonarr and Bazarr interfaces inside Gatearr at `/tools/...`, plus Tracearr and Tdarr interface access. Grants include their full native interface and administrative capabilities. |
 | Account support | Username/email/password administration, account-change emails, audited assistance sessions and readable activity logs. |
@@ -213,17 +161,15 @@ These are reserved example domains. API addresses can remain private; browser/ap
 
 **Email recovery changes the password on the connected media server. It does not reset an Emby Connect/community account or recover a server that was never connected to Gatearr.**
 
-## Portal builder and Access guides
+## Page builder and access guides
 
-Open **Administration → Appearance → Portal builder**, then choose **Login screen**, **Portal**, **Access guide** or **Footer**. Drag blocks into the live preview and click to edit. Preview desktop, tablet or phone layouts. Configure login-form placement, menus, rich text, links, images, footer columns and colors. Drafts autosave; **Publish** makes them visible to users.
+Open **Administration → Appearance → Page builder** to manage Home, custom pages and access-guide pages. Use the system pages, header and footer sections to customize the rest of the experience. Drag blocks into the live preview, edit their settings and publish when ready. Page and block visibility can be restricted to administrators or selected groups.
 
-Each **Applications** block fills one row. Choose the **Number of applications** (up to six), select at most that many and drag them into order. Use one row for Emby/Seerr and another for Sonarr/Bazarr/**My account**, for example. Applications appear only to users who have access. Existing oversized grids are adapted into rows while retaining selection order.
+Application cards can use direct links or access guides; supported administration tools can also open inside Gatearr. Guides contain nested device choices and editable steps. The guide editor provides buttons for `{server_url}`, `{server_host}`, `{server_port}` and `{username}`. Custom URL applications can have their own guides.
 
-An application can open a direct link or its **Access guide**. Guide choices can be nested and reordered; tutorials have rich steps, images and download links. Use `{server_url}`, `{server_host}`, `{server_port}` and `{username}` in instructions. Emby starts with guides; Seerr defaults to a direct link and can have custom guides. Radarr/Sonarr/Bazarr open their integrated interfaces and do not use guides.
+In **Appearance → Theme**, select one of nine presets, preview its light and dark variants and customize the palettes. Administrators can enforce a mode or let users choose. Custom branding can include separate logos for light and dark backgrounds.
 
-Edit the light/dark palettes and gradients in **Appearance → Theme** with a live preview, or customize page/block colors in the builder. Official application PNG logos and the searchable Font Awesome Free collection are bundled. Validated PNG/SVG uploads persist in the database. Footer content supports columns, rich text, images and links.
-
-**Updates → Reset customized content** restores starter pages, guides, labels, theme and application display while retaining API/SMTP connections, users, groups, permissions and active languages. Confirmation is required.
+**Updates → Reset customized content** restores starter content while retaining accounts, permissions, configured integrations and SMTP settings. Confirmation is required.
 
 ### Included languages
 
@@ -333,7 +279,7 @@ Set `PUBLIC_URL=https://accounts.example.com`, `COOKIE_SECURE=true`, and `TRUSTE
 
 ## Administration
 
-- **Appearance**: configurable name, uploaded logo and browser-tab title, Portal builder (including Access guides and Footer), and Theme with live preview.
+- **Appearance**: configurable name, uploaded logo and browser-tab title, Page builder (including system pages, access guides, header and footer), and Theme with live preview.
 - **Users**: accounts, group membership, libraries/media policies, Seerr permissions/quotas, admin-tool access and assistance.
 - **Applications & API**: application links, private/public addresses, connections and health checks in one place.
 - **Emails**: separate template and SMTP tabs; localized invitation/recovery/verification/account-change templates and a Tracearr-dependent new-season template.
